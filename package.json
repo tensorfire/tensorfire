@@ -18,6 +18,8 @@
     "mocaccino": "^1.8.2",
     "mocha": "^3.2.0",
     "mochify": "^2.18.1",
+    "ndarray": "^1.0.18",
+    "ndarray-ops": "^1.2.2",
     "stringify": "^5.1.0"
   }
 }

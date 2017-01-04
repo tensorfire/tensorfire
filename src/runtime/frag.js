@@ -2,7 +2,6 @@ import { readFileSync } from 'fs';
 
 import ACTIVATIONS from './glsl/activations.js'
 
-const TENSOR_VERTEX_SHADER = readFileSync(__dirname + '/glsl/vertex.glsl', 'utf8');
 const TENSOR_FRAGMENT_HEADER = readFileSync(__dirname + '/glsl/frag_header.glsl', 'utf8');
 const READ_TENSOR_NORMAL = readFileSync(__dirname + '/glsl/read_normal.glsl', 'utf8')
 const READ_TENSOR_NOFLOAT = readFileSync(__dirname + '/glsl/read_nofloat.glsl', 'utf8')

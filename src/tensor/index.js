@@ -1,5 +1,6 @@
 import showTexture from './show.js'
 import { packTensor, unpackTensor } from './pack.js'
+import { Run } from '../runtime/index.js'
 
 const TENSOR_IDENTITY = `
     uniform Tensor image;
@@ -103,7 +104,7 @@ export class Tensor {
     show(){
         if(this.nofloat){
             var out = new OutputTensor(this.gl, this.shape, 'uint8');
-            TRun(TENSOR_IDENTITY, out, { image: this })
+            Run(TENSOR_IDENTITY, out, { image: this })
             out._show()
             out.destroy()
         }else this._show();
@@ -148,7 +149,7 @@ export class OutputTensor extends Tensor {
     // so we apply a transformation that encodes the tensor as unsigned bytes first
     _read_nofloat(){
         var out = new OutputTensor(this.gl, this.shape, 'nofloat')
-        TRun(TENSOR_IDENTITY, out, { image: this })
+        Run(TENSOR_IDENTITY, out, { image: this })
         var data = out.read()
         out.destroy()
         return data;
@@ -225,7 +226,6 @@ export class InPlaceTensor extends OutputTensor {
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.tex, 0);
     }
 }
-
 
 
 function makeFrameBuffer(gl, texture){

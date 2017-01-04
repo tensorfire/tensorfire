@@ -1,9 +1,10 @@
 // TENSOR_FLOAT_UTILS
 
+// https://github.com/mikolalysenko/glsl-read-float/blob/master/index.glsl
+
 #define FLOAT_MAX  1.70141184e38
 #define FLOAT_MIN  1.17549435e-38
 
-// https://github.com/mikolalysenko/glsl-read-float/blob/master/index.glsl
 vec4 encode_float(float v) {
     highp float av = abs(v);
 
@@ -43,6 +44,10 @@ vec4 encode_float(float v) {
 }
 
 // https://github.com/spite/scotlandjs-2015/blob/master/demo/index.html
+
+// This implementation seems to be broken. Logan, you should fix this.
+// Look, I called you out by name, in the comments of the source code
+
 float decode_float( vec4 val ) {
     float sign = ( val.a * 255. / pow( 2., 7. ) ) >= 1. ? -1. : 1.;
     float s = val.a * 255.;
