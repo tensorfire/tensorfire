@@ -1,0 +1,9 @@
+{
+  "reporter"   : ["text", "text-summary", "lcov", "html"],
+  "include"    : ["src/**/*.js"],
+  "exclude"    : ["test", "test{,-*}.js", "**/*.test.js", "**/__tests__/**", "**/node_modules/**", "dist"],
+  "require"    : ["babel-register"],
+  "sourceMap"  : false,
+  "instrument" : false,
+  "all"        : true
+}

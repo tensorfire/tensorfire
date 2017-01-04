@@ -5,6 +5,7 @@ import ndt from 'ndarray-tests'
 import ndpack from 'ndarray-pack'
 import ndunpack from 'ndarray-unpack'
 import ndshow from 'ndarray-show'
+import ndarray from 'ndarray'
 
 function assEqual(a, b){
 	if(ndt.equal(a, b, 1e-5)){

@@ -51,11 +51,7 @@ export class Tensor {
         }else if(data instanceof Uint8Array || data === 'uint8'){
             this.type = 'uint8'
         }else if(data.shape){
-            if(data.data instanceof Uint8Array){
-                this.type = 'uint8'
-            }else{
-                this.type = 'float32'
-            }
+            this.type = 'float32'
         }else if(Array.isArray(data)){
             this.type = 'float32'
             data = new Float32Array(data)

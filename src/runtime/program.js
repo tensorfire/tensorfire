@@ -62,7 +62,7 @@ function createTensorProgram(gl, fragmentShader){
 }
 
 
-function bindAttributeBuffer(gl, program) {
+export function bindAttributeBuffer(gl, program) {
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ -1,-1, 1,-1, -1, 1, 1, 1]), gl.STATIC_DRAW);
 
@@ -81,7 +81,7 @@ function extractUniformDeclarations(str){
     return uniforms;
 }
 
-function createShaderProgram(gl, vertexSource, fragmentSource) {
+export function createShaderProgram(gl, vertexSource, fragmentSource) {
     var vertexShader = compileShader(gl, vertexSource, gl.VERTEX_SHADER);
     var fragmentShader = compileShader(gl, fragmentSource, gl.FRAGMENT_SHADER);
 

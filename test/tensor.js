@@ -4,6 +4,7 @@ import headlessGL from "gl"
 import ndt from 'ndarray-tests'
 import ndpack from 'ndarray-pack'
 import ndshow from 'ndarray-show'
+import ndarray from 'ndarray'
 
 function assEqual(a, b){
 	if(ndt.equal(a, b, 1e-5)){
@@ -79,6 +80,12 @@ describe('Tensor', () => {
 			var t = new OutputTensor(gl, [2, 2], new Uint8ClampedArray([ 255, 0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0 ]))
 			assert.deepEqual(t.shape, [2, 2, 1, 1]);
 			assEqual(t.read2(), ndpack([[1, 0], [127/255, 64/255]]))
+		});
+
+		it('should show uint8clampedarray', function() {
+			var t = new OutputTensor(gl, [2, 2], new Uint8ClampedArray([ 255, 0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0 ]))
+			assert.deepEqual(t.shape, [2, 2, 1, 1]);
+			t.show()
 		});
 
 		it('should load plain array', function() {
@@ -181,6 +188,12 @@ describe('Tensor', () => {
 			assEqual(t.read2(), array)
 		});	
 
+		it('should load 2x2 uint8 ndarray', function() {
+			var array = ndarray(new Uint8Array([1, 2, 3, 4]), [2, 2])
+			var t = new OutputTensor(gl, array)
+			assEqual(t.read2(), array)
+		});	
+
 		it('should load 2x2x2 float32 ndarray', function() {
 			var array = ndpack([[[1, 2], [3, 4]], [[1, 2], [3, 4]]])
 			var t = new OutputTensor(gl, array)
@@ -219,6 +232,16 @@ describe('Tensor', () => {
 
 			assert.deepEqual(t._read(), [ 51, 51, 91, 65, 0, 0, 128, 192, 51, 51, 115, 65, 0, 0, 128, 63 ])
 		});
+
+		it('should show nofloat tensor', function(){
+			var t = new OutputTensor(gl, [1, 1, 4], [13.7, -4, 15.2, 1], { nofloat: true })
+			t.show()
+		})
+
+		it('should show raw tensor', function(){
+			var t = new OutputTensor(gl, [1, 1, 4], [13.7, -4, 15.2, 1], { nofloat: true })
+			t._show()
+		})
 
 
 	})

@@ -33,6 +33,5 @@ export default function TNSL(str){
             }
             throw new Error('Can not inline expression ' + body);
         })
-        return str;
     }
 }

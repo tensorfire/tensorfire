@@ -1,3 +1,5 @@
+import { bindAttributeBuffer, createShaderProgram } from '../runtime/program.js'
+
 const SHOW_TEXTURE_VERTEX = `
     attribute vec2 a_position;
     varying mediump vec2 pos;
