@@ -16,8 +16,8 @@
 // containing the shape of the input tensor "image"
 // automatically
 
-export function TNSL(str){
-    return function(uniforms){
+export default function TNSL(str){
+    return function(uniforms, output){
         return str.replace(/\#\(([\w\.\s]+)\)/g, function(all, body){
             var obj = uniforms;
             for(let part of body.split('.'))

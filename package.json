@@ -4,13 +4,20 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "browserify --debug --plugin [consolify] -t babelify -p [mocaccino --reporter spec --colors] test/*.js > dist/test.html"
   },
   "author": "Kevin Kwok",
   "license": "ISC",
   "dependencies": {
+    "babel-plugin-static-fs": "^1.1.0",
     "babel-preset-es2015": "^6.18.0",
+    "babel-register": "^6.18.0",
     "babelify": "^7.3.0",
-    "brfs-babel": "^1.0.0"
+    "brfs-babel": "^1.0.0",
+    "browser-reload": "^1.1.0",
+    "mocaccino": "^1.8.2",
+    "mocha": "^3.2.0",
+    "mochify": "^2.18.1",
+    "stringify": "^5.1.0"
   }
 }

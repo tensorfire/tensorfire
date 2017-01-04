@@ -15,9 +15,9 @@ const SHOW_TEXTURE_FRAGMENT = `
     }
 `
 
-export default function ShowTexture(gl, tex){
+export default function showTexture(gl, tex){
     if(!gl._showProgram){
-        gl._showProgram = createProgramFromScripts(gl, SHOW_TEXTURE_VERTEX, SHOW_TEXTURE_FRAGMENT);
+        gl._showProgram = createShaderProgram(gl, SHOW_TEXTURE_VERTEX, SHOW_TEXTURE_FRAGMENT);
         gl.useProgram(gl._showProgram);
         bindAttributeBuffer(gl, gl._showProgram);
         gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'tex'), 0);

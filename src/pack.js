@@ -1,4 +1,7 @@
-export function packTensor(array, cols){
+import ndarray from "ndarray"
+import ndops from "ndarray-ops"
+
+export function packTensor(array, cols, type = 'float32'){
     array = ndarray(array.data, 
         array.shape.concat([1, 1, 1, 1]).slice(0, 4),
         array.stride.concat([1, 1, 1, 1]).slice(0, 4),
@@ -10,9 +13,15 @@ export function packTensor(array, cols){
         th = shape[1],
         width = tw * cols, 
         height = th * Math.ceil(tiles / cols),
-        chunks = Math.ceil(shape[2] / 4);
+        chunks = Math.ceil(shape[2] / 4),
+        length = width * height * 4;
     
-    var data = new Float32Array(width * height * 4);
+    if(type === 'float32'){
+        var data = new Float32Array(length);    
+    }else if(type === 'uint8'){
+        var data = new Uint8Array(length);    
+    }
+
     var out = ndarray(data, [height, width, 4])
 
     for(var z = 0; z < chunks; z++){
@@ -32,6 +41,8 @@ export function packTensor(array, cols){
     }
     return data;
 }
+
+
 
 export function unpackTensor(data, shape, cols){
     var length = shape.reduce((a, b) => a * b)

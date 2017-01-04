@@ -1,10 +1,9 @@
-uniform Tensor image;
-
-// https://github.com/mikolalysenko/glsl-read-float/blob/master/index.glsl
+// TENSOR_FLOAT_UTILS
 
 #define FLOAT_MAX  1.70141184e38
 #define FLOAT_MIN  1.17549435e-38
 
+// https://github.com/mikolalysenko/glsl-read-float/blob/master/index.glsl
 vec4 encode_float(float v) {
     highp float av = abs(v);
 
@@ -43,16 +42,16 @@ vec4 encode_float(float v) {
     return c.abgr / 255.0;
 }
 
-vec4 process(ivec4 pos) {
-    vec4 color = readTensor(image, ivec4(pos.x / 4, pos.yzw));
-    int channel = imod(pos.x, 4);
-    if(channel == 0){
-        return encode_float(color.r);
-    }else if(channel == 1){
-        return encode_float(color.g);
-    }else if(channel == 2){
-        return encode_float(color.b);
-    }else if(channel == 3){
-        return encode_float(color.a);
-    }
+// https://github.com/spite/scotlandjs-2015/blob/master/demo/index.html
+float decode_float( vec4 val ) {
+    float sign = ( val.a * 255. / pow( 2., 7. ) ) >= 1. ? -1. : 1.;
+    float s = val.a * 255.;
+    if( s > 128. ) s -= 128.;
+    float exponent = s * 2. + floor( val.b * 255. / pow( 2., 7. ) );
+    float mantissa = ( val.r * 255. + val.g * 255. * 256. 
+            + clamp( val.b * 255. - 128., 0., 255. ) * 256. * 256. );
+    float t = val.b * 255.;
+    if( t > 128. ) t -= 128.;
+    mantissa = t * 256. * 256. + val.g * 255. * 256. + val.r * 255.;
+    return sign * pow( 2., exponent - 127. ) * ( 1. + mantissa / pow ( 2., 23. ) );
 }
