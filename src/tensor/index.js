@@ -23,15 +23,22 @@ const TENSOR_IDENTITY = `
 
 
 export class Tensor {
-    constructor(gl, shape, data = null){
+    constructor(gl, shape = [], data = null, options = {}){
         if(!gl.createTexture)
             throw new Error('Invalid WebGLRenderingContext');
         this.gl = gl;
 
         if(shape.shape){
             // ndarrays can be passed instead of raw data
+            options = data;
             data = shape;
             shape = shape.shape;
+        }
+        if(shape.width && shape.height && shape.data){
+            // imagedata objects can be passed
+            options = data;
+            shape = [shape.width, shape.height]
+            data = shape.data;
         }
         shape = shape.concat([1, 1, 1, 1]).slice(0, 4)
         this.shape = shape;
@@ -69,7 +76,7 @@ export class Tensor {
             }
         }
 
-        if(this.type === 'float32' && (gl.NO_FLOAT_TEXTURES || data === 'nofloat')){
+        if(this.type === 'float32' && (gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat)){
             this.nofloat = true;
             var width = shape[0] * 4;    
         }else{
@@ -93,7 +100,6 @@ export class Tensor {
         if(typeof data == 'string') data = null;
 
         if(this.nofloat){
-            this.type = 'uint8'
             if(data !== null) data = new Uint8Array(data.buffer);
         }
 
@@ -107,15 +113,19 @@ export class Tensor {
         var glType = ({
             float32: gl.FLOAT,
             uint8: gl.UNSIGNED_BYTE
-        })[this.type];
+        })[this.nofloat ? 'uint8' : this.type];
 
         this.tex = makeTexture(gl, this.texSize[0], this.texSize[1], glType, data);
     }
     _show(){ showTexture(this.gl, this.tex) }
+    copy(dtype = 'float32'){
+        var out = new OutputTensor(this.gl, this.shape, dtype);
+        Run(TENSOR_IDENTITY, out, { image: this })
+        return out
+    }
     show(){
         if(this.nofloat){
-            var out = new OutputTensor(this.gl, this.shape, 'uint8');
-            Run(TENSOR_IDENTITY, out, { image: this })
+            var out = this.copy('uint8')
             out._show()
             out.destroy()
         }else this._show();
@@ -148,20 +158,18 @@ export class OutputTensor extends Tensor {
         var gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
         var len = this.texSize[0] * this.texSize[1] * 4,
-            pixels = (this.type == 'uint8') ? (new Uint8Array(len)) : (new Float32Array(len)),
-            glType = (this.type == 'uint8') ? gl.UNSIGNED_BYTE : gl.FLOAT;
+            pixels = (this.type == 'uint8' || this.nofloat) ? (new Uint8Array(len)) : (new Float32Array(len)),
+            glType = (this.type == 'uint8' || this.nofloat) ? gl.UNSIGNED_BYTE : gl.FLOAT;
         gl.readPixels(0, 0, this.texSize[0], this.texSize[1], gl.RGBA, glType, pixels);
         return pixels;
     }
-
 
     // some browsers (like Safari) don't support readPixels(gl.FLOAT)
     // so we allocate a new tensor with tiles which are 4x as wide
 
     // so we apply a transformation that encodes the tensor as unsigned bytes first
     _read_nofloat(){
-        var out = new OutputTensor(this.gl, this.shape, 'nofloat')
-        Run(TENSOR_IDENTITY, out, { image: this })
+        var out = this.copy('nofloat')
         var data = out.read()
         out.destroy()
         return data;
