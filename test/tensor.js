@@ -105,6 +105,32 @@ describe('Tensor', () => {
 				assEqual(t.copy('float32').read().pick(0, 0, null, 0), ndpack(floatData));
 			});
 
+			it('should read approximation after uint8 copy', function() {
+				assert.deepEqual(t.copy('uint8')._read(), 
+					floatData.map(k => Math.round(255 * k)))
+			})
+
+			it('should read intact after nofloat copy', function() {
+				var nofloat = t.copy('nofloat');
+				assEqual(nofloat.read().pick(0, 0, null, 0), ndpack(floatData));
+
+				assert.deepEqual(nofloat._read(), new Uint8Array(new Float32Array(floatData).buffer))
+			});
+		})
+		describe('Hi Logan', function(){
+
+			var floatData = [ 1, 0.2, 0.6, 0.8 ];
+			var t = new OutputTensor(gl, [1, 1, 4], new Float32Array(floatData), { nofloat: true })
+
+			it('should read out intact', function() {
+				assert.deepEqual(t.shape, [1, 1, 4, 1]);
+
+				assEqual(t.read().pick(0, 0, null, 0), ndpack(floatData));
+			});
+
+			it('should read intact after float32 copy', function() {
+				assEqual(t.copy('float32').read().pick(0, 0, null, 0), ndpack(floatData));
+			});
 
 			it('should read approximation after uint8 copy', function() {
 				assert.deepEqual(t.copy('uint8')._read(), 
@@ -113,7 +139,7 @@ describe('Tensor', () => {
 
 			it('should read intact after nofloat copy', function() {
 				var nofloat = t.copy('nofloat');
-				assEqual(nofloat.read().pick(0, 0, null, 0), ndpack([ 0.5, 0.2, 0.6, 0.8 ]));
+				assEqual(nofloat.read().pick(0, 0, null, 0), ndpack(floatData));
 
 				assert.deepEqual(nofloat._read(), new Uint8Array(new Float32Array(floatData).buffer))
 			});
@@ -134,7 +160,10 @@ describe('Tensor', () => {
 			})
 
 			it('should be the same after being nofloat copied', function(){
-				assEqual(t.copy('nofloat').read(), array)
+				var nofloat = t.copy('nofloat');
+				assert.equal(nofloat.nofloat, true)
+				assert.equal(nofloat.type, 'float32')
+				assEqual(nofloat.read(), array)
 			})
 		})
 	})
@@ -169,7 +198,7 @@ describe('Tensor', () => {
 
 	})
 
-	describe('NOFLOAT tests', function(){
+	describe('NOFLOAT', function(){
 		it('should create nofloat tensor', function() {
 			var t = new Tensor(gl, [1, 1], 'nofloat')
 			assert.deepEqual(t.shape, [1, 1, 1, 1]);

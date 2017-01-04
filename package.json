@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "browserify --debug --plugin [consolify] -t babelify -p [mocaccino --reporter spec --colors] test/*.js > test.js"
+    "test": "browserify --debug -t babelify -p [mocaccino --reporter spec --no-colors] test/*.js > dist/test.js"
   },
   "author": "Kevin Kwok",
   "license": "ISC",

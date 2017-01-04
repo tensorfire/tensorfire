@@ -3,14 +3,6 @@ import { packTensor, unpackTensor } from './pack.js'
 import { Run } from '../runtime/index.js'
 import ndshow from 'ndarray-show'
 
-const TENSOR_IDENTITY = `
-    uniform Tensor image;
-
-    vec4 process(ivec4 pos) {
-        return readTensor(image, pos);
-    }
-`
-
 //            Tensor: plain old tensors that can be used as inputs
 //                    but they can't be used as destinations and 
 //                    there isn't a .read() method, so you can't
@@ -40,6 +32,9 @@ export class Tensor {
             shape = [shape.width, shape.height]
             data = shape.data;
         }
+
+        options = options || {};
+
         shape = shape.concat([1, 1, 1, 1]).slice(0, 4)
         this.shape = shape;
 
@@ -119,6 +114,13 @@ export class Tensor {
     }
     _show(){ showTexture(this.gl, this.tex) }
     copy(dtype = 'float32'){
+        const TENSOR_IDENTITY = `
+            uniform Tensor image;
+
+            vec4 process(ivec4 pos) {
+                return readTensor(image, pos);
+            }
+        `
         var out = new OutputTensor(this.gl, this.shape, dtype);
         Run(TENSOR_IDENTITY, out, { image: this })
         return out
@@ -145,8 +147,8 @@ export class Tensor {
 //                    associated framebuffer object.
 
 export class OutputTensor extends Tensor {
-    constructor(gl, shape, data = null){
-        super(gl, shape, data);
+    constructor(gl, ...args){
+        super(gl, ...args);
         this.fbo = makeFrameBuffer(gl, this.tex);
     }
     destroy(){
@@ -156,10 +158,16 @@ export class OutputTensor extends Tensor {
 
     _read(){
         var gl = this.gl;
+        
+        if(this.type == 'uint8' || this.nofloat){
+            var glType = gl.UNSIGNED_BYTE,
+                pixels = new Uint8Array(this.texSize[0] * this.texSize[1] * 4)
+        }else{
+            var glType = gl.FLOAT,
+                pixels = new Float32Array(this.texSize[0] * this.texSize[1] * 4)
+        }
+
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
-        var len = this.texSize[0] * this.texSize[1] * 4,
-            pixels = (this.type == 'uint8' || this.nofloat) ? (new Uint8Array(len)) : (new Float32Array(len)),
-            glType = (this.type == 'uint8' || this.nofloat) ? gl.UNSIGNED_BYTE : gl.FLOAT;
         gl.readPixels(0, 0, this.texSize[0], this.texSize[1], gl.RGBA, glType, pixels);
         return pixels;
     }
@@ -227,8 +235,8 @@ export class OutputTensor extends Tensor {
 //                    get swapped in the middle of in-place operations.
 
 export class InPlaceTensor extends OutputTensor {
-    constructor(gl, shape, data = null){
-        super(gl, shape, data);
+    constructor(gl, ...args){
+        super(gl, ...args);
 
         var glType = ({
             float32: gl.FLOAT,
