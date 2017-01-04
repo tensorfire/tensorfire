@@ -29,8 +29,8 @@ export class Tensor {
         if(shape.width && shape.height && shape.data){
             // imagedata objects can be passed
             options = data;
-            shape = [shape.width, shape.height]
             data = shape.data;
+            shape = [shape.width, shape.height]
         }
 
         options = options || {};
@@ -41,9 +41,8 @@ export class Tensor {
         if(this.shape.some(k => !isFinite(k) || k < 1 || !Number.isInteger(k))) 
             throw new Error('Invalid shape: ' + this.shape);
 
-        // this lets us pass imagedata.data things in
-        if(data instanceof Uint8ClampedArray)
-            data = new Uint8Array(data);
+        if(data instanceof Uint8ClampedArray) data = new Uint8Array(data);
+        if(data instanceof Float64Array) data = new Float32Array(data);
 
         if(data === null || data === 'nofloat' || data instanceof Float32Array || data === 'float32'){
             // null defaults to a float32 texture type
@@ -51,7 +50,11 @@ export class Tensor {
         }else if(data instanceof Uint8Array || data === 'uint8'){
             this.type = 'uint8'
         }else if(data.shape){
-            this.type = 'float32'
+            if(data.data instanceof Uint8Array){
+                this.type = 'uint8'
+            }else{
+                this.type = 'float32'
+            }
         }else if(Array.isArray(data)){
             this.type = 'float32'
             data = new Float32Array(data)

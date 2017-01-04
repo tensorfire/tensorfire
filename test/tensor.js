@@ -33,6 +33,17 @@ describe('Tensor', () => {
 		it('should throw when pased data of wrong length', function(){
 			assert.throws(e => new Tensor(gl, [5, 5], [1, 2]))
 		})
+
+
+		it('should throw when pased weird stuff', function(){
+			assert.throws(e => new Tensor(gl, [5, 5], "poop"))
+		})
+
+
+		it('should throw when attempting to call swap', function(){
+			var t = new OutputTensor(gl, [2, 2], new Uint8ClampedArray([ 255, 0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0 ]))
+			assert.throws(e => t.swap())
+		})
 	
 	})
 	
@@ -87,6 +98,24 @@ describe('Tensor', () => {
 			assert.deepEqual(t.shape, [2, 2, 1, 1]);
 			t.show()
 		});
+		
+		it('should load imagedata', function() {
+			var im = {
+				width: 2,
+				height: 2,
+				data: new Uint8ClampedArray([ 255, 0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0 ])
+			}
+			var t = new OutputTensor(gl, im)
+			assert.deepEqual(t.shape, [2, 2, 1, 1]);
+			assEqual(t.read2(), ndpack([[1, 0], [127/255, 64/255]]))
+		});
+
+		it('should load float64array', function() {
+			var t = new OutputTensor(gl, [2, 2], new Float64Array([ 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0 ]))
+			assert.deepEqual(t.shape, [2, 2, 1, 1]);
+			assert(ndt.equal(t.read2(), ndpack([[1, 3], [2, 4]])))
+		});
+
 
 		it('should load plain array', function() {
 			var t = new OutputTensor(gl, [2, 2], [ 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0 ])
@@ -189,10 +218,16 @@ describe('Tensor', () => {
 		});	
 
 		it('should load 2x2 uint8 ndarray', function() {
-			var array = ndarray(new Uint8Array([1, 2, 3, 4]), [2, 2])
+			var array = ndarray(new Uint8Array([255, 127, 32, 4]), [2, 2])
 			var t = new OutputTensor(gl, array)
-			assEqual(t.read2(), array)
+			assEqual(t.read2(), ndpack([[1, 127/255], [32/255, 4/255]]))
 		});	
+
+		it('should print 2x2 float32 ndarray', function(){
+			var array = ndarray(new Float32Array([1, 2, 3, 4]), [2, 2])
+			var t = new OutputTensor(gl, array)
+			assert.equal(t.print2(), '   1.000    2.000\n   3.000    4.000')
+		})
 
 		it('should load 2x2x2 float32 ndarray', function() {
 			var array = ndpack([[[1, 2], [3, 4]], [[1, 2], [3, 4]]])
@@ -219,6 +254,15 @@ describe('Tensor', () => {
 			assert.equal(t.nofloat, true)
 			assert.deepEqual(t.texSize, [4, 1])
 		});
+
+		it('should do stuff with _read_nofloat', function() {
+			var array = ndpack([
+				[[[1, 2], [-3, 18]], [[Math.PI, 2], [3, 4]]], 
+				[[[13, 2], [33, 4]], [[1, 0.2], [Math.E, 4]]]
+			])
+			var t = new OutputTensor(gl, array)
+			assEqual(t._read_nofloat(), array)
+		});	
 
 		it('should read nofloat tensor', function() {
 			var t = new OutputTensor(gl, [1, 1, 4], [13.7, -4, 15.2, 1], { nofloat: true })

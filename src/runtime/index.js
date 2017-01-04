@@ -27,6 +27,8 @@ export function Run(shaderGen, output, uniforms = {}){
         mustSwap = false;
         
     for(let name in uniforms){
+        if(name.startsWith('_')) continue;
+        
         if(!(name in tp.uniformTypes)) throw new Error("Unknown uniform " + name);
         let value = uniforms[name], 
             type = tp.uniformTypes[name];

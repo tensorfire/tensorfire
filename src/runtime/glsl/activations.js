@@ -1,20 +1,20 @@
 export default {
     relu: `
         vec4 activationFunc(vec4 data){
-            return max(data, vec4(0, 0, 0, 0))
+            return max(data, vec4(0, 0, 0, 0));
         }
     `,
     tanh: `
         vec4 activationFunc(vec4 data){
-            vec4 e = exp(2.0 * clamp(data, vec4(-10,-10,-10,-10), vec4(-10,-10,-10,-10)) );
+            vec4 e = exp(2.0 * clamp(data, vec4(-20,-20,-20,-20), vec4(20,20,20,20)) );
             return (e-vec4(1, 1, 1, 1))/(e+vec4(1, 1, 1, 1));
         }
     `,
     sigmoid: `
         vec4 activationFunc(vec4 data){
-            return vec4(1, 1, 1, 1) / (vec4(1, 1, 1, 1) + 
-                exp(-clamp(data, vec4(-10,-10,-10,-10), vec4(-10,-10,-10,-10))));
-        }   
+            return (vec4(1,1,1,1)/(vec4(1,1,1,1) + exp(-2.0 * 
+                clamp(data,vec4(-20,-20,-20,-20), vec4(20,20,20,20)) )));
+        }
     `,
     hard_sigmoid: `
         vec4 activationFunc(vec4 data){

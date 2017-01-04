@@ -40,9 +40,9 @@ describe('Basic', () => {
 		});
 
 		it('should throw for syntax error', function() {
-			var input = new Tensor(gl, [5, 5])
-			assert.throws(e => Run('wumbo', input))
-			assert.throws(e => Compile('wumbo', input))
+			var input = new OutputTensor(gl, [5, 5])
+			assert.throws(e => Run(ECHO_LOCATION + '-', input))
+			assert.throws(e => Compile(ECHO_LOCATION + '-', input))
 		});
 	})
 	
