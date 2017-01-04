@@ -587,6 +587,10 @@ binary-extensions@^1.0.0:
   version "1.8.0"
   resolved "https://registry.yarnpkg.com/binary-extensions/-/binary-extensions-1.8.0.tgz#48ec8d16df4377eae5fa5884682480af4d95c774"
 
+bit-twiddle@^1.0.0:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/bit-twiddle/-/bit-twiddle-1.0.2.tgz#0c6c1fabe2b23d17173d9a61b7b7093eb9e1769e"
+
 block-stream@*:
   version "0.0.9"
   resolved "https://registry.yarnpkg.com/block-stream/-/block-stream-0.0.9.tgz#13ebfe778a03205cfe03751481ebb4b3300c126a"
@@ -1059,7 +1063,7 @@ crypto-browserify@^3.0.0:
     public-encrypt "^4.0.0"
     randombytes "^2.0.0"
 
-cwise-compiler@^1.0.0:
+cwise-compiler@^1.0.0, cwise-compiler@^1.1.2:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/cwise-compiler/-/cwise-compiler-1.1.2.tgz#3bcbfd063bd1d69d25b3eebfc56df0de15d4c9d0"
   dependencies:
@@ -1151,6 +1155,10 @@ dot-case@^1.1.0:
   resolved "https://registry.yarnpkg.com/dot-case/-/dot-case-1.1.2.tgz#1e73826900de28d6de5480bc1de31d0842b06bec"
   dependencies:
     sentence-case "^1.1.2"
+
+dup@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/dup/-/dup-1.0.0.tgz#51fc5ac685f8196469df0b905e934b20af5b4029"
 
 duplexer2@^0.1.2, duplexer2@~0.1.0, duplexer2@~0.1.2:
   version "0.1.4"
@@ -1260,6 +1268,12 @@ fill-range@^2.1.0:
     randomatic "^1.1.3"
     repeat-element "^1.1.2"
     repeat-string "^1.5.2"
+
+fixed-width-float@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/fixed-width-float/-/fixed-width-float-1.0.0.tgz#bb0299404a16a167b207982821b33fd0aad9203b"
+  dependencies:
+    sprintf "~0.1.3"
 
 for-in@^0.1.5:
   version "0.1.6"
@@ -2020,13 +2034,47 @@ nan@^2.3.0:
   version "2.5.0"
   resolved "https://registry.yarnpkg.com/nan/-/nan-2.5.0.tgz#aa8f1e34531d807e9e27755b234b4a6ec0c152a8"
 
-ndarray-ops@^1.2.2:
+ndarray-blas-level1@^1.0.5:
+  version "1.1.3"
+  resolved "https://registry.yarnpkg.com/ndarray-blas-level1/-/ndarray-blas-level1-1.1.3.tgz#ec15cfaced81987d651a08b371ffb7bbddbd7982"
+
+ndarray-ops@^1.2.1, ndarray-ops@^1.2.2:
   version "1.2.2"
   resolved "https://registry.yarnpkg.com/ndarray-ops/-/ndarray-ops-1.2.2.tgz#59e88d2c32a7eebcb1bc690fae141579557a614e"
   dependencies:
     cwise-compiler "^1.0.0"
 
-ndarray@^1.0.18:
+ndarray-pack@^1.2.1:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/ndarray-pack/-/ndarray-pack-1.2.1.tgz#8caebeaaa24d5ecf70ff86020637977da8ee585a"
+  dependencies:
+    cwise-compiler "^1.1.2"
+    ndarray "^1.0.13"
+
+ndarray-scratch@^1.1.1:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/ndarray-scratch/-/ndarray-scratch-1.2.0.tgz#6304636d62eba93db4727ac13c693341dba50e01"
+  dependencies:
+    ndarray "^1.0.14"
+    ndarray-ops "^1.2.1"
+    typedarray-pool "^1.0.2"
+
+ndarray-show@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/ndarray-show/-/ndarray-show-2.0.0.tgz#2a904960ed7615c5af5ad0dc77074976148021d4"
+  dependencies:
+    fixed-width-float "^1.0.0"
+    ndarray "^1.0.14"
+
+ndarray-tests@^1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/ndarray-tests/-/ndarray-tests-1.3.0.tgz#0ab26f99ea352e0d91b45d976085ef8748e4a95a"
+  dependencies:
+    ndarray-blas-level1 "^1.0.5"
+    ndarray-ops "^1.2.2"
+    ndarray-scratch "^1.1.1"
+
+ndarray@^1.0.13, ndarray@^1.0.14, ndarray@^1.0.18:
   version "1.0.18"
   resolved "https://registry.yarnpkg.com/ndarray/-/ndarray-1.0.18.tgz#b60d3a73224ec555d0faa79711e502448fd3f793"
   dependencies:
@@ -2555,6 +2603,10 @@ split2@^0.2.1:
   dependencies:
     through2 "~0.6.1"
 
+sprintf@~0.1.3:
+  version "0.1.5"
+  resolved "https://registry.yarnpkg.com/sprintf/-/sprintf-0.1.5.tgz#8f83e39a9317c1a502cb7db8050e51c679f6edcf"
+
 sshpk@^1.7.0:
   version "1.10.1"
   resolved "https://registry.yarnpkg.com/sshpk/-/sshpk-1.10.1.tgz#30e1a5d329244974a1af61511339d595af6638b0"
@@ -2752,6 +2804,13 @@ tunnel-agent@~0.4.1:
 tweetnacl@^0.14.3, tweetnacl@~0.14.0:
   version "0.14.5"
   resolved "https://registry.yarnpkg.com/tweetnacl/-/tweetnacl-0.14.5.tgz#5ae68177f192d4456269d108afa93ff8743f4f64"
+
+typedarray-pool@^1.0.2:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/typedarray-pool/-/typedarray-pool-1.1.0.tgz#d114f484801489f53ecab5e8088aa23044f498d9"
+  dependencies:
+    bit-twiddle "^1.0.0"
+    dup "^1.0.0"
 
 typedarray@~0.0.5:
   version "0.0.6"

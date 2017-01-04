@@ -1,5 +1,5 @@
 import assert from 'assert'
-import TNSL from '../src/tnsl.js'
+import TNSL from '../src/runtime/tnsl.js'
 
 describe('TNSL', function() {
 	it('should pass through regular strings', function() {

@@ -1,6 +1,8 @@
 import getTensorProgram from './program.js'
 import assembleFragmentShader from './frag.js'
+import { Tensor, OutputTensor, InPlaceTensor } from '../tensor/index.js'
 import TNSL from './tnsl.js'
+
 
 export function Compile(shaderGen, output, uniforms){
     if(!(output instanceof OutputTensor)) 
@@ -14,17 +16,15 @@ export function Compile(shaderGen, output, uniforms){
 }
 
 export function Run(shaderGen, output, uniforms){
-    var tp = TCompile(shaderGen, output, uniforms);
+    var tp = Compile(shaderGen, output, uniforms);
 
+    var gl = output.gl;
     gl.useProgram(tp.program);
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
 
-    function setUniform(name, value){
-        gl['uniform' + UNIFORM_SETTERS[tp.uniformLocs[name].type]](tp.uniformLocs[name].loc, value)
-    }
-
-    var texIndex = 0,
+    var setUniform = tp.setUniform,
+        texIndex = 0,
         mustSwap = false;
         
     for(let name in uniforms){

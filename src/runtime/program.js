@@ -48,10 +48,16 @@ function createTensorProgram(gl, fragmentShader){
             addUniform(name, type);
         }else throw new Error("Unknown uniform type " + type);
     }
+
+    function setUniform(name, value){
+        gl['uniform' + UNIFORM_SETTERS[uniformLocs[name].type]](uniformLocs[name].loc, value)
+    }
+
     return {
         program: program,
         uniformLocs: uniformLocs,
-        uniformTypes: uniformTypes
+        uniformTypes: uniformTypes,
+        setUniform: setUniform,
     }
 }
 

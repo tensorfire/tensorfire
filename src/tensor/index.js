@@ -1,6 +1,7 @@
 import showTexture from './show.js'
 import { packTensor, unpackTensor } from './pack.js'
 import { Run } from '../runtime/index.js'
+import ndshow from 'ndarray-show'
 
 const TENSOR_IDENTITY = `
     uniform Tensor image;
@@ -53,13 +54,16 @@ export class Tensor {
             }else{
                 this.type = 'float32'
             }
+        }else if(Array.isArray(data)){
+            this.type = 'float32'
+            data = new Float32Array(data)
         }else{
             throw new Error("Invalid format for data: must be Uint8Array or Float32Array or ndarray");
         }
 
         if(!gl.NO_FLOAT_TEXTURES){
-            if(!gl.getExtension('OES_texture_float')){
-                console.debug("This browser does not seem to support OES_texture_float. "
+            if(!gl.getExtension('OES_texture_float') && !gl.FORCE_FLOAT_TEXTURES){
+                console.info("This browser does not seem to support OES_texture_float. "
                     + "Using float codec workaround from now on.")
                 gl.NO_FLOAT_TEXTURES = true;
             }
@@ -91,6 +95,13 @@ export class Tensor {
         if(this.nofloat){
             this.type = 'uint8'
             if(data !== null) data = new Uint8Array(data.buffer);
+        }
+
+        if(data !== null){
+            let length = this.texSize[0] * this.texSize[1] * 4;
+            if(length !== data.length){
+                throw new Error("Data array must have length " + length + ", not " + data.length)
+            }
         }
 
         var glType = ({
@@ -134,7 +145,8 @@ export class OutputTensor extends Tensor {
     }
 
     _read(){
-        this.gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+        var gl = this.gl;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
         var len = this.texSize[0] * this.texSize[1] * 4,
             pixels = (this.type == 'uint8') ? (new Uint8Array(len)) : (new Float32Array(len)),
             glType = (this.type == 'uint8') ? gl.UNSIGNED_BYTE : gl.FLOAT;
@@ -160,11 +172,18 @@ export class OutputTensor extends Tensor {
         if(this.nofloat){
             var data = new Float32Array(this._read().buffer)
             return unpackTensor(data, this.shape, this.cols)
-        }else if(!gl.NO_READ_FLOAT || this.type == 'uint8'){
+        }else if(this.type == 'uint8'){
             var pixels = this._read()
-            if(this.gl.getError() === this.gl.INVALID_ENUM){
+            var array = unpackTensor(pixels, this.shape, this.cols)
+            for(var i = 0; i < array.data.length; i++){
+                array.data[i] /= 255;
+            }
+            return array;
+        }else if(!gl.NO_READ_FLOAT){
+            var pixels = this._read()
+            if(this.gl.getError() === this.gl.INVALID_ENUM && !gl.FORCE_READ_FLOAT){
                 gl.NO_READ_FLOAT = true;
-                console.debug('This browser does not seem to support readPixels with gl.FLOAT. ' + 
+                console.info('This browser does not seem to support readPixels with gl.FLOAT. ' + 
                     'Using float encoder hack from now on.')
             }else{
                 return unpackTensor(pixels, this.shape, this.cols)    

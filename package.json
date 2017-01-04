@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "browserify --debug --plugin [consolify] -t babelify -p [mocaccino --reporter spec --colors] test/*.js > dist/test.html"
+    "test": "browserify --debug --plugin [consolify] -t babelify -p [mocaccino --reporter spec --colors] test/*.js > test.js"
   },
   "author": "Kevin Kwok",
   "license": "ISC",
@@ -20,6 +20,9 @@
     "mochify": "^2.18.1",
     "ndarray": "^1.0.18",
     "ndarray-ops": "^1.2.2",
+    "ndarray-pack": "^1.2.1",
+    "ndarray-show": "^2.0.0",
+    "ndarray-tests": "^1.3.0",
     "stringify": "^5.1.0"
   }
 }

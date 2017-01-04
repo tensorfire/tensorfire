@@ -1,3 +1,5 @@
+import { Tensor, OutputTensor, InPlaceTensor } from '../tensor/index.js'
+
 import { readFileSync } from 'fs';
 
 import ACTIVATIONS from './glsl/activations.js'
