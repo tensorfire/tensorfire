@@ -4,18 +4,17 @@ import { Tensor, OutputTensor, InPlaceTensor } from '../tensor/index.js'
 import TNSL from './tnsl.js'
 
 
-export function Compile(shaderGen, output, uniforms){
+export function Compile(shaderGen, output, uniforms = {}){
     if(!(output instanceof OutputTensor)) 
         throw new Error("First argument must be an instance of OutputTensor");
     
-    if(typeof shaderGen === 'string'){
-        shaderGen = TNSL(shaderGen)
-    }
+    if(typeof shaderGen === 'string') shaderGen = TNSL(shaderGen);
+    
     var gl = output.gl;
     return getTensorProgram(gl, assembleFragmentShader(shaderGen, output, uniforms));
 }
 
-export function Run(shaderGen, output, uniforms){
+export function Run(shaderGen, output, uniforms = {}){
     var tp = Compile(shaderGen, output, uniforms);
 
     var gl = output.gl;

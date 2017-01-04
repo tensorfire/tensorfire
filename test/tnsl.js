@@ -8,6 +8,10 @@ describe('TNSL', function() {
 		assert.equal(TNSL('hello (wat)')({}), 'hello (wat)');
 	});
 
+	it('should throw for non-string input', function() {
+		assert.throws(e => TNSL(null) );
+	});
+
 	it('should throw for missing uniform', function() {
 		assert.throws(e => TNSL('hello #(cat)')({  }) );
 	});

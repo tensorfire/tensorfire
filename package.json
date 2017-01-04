@@ -23,6 +23,7 @@
     "ndarray-pack": "^1.2.1",
     "ndarray-show": "^2.0.0",
     "ndarray-tests": "^1.3.0",
+    "ndarray-unpack": "^1.0.0",
     "stringify": "^5.1.0"
   }
 }

@@ -17,6 +17,9 @@
 // automatically
 
 export default function TNSL(str){
+    if(typeof str != 'string') 
+        throw new Error('TNSL shader preprocessor only accepts strings');
+    
     return function(uniforms, output){
         return str.replace(/\#\(([\w\.\s]+)\)/g, function(all, body){
             var obj = uniforms;
