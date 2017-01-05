@@ -1,0 +1,63 @@
+<body>
+<script src="../../dist/demo-util.js"></script>
+<script src="../../dist/tensor.js"></script>
+
+<script>
+var gl = KV.createGL(),
+    OutputTensor = KV.OutputTensor,
+    Tensor = KV.Tensor,
+    InPlaceTensor = KV.InPlaceTensor,
+    TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
+
+
+const EliminationStep = TP`
+    uniform Tensor mat;
+    uniform int k;
+
+    vec4 process(ivec4 pos) {
+        if(pos.x > k){
+            if(pos.y > k){
+                return readTensor(mat, pos) - readTensor(mat, k, pos.y)
+                    * (readTensor(mat, pos.x, k) / readTensor(mat, k, k));  
+            }else{
+                return vec4(0, 0, 0, 0);
+            }
+        }
+        return readTensor(mat, pos);
+    }
+`;
+
+const BackSubstitute = TP`
+    uniform Tensor mat;
+    uniform int k;
+
+    vec4 process(ivec4 pos) {
+        if(pos.x == k){
+            return readTensor(mat, pos) / readTensor(mat, k, k);
+        }else{
+            return readTensor(mat, pos) - readTensor(mat, k, pos.y) * (
+                    readTensor(mat, pos.x, k) / readTensor(mat, k, k));    
+        }
+    }
+`;
+
+var mat = new InPlaceTensor(gl, ndpack([
+    [2, 1, -1, 8],
+    [-3, -1, 2, -11], 
+    [-2, 1, 2, -3]
+]))
+
+
+for(var k = 0; k < mat.shape[0]; k++){
+    EliminationStep(mat, { mat: mat, k: k })
+}
+
+for(var k = mat.shape[0] - 1; k >= 0; k--){
+    BackSubstitute(mat, { mat: mat, k: k })
+}
+
+mat.show({ scale: 1/6, offset: 0.5, transpose: true, flipY: true })
+
+console.log(ndshow(mat.read2()))    
+
+</script>

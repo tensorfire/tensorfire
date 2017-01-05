@@ -12,9 +12,19 @@ const SHOW_TEXTURE_VERTEX = `
 const SHOW_TEXTURE_FRAGMENT = `
     uniform sampler2D tex;
     uniform lowp float scale;
+    uniform lowp float offset;
+    uniform bool transpose;
+    uniform bool flipX;
+    uniform bool flipY;
+
     varying mediump vec2 pos;
     void main() {
-        gl_FragColor = vec4(scale * texture2D(tex, pos).rgb, 1);
+        mediump vec2 p = pos;
+        if(flipX) p.x = 1.0 - p.x;
+        if(flipY) p.y = 1.0 - p.y;
+        if(transpose) p = p.yx;
+        gl_FragColor = vec4(vec3(offset, offset, offset) 
+            + scale * texture2D(tex, p).rgb, 1);
     }
 `
 
@@ -30,6 +40,10 @@ export default function showTexture(gl, tex, opt = {}){
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.uniform1f(gl.getUniformLocation(gl._showProgram, 'scale'), opt.scale || 1)
+    gl.uniform1f(gl.getUniformLocation(gl._showProgram, 'offset'), opt.offset || 0)
+    gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'transpose'), opt.transpose ? 1 : 0)
+    gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'flipX'), opt.flipX ? 1 : 0)
+    gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'flipY'), opt.flipY ? 1 : 0)
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);

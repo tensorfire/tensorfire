@@ -2923,7 +2923,7 @@ var _program = require('../runtime/program.js');
 
 var SHOW_TEXTURE_VERTEX = '\n    attribute vec2 a_position;\n    varying mediump vec2 pos;\n    void main() {\n        pos = (a_position + vec2(1, 1)) / 2.0;\n        gl_Position = vec4(a_position, 0, 1);\n    }\n';
 
-var SHOW_TEXTURE_FRAGMENT = '\n    uniform sampler2D tex;\n    uniform lowp float scale;\n    varying mediump vec2 pos;\n    void main() {\n        gl_FragColor = vec4(scale * texture2D(tex, pos).rgb, 1);\n    }\n';
+var SHOW_TEXTURE_FRAGMENT = '\n    uniform sampler2D tex;\n    uniform lowp float scale;\n    uniform lowp float offset;\n    uniform bool transpose;\n    uniform bool flipX;\n    uniform bool flipY;\n\n    varying mediump vec2 pos;\n    void main() {\n        mediump vec2 p = pos;\n        if(flipX) p.x = 1.0 - p.x;\n        if(flipY) p.y = 1.0 - p.y;\n        if(transpose) p = p.yx;\n        gl_FragColor = vec4(vec3(offset, offset, offset) \n            + scale * texture2D(tex, p).rgb, 1);\n    }\n';
 
 function showTexture(gl, tex) {
     var opt = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
@@ -2939,6 +2939,10 @@ function showTexture(gl, tex) {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.uniform1f(gl.getUniformLocation(gl._showProgram, 'scale'), opt.scale || 1);
+    gl.uniform1f(gl.getUniformLocation(gl._showProgram, 'offset'), opt.offset || 0);
+    gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'transpose'), opt.transpose ? 1 : 0);
+    gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'flipX'), opt.flipX ? 1 : 0);
+    gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'flipY'), opt.flipY ? 1 : 0);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
