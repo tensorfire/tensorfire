@@ -1,4 +1,4 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.GT = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.KV = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict"
 
 var createThunk = require("./lib/thunk.js")
@@ -2518,13 +2518,10 @@ var Tensor = exports.Tensor = function () {
             return !isFinite(k) || k < 1 || !Number.isInteger(k);
         })) throw new Error('Invalid shape: ' + this.shape);
 
-        if (data instanceof Uint8ClampedArray) data = new Uint8Array(data);
-        if (data instanceof Float64Array) data = new Float32Array(data);
-
-        if (data === null || data === 'nofloat' || data instanceof Float32Array || data === 'float32') {
+        if (data === null || data === 'nofloat' || data instanceof Float32Array || data === 'float32' || data instanceof Float64Array || Array.isArray(data)) {
             // null defaults to a float32 texture type
             this.type = 'float32';
-        } else if (data instanceof Uint8Array || data === 'uint8') {
+        } else if (data instanceof Uint8Array || data === 'uint8' || data instanceof Uint8ClampedArray) {
             this.type = 'uint8';
         } else if (data.shape) {
             if (data.data instanceof Uint8Array) {
@@ -2532,9 +2529,6 @@ var Tensor = exports.Tensor = function () {
             } else {
                 this.type = 'float32';
             }
-        } else if (Array.isArray(data)) {
-            this.type = 'float32';
-            data = new Float32Array(data);
         } else {
             throw new Error("Invalid format for data: must be Uint8Array or Float32Array or ndarray");
         }
@@ -2562,32 +2556,50 @@ var Tensor = exports.Tensor = function () {
         this.cols = cols;
         this.texSize = [width * cols, shape[1] * Math.ceil(tiles / cols)];
 
-        if (data && data.shape) {
-            data = (0, _pack.packTensor)(data, cols, this.type);
-        }
-
         if (typeof data == 'string') data = null;
 
-        if (this.nofloat) {
-            if (data !== null) data = new Uint8Array(data.buffer);
-        }
-
-        if (data !== null) {
-            var length = this.texSize[0] * this.texSize[1] * 4;
-            if (length !== data.length) {
-                throw new Error("Data array must have length " + length + ", not " + data.length);
-            }
-        }
-
-        var glType = {
-            float32: gl.FLOAT,
-            uint8: gl.UNSIGNED_BYTE
-        }[this.nofloat ? 'uint8' : this.type];
-
-        this.tex = makeTexture(gl, this.texSize[0], this.texSize[1], glType, data);
+        this.tex = makeTexture(gl);
+        this.update(data);
     }
 
     _createClass(Tensor, [{
+        key: 'update',
+        value: function update(data) {
+            var _this = this;
+
+            var gl = this.gl;
+            gl.bindTexture(gl.TEXTURE_2D, this.tex);
+
+            if (data !== null) {
+                // clear
+                if (data.shape) {
+                    // ndarrays
+                    var new_shape = data.shape.concat([1, 1, 1, 1]).slice(0, 4);
+                    if (new_shape.some(function (k, i) {
+                        return _this.shape[i] != k;
+                    })) throw new Error('Unexpected shape: ' + new_shape);
+                    data = (0, _pack.packTensor)(data, this.cols, this.type);
+                }
+                if (data.data && data.width && data.height) data = data.data; // imagedata
+                if (data instanceof Uint8ClampedArray) data = new Uint8Array(data);
+                if (data instanceof Float64Array) data = new Float32Array(data);
+                if (Array.isArray(data)) data = new Float32Array(data);
+
+                if (this.nofloat) data = new Uint8Array(data.buffer);
+
+                var length = this.texSize[0] * this.texSize[1] * 4;
+                if (length !== data.length) throw new Error("Data array must have length " + length + ", not " + data.length);
+            }
+            var type = this.nofloat ? 'uint8' : this.type;
+            if (type == 'uint8' && (data === null || data instanceof Uint8Array)) {
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.texSize[0], this.texSize[1], 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+            } else if (type == 'float32' && (data === null || data instanceof Float32Array)) {
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.texSize[0], this.texSize[1], 0, gl.RGBA, gl.FLOAT, data);
+            } else {
+                throw new Error("Invalid data format. Must be " + type);
+            }
+        }
+    }, {
         key: '_show',
         value: function _show() {
             (0, _show3.default)(this.gl, this.tex);
@@ -2643,10 +2655,10 @@ var OutputTensor = exports.OutputTensor = function (_Tensor) {
             args[_key - 1] = arguments[_key];
         }
 
-        var _this = _possibleConstructorReturn(this, (_ref = OutputTensor.__proto__ || Object.getPrototypeOf(OutputTensor)).call.apply(_ref, [this, gl].concat(args)));
+        var _this2 = _possibleConstructorReturn(this, (_ref = OutputTensor.__proto__ || Object.getPrototypeOf(OutputTensor)).call.apply(_ref, [this, gl].concat(args)));
 
-        _this.fbo = makeFrameBuffer(gl, _this.tex);
-        return _this;
+        _this2.fbo = makeFrameBuffer(gl, _this2.tex);
+        return _this2;
     }
 
     _createClass(OutputTensor, [{
@@ -2758,15 +2770,16 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
             args[_key2 - 1] = arguments[_key2];
         }
 
-        var _this2 = _possibleConstructorReturn(this, (_ref2 = InPlaceTensor.__proto__ || Object.getPrototypeOf(InPlaceTensor)).call.apply(_ref2, [this, gl].concat(args)));
+        var _this3 = _possibleConstructorReturn(this, (_ref2 = InPlaceTensor.__proto__ || Object.getPrototypeOf(InPlaceTensor)).call.apply(_ref2, [this, gl].concat(args)));
 
         var glType = {
             float32: gl.FLOAT,
             uint8: gl.UNSIGNED_BYTE
-        }[_this2.nofloat ? 'uint8' : _this2.type];
+        }[_this3.nofloat ? 'uint8' : _this3.type];
 
-        _this2.tex2 = makeTexture(gl, _this2.texSize[0], _this2.texSize[1], glType, null);
-        return _this2;
+        _this3.tex2 = makeTexture(gl);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, _this3.texSize[0], _this3.texSize[1], 0, gl.RGBA, glType, null);
+        return _this3;
     }
 
     _createClass(InPlaceTensor, [{
@@ -2801,7 +2814,7 @@ function makeFrameBuffer(gl, texture) {
     return framebuffer;
 }
 
-function makeTexture(gl, width, height, type, data) {
+function makeTexture(gl) {
     var texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -2809,8 +2822,6 @@ function makeTexture(gl, width, height, type, data) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, type, data);
 
     return texture;
 }
@@ -2944,19 +2955,6 @@ function createGL(canvas) {
     if (!gl) alert('Could not initialize WebGL, try another browser');
     return gl;
 }
-
-// function loadImage(url, cb){
-//     var image = new Image,
-//         canvas = document.createElement('canvas'),
-//         ctx = canvas.getContext('2d');
-//     image.src = url;
-//     image.onload = function(){
-//         canvas.width = image.naturalWidth;
-//         canvas.height = image.naturalHeight;
-//         ctx.drawImage(image, 0, 0)
-//         cb(ctx.getImageData(0, 0, canvas.width, canvas.height))
-//     }
-// }
 
 },{}]},{},[12])(12)
 });

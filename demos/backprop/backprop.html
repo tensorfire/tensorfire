@@ -3,11 +3,11 @@
 <script src="../../dist/tensor.js"></script>
 
 <script>
-var gl = GT.createGL(),
-	OutputTensor = GT.OutputTensor,
-	Tensor = GT.Tensor,
-	InPlaceTensor = GT.InPlaceTensor,
-	TP = s => (out, opt) => GT.Run(s.join(''), out, opt);
+var gl = KV.createGL(),
+	OutputTensor = KV.OutputTensor,
+	Tensor = KV.Tensor,
+	InPlaceTensor = KV.InPlaceTensor,
+	TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
 
 
 // computes output = sigmoid(inputs * weights)

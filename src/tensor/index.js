@@ -41,13 +41,11 @@ export class Tensor {
         if(this.shape.some(k => !isFinite(k) || k < 1 || !Number.isInteger(k))) 
             throw new Error('Invalid shape: ' + this.shape);
 
-        if(data instanceof Uint8ClampedArray) data = new Uint8Array(data);
-        if(data instanceof Float64Array) data = new Float32Array(data);
-
-        if(data === null || data === 'nofloat' || data instanceof Float32Array || data === 'float32'){
+        if(data === null || data === 'nofloat' || data instanceof Float32Array 
+            || data === 'float32' || data instanceof Float64Array || Array.isArray(data)){
             // null defaults to a float32 texture type
             this.type = 'float32'
-        }else if(data instanceof Uint8Array || data === 'uint8'){
+        }else if(data instanceof Uint8Array || data === 'uint8' || data instanceof Uint8ClampedArray){
             this.type = 'uint8'
         }else if(data.shape){
             if(data.data instanceof Uint8Array){
@@ -55,9 +53,6 @@ export class Tensor {
             }else{
                 this.type = 'float32'
             }
-        }else if(Array.isArray(data)){
-            this.type = 'float32'
-            data = new Float32Array(data)
         }else{
             throw new Error("Invalid format for data: must be Uint8Array or Float32Array or ndarray");
         }
@@ -87,29 +82,44 @@ export class Tensor {
         this.cols = cols;
         this.texSize = [width * cols, shape[1] * Math.ceil(tiles / cols)]
 
-        if(data && data.shape){
-            data = packTensor(data, cols, this.type);
-        }
-
         if(typeof data == 'string') data = null;
 
-        if(this.nofloat){
-            if(data !== null) data = new Uint8Array(data.buffer);
-        }
+        this.tex = makeTexture(gl);
+        this.update(data)
+    }
 
-        if(data !== null){
-            let length = this.texSize[0] * this.texSize[1] * 4;
-            if(length !== data.length){
-                throw new Error("Data array must have length " + length + ", not " + data.length)
+    update(data){
+        var gl = this.gl;
+        gl.bindTexture(gl.TEXTURE_2D, this.tex);
+
+        if(data !== null){ // clear
+            if(data.shape){ // ndarrays
+                var new_shape = data.shape.concat([1, 1, 1, 1]).slice(0, 4);
+                if(new_shape.some((k, i) => this.shape[i] != k))
+                    throw new Error('Unexpected shape: ' + new_shape);
+                data = packTensor(data, this.cols, this.type);
             }
+            if(data.data && data.width && data.height) data = data.data; // imagedata
+            if(data instanceof Uint8ClampedArray) data = new Uint8Array(data);
+            if(data instanceof Float64Array) data = new Float32Array(data);
+            if(Array.isArray(data)) data = new Float32Array(data);
+
+            if(this.nofloat) data = new Uint8Array(data.buffer);
+            
+            let length = this.texSize[0] * this.texSize[1] * 4;
+            if(length !== data.length)
+                throw new Error("Data array must have length " + length + ", not " + data.length);
         }
-
-        var glType = ({
-            float32: gl.FLOAT,
-            uint8: gl.UNSIGNED_BYTE
-        })[this.nofloat ? 'uint8' : this.type];
-
-        this.tex = makeTexture(gl, this.texSize[0], this.texSize[1], glType, data);
+        var type = this.nofloat ? 'uint8' : this.type;
+        if(type == 'uint8' && (data === null || data instanceof Uint8Array)){
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 
+                this.texSize[0], this.texSize[1], 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+        }else if(type == 'float32' && (data === null || data instanceof Float32Array)){
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 
+                this.texSize[0], this.texSize[1], 0, gl.RGBA, gl.FLOAT, data);    
+        }else{
+            throw new Error("Invalid data format. Must be " + type)
+        }
     }
     _show(){ showTexture(this.gl, this.tex) }
     copy(dtype = 'float32'){
@@ -242,7 +252,9 @@ export class InPlaceTensor extends OutputTensor {
             uint8: gl.UNSIGNED_BYTE
         })[this.nofloat ? 'uint8' : this.type];
         
-        this.tex2 = makeTexture(gl, this.texSize[0], this.texSize[1], glType, null);
+        this.tex2 = makeTexture(gl);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 
+            this.texSize[0], this.texSize[1], 0, gl.RGBA, glType, null);
     }
     destroy(){
         super.destroy()
@@ -271,7 +283,7 @@ function makeFrameBuffer(gl, texture){
 }
 
 
-function makeTexture(gl, width, height, type, data){
+function makeTexture(gl){
     var texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -280,8 +292,7 @@ function makeTexture(gl, width, height, type, data){
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, type, data);
-
     return texture;
 }
+
 

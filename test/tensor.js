@@ -124,8 +124,18 @@ describe('Tensor', () => {
 		});		
 	})
 
+	describe('Update', function(){
+		it('should throw for wrong shape update', function() {
+			var t = new OutputTensor(gl, [2, 2], new Float64Array([ 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0 ]))
+			assert.deepEqual(t.shape, [2, 2, 1, 1]);
+			assert(ndt.equal(t.read2(), ndpack([[1, 3], [2, 4]])))
 
-	describe('Copy Tests', function(){
+			assert.throws(() => t.update(ndarray(new Float32Array(25), [5,5])))
+		});
+	})
+
+
+	describe('Copy', function(){
 		describe('Simple Array', function(){
 
 			var floatData = [ 1, 0.2, 0.6, 0.8 ];

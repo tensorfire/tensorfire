@@ -6,8 +6,8 @@
   "scripts": {
     "test": "mocha --require babel-register",
     "testpage": "browserify --debug -t babelify -p [mocaccino --reporter html] test/*.js > dist/test.js",
-    "cover": "BABEL_ENV=nyc nyc mocha || nyc report --reporter=lcov && mv coverage dist/coverage",
-    "build": "browserify src/index.js -t babelify -o dist/tensor.js -s GT"
+    "cover": "BABEL_ENV=nyc nyc mocha || nyc report --reporter=lcov && rm -r dist/coverage && mv coverage dist/coverage",
+    "build": "browserify src/index.js -t babelify -o dist/tensor.js -s KV"
   },
   "author": "Kevin Kwok",
   "license": "ISC",
