@@ -15,7 +15,6 @@ function assEqual(a, b){
 	}
 }
 
-
 const ECHO_LOCATION = `
 	vec4 process(ivec4 pos){
 		return vec4(pos);

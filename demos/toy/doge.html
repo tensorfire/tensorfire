@@ -1,0 +1,76 @@
+<body>
+<script src="../../dist/demo-util.js"></script>
+<script src="../../dist/tensor.js"></script>
+
+<script>
+var gl = GT.createGL(),
+    OutputTensor = GT.OutputTensor,
+    Tensor = GT.Tensor,
+    InPlaceTensor = GT.InPlaceTensor,
+    TP = s => (out, opt) => GT.Run(s.join(''), out, opt);
+
+
+const ColorizeQuad = TP`
+    uniform Tensor image;
+
+    vec4 process(ivec4 pos) {
+        if(pos.z == 3){
+            float k = dot(readTensor(image, ivec4(pos.xy, 0, 0)), vec4(0.21216, 0.7152, 0.0722, 0));    
+            return vec4(k, k, k, 1);
+        }
+        return readTensor(image, ivec4(pos.xy, 0, 0)) 
+            * vec4(pos.z==0?2:1, pos.z==1?2:1, pos.z==2?2:1, 1);
+    }
+`
+
+
+const ColorMirror = TP`
+    uniform Tensor image;
+
+    vec4 process(ivec4 pos) {
+        if(pos.w == 0){
+            return readTensor(image, ivec4(pos.xyz, 0));
+        }else{
+            return readTensor(image, ivec4(pos.yxz, 0));
+        }
+    }
+`
+
+gl.canvas.width = 512
+gl.canvas.height = 512
+
+
+function loadImage(url, cb){
+    var image = new Image,
+        canvas = document.createElement('canvas'),
+        ctx = canvas.getContext('2d');
+    image.src = url;
+    image.onload = function(){
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        ctx.drawImage(image, 0, 0)
+        cb(ctx.getImageData(0, 0, canvas.width, canvas.height))
+    }
+}
+
+
+loadImage('./doge.jpg', function(im){
+    // we can convert the image data into an ndarray
+    // var ndoge = ndarray(new Float32Array(im.data), [im.width, im.height, 4]);
+    // ndops.divseq(ndoge, 255)
+    // doge = new Tensor(gl, ndoge.transpose(1, 0, 2))
+
+    // we can load directly from imagedata
+    doge = new Tensor(gl, [im.width, im.height, 4], im.data)
+
+
+    multidoge = new OutputTensor(gl, [im.width, im.height, 4 * 4])
+    ColorizeQuad(multidoge, { image: doge })
+
+    hyperdoge = new OutputTensor(gl, [im.width, im.height, 4 * 4, 2])
+
+    ColorMirror(hyperdoge, { image: multidoge })
+    hyperdoge.show()
+
+})
+</script>

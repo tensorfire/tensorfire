@@ -6,7 +6,8 @@
   "scripts": {
     "test": "mocha --require babel-register",
     "testpage": "browserify --debug -t babelify -p [mocaccino --reporter html] test/*.js > dist/test.js",
-    "cover": "BABEL_ENV=nyc nyc mocha"
+    "cover": "BABEL_ENV=nyc nyc mocha || nyc report --reporter=lcov",
+    "build": "browserify src/index.js -t babelify -o dist/tensor.js -s GT"
   },
   "author": "Kevin Kwok",
   "license": "ISC",
@@ -26,6 +27,7 @@
     "ndarray-show": "^2.0.0",
     "ndarray-tests": "^1.3.0",
     "ndarray-unpack": "^1.0.0",
-    "nyc": "next"
+    "nyc": "next",
+    "zeros": "^1.0.0"
   }
 }
