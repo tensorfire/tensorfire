@@ -122,7 +122,7 @@ export class Tensor {
         }
     }
     _show(opt = {}){ showTexture(this.gl, this.tex, opt) }
-    copy(dtype = 'float32'){
+    copy(dtype = 'float32', constructor = OutputTensor){
         const TENSOR_IDENTITY = `
             uniform Tensor image;
 
@@ -130,7 +130,7 @@ export class Tensor {
                 return readTensor(image, pos);
             }
         `
-        var out = new OutputTensor(this.gl, this.shape, dtype);
+        var out = new constructor(this.gl, this.shape, dtype);
         Run(TENSOR_IDENTITY, out, { image: this })
         return out
     }

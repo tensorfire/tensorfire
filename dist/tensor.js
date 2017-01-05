@@ -2609,9 +2609,10 @@ var Tensor = exports.Tensor = function () {
         key: 'copy',
         value: function copy() {
             var dtype = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'float32';
+            var constructor = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : OutputTensor;
 
             var TENSOR_IDENTITY = '\n            uniform Tensor image;\n\n            vec4 process(ivec4 pos) {\n                return readTensor(image, pos);\n            }\n        ';
-            var out = new OutputTensor(this.gl, this.shape, dtype);
+            var out = new constructor(this.gl, this.shape, dtype);
             (0, _index.Run)(TENSOR_IDENTITY, out, { image: this });
             return out;
         }

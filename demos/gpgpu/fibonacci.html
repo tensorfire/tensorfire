@@ -25,29 +25,41 @@ const MatrixMultiply = TP`
 `;
 
 
+function MatrixPower(base, n){
+	if(n <= 0) throw new Error("can not raise to zeroth power");
+
+	var a = base.copy('float32', InPlaceTensor),
+		res = a.copy('float32', InPlaceTensor);
+
+	n--
+	while(n > 0){
+		if(n % 2 == 0){
+			MatrixMultiply(a, { a: a, b: a })	
+			n /= 2
+		}
+		MatrixMultiply(res, { a: res, b: a })
+		n--
+	}
+	return res
+}
+
+function ComputeNthFibonacci(n){
+	return MatrixPower(Q, n).read().get(0, 1, 0, 0)
+}
+
+function testFib(){
+	var nums = []
+	for(var i = 1; i < 15; i++){
+		nums.push(ComputeNthFibonacci(i))
+	}
+	return nums
+}
+
 var Q = new Tensor(gl, ndpack([[1, 1], [1, 0]]));
 
 
+console.log(testFib())
+console.log([1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377])
 
-function ComputeNthFibonacci(n){
-	if(n <= 0) return 0;
-	if(n <= 2) return 1;
-
-	// var C = new InPlaceTensor(gl, ndpack([[1, 1], [1, 0]]))
-	// while(n > 0){
-	// 	if(n % 2 == 1){
-	// 		MatrixMultiply(C, { a: C, b: Q }); 
-	// 		n--
-	// 	}else{
-	// 		MatrixMultiply(C, { a: C, b: C });
-	// 		n /= 2
-	// 	}
-	// }
-	// console.log(C.print2())
-	
-}
-
-
-
-
+console.log(ComputeNthFibonacci(42))
 </script>
