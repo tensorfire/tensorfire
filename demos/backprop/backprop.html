@@ -125,13 +125,13 @@ l1_error = new OutputTensor(gl, [4, 4])
 l1_delta = new OutputTensor(gl, [4, 4])
 
 
-for(var i = 0; i < 1000; i++){
+for(var i = 0; i < 10000; i++){
 
     ForwardLayer(l1, { inputs: X, weights: syn0 })
     ForwardLayer(l2, { inputs: l1, weights: syn1 })
     Subtraction(l2_error, { a: y, b: l2 })
 
-    if(i % 100 == 0){
+    if(i % 1000 == 0){
         console.log("Error:", ndops.norm1(l2_error.read()) / l2_error.shape[0])    
     }
 
