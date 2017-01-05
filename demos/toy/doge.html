@@ -61,8 +61,7 @@ loadImage('./doge.jpg', function(im){
     // doge = new Tensor(gl, ndoge.transpose(1, 0, 2))
 
     // we can load directly from imagedata
-    doge = new Tensor(gl, [im.width, im.height, 4], im.data)
-
+    doge = new Tensor(gl, im)
 
     multidoge = new OutputTensor(gl, [im.width, im.height, 4 * 4])
     ColorizeQuad(multidoge, { image: doge })
