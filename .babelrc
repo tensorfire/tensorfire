@@ -1,4 +1,7 @@
 {
   "presets": ["es2015"],
-  "plugins": ["static-fs", "istanbul"],
+  "plugins": ["static-fs"],
+  "env": {
+  	"nyc": { "plugins": ["istanbul"] }
+  }
 }

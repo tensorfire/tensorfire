@@ -162,7 +162,7 @@ describe('Basic', () => {
 		})
 
 		it('should throw for other tensors', function(){
-			var out = new OutTensor(gl, ndpack([
+			var out = new OutputTensor(gl, ndpack([
 				[5, 6], 
 				[-3, 0]]));
 

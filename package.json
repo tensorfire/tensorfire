@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "browserify --debug -t babelify -p [mocaccino --reporter html] test/*.js > dist/test.js"
+    "test": "mocha --require babel-register",
+    "testpage": "browserify --debug -t babelify -p [mocaccino --reporter html] test/*.js > dist/test.js",
+    "cover": "BABEL_ENV=nyc nyc mocha"
   },
   "author": "Kevin Kwok",
   "license": "ISC",
