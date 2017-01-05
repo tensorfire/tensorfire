@@ -1,0 +1,53 @@
+<body>
+<script src="../../dist/demo-util.js"></script>
+<script src="../../dist/tensor.js"></script>
+
+<script>
+var gl = KV.createGL(),
+    OutputTensor = KV.OutputTensor,
+    Tensor = KV.Tensor,
+    InPlaceTensor = KV.InPlaceTensor,
+    TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
+
+
+const MatrixMultiply = TP`
+    uniform Tensor a;
+    uniform Tensor b;
+   
+    vec4 process(ivec4 pos) {
+        vec4 sum = vec4(0, 0, 0, 0);
+        for(int k = 0; k < #(a.shape).y; k++){
+            sum += readTensor(a, ivec4(pos.x, k, pos.wz))
+                 * readTensor(b, ivec4(k, pos.y, pos.wz));
+        }
+        return sum;
+    }
+`;
+
+
+var Q = new Tensor(gl, ndpack([[1, 1], [1, 0]]));
+
+
+
+function ComputeNthFibonacci(n){
+	if(n <= 0) return 0;
+	if(n <= 2) return 1;
+
+	// var C = new InPlaceTensor(gl, ndpack([[1, 1], [1, 0]]))
+	// while(n > 0){
+	// 	if(n % 2 == 1){
+	// 		MatrixMultiply(C, { a: C, b: Q }); 
+	// 		n--
+	// 	}else{
+	// 		MatrixMultiply(C, { a: C, b: C });
+	// 		n /= 2
+	// 	}
+	// }
+	// console.log(C.print2())
+	
+}
+
+
+
+
+</script>
