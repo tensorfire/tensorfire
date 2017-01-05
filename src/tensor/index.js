@@ -18,6 +18,7 @@ export class Tensor {
     constructor(gl, shape = [], data = null, options = {}){
         if(!gl.createTexture)
             throw new Error('Invalid WebGLRenderingContext');
+        
         this.gl = gl;
 
         if(shape.shape){

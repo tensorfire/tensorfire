@@ -1,0 +1,61 @@
+<body>
+<script src="../../dist/demo-util.js"></script>
+<script src="../../dist/tensor.js"></script>
+<script src="beauty-and-the-beast.js"></script>
+
+<script>
+var gl = KV.createGL(),
+    OutputTensor = KV.OutputTensor,
+    Tensor = KV.Tensor,
+    InPlaceTensor = KV.InPlaceTensor,
+    TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
+
+const MatrixMultiply = TP`
+    uniform Tensor a;
+    uniform Tensor b;
+   
+    vec4 process(ivec4 pos) {
+        vec4 sum = vec4(0, 0, 0, 0);
+        for(int k = 0; k < #(a.shape).y; k++){
+            sum += readTensor(a, ivec4(pos.x, k, pos.wz))
+                 * readTensor(b, ivec4(k, pos.y, pos.wz));
+        }
+        return sum;
+    }
+`;
+
+var transitionProbMatrix = new Tensor(gl, transitionProbs);
+var len = transitionProbMatrix.shape[0];
+var state = new InPlaceTensor(gl, ndpack([new Array(len).fill(1/len)]))
+
+// power iteration technique for calculating eigenvectors
+for(var i = 0; i < 100; i++){
+	MatrixMultiply(state, { a: state, b: transitionProbMatrix })	
+}
+
+
+function h(type, children = []){
+	var el = document.createElement(type);
+	(Array.isArray(children) ? children : [ children ])
+		.forEach(k => el.appendChild(typeof k != 'object' ? 
+			document.createTextNode(k) : k));
+	return el
+}
+
+var results = ndunpack(state.read().pick(0, null, 0, 0))
+	.map((k, i) => [matrixKeys[i], k])
+	.sort((b, a) => a[1] - b[1]);
+
+var table = h('table', h('tbody', 
+	results.map(k => 
+		h('tr', [
+			h('td', k[0]),
+			h('td', k[1])
+		])
+	)
+))
+
+document.body.appendChild(table)
+
+transitionProbMatrix.show()
+</script>
