@@ -121,7 +121,7 @@ export class Tensor {
             throw new Error("Invalid data format. Must be " + type)
         }
     }
-    _show(){ showTexture(this.gl, this.tex) }
+    _show(opt = {}){ showTexture(this.gl, this.tex, opt) }
     copy(dtype = 'float32'){
         const TENSOR_IDENTITY = `
             uniform Tensor image;
@@ -134,12 +134,12 @@ export class Tensor {
         Run(TENSOR_IDENTITY, out, { image: this })
         return out
     }
-    show(){
+    show(opt = {}){
         if(this.nofloat){
             var out = this.copy('uint8')
-            out._show()
+            out._show(opt)
             out.destroy()
-        }else this._show();
+        }else this._show(opt);
     }
     destroy(){ this.gl.deleteTexture(this.tex) }
 }

@@ -11,13 +11,14 @@ const SHOW_TEXTURE_VERTEX = `
 
 const SHOW_TEXTURE_FRAGMENT = `
     uniform sampler2D tex;
+    uniform lowp float scale;
     varying mediump vec2 pos;
     void main() {
-        gl_FragColor = vec4(texture2D(tex, pos).rgb, 1);
+        gl_FragColor = vec4(scale * texture2D(tex, pos).rgb, 1);
     }
 `
 
-export default function showTexture(gl, tex){
+export default function showTexture(gl, tex, opt = {}){
     if(!gl._showProgram){
         gl._showProgram = createShaderProgram(gl, SHOW_TEXTURE_VERTEX, SHOW_TEXTURE_FRAGMENT);
         gl.useProgram(gl._showProgram);
@@ -28,6 +29,7 @@ export default function showTexture(gl, tex){
     gl.useProgram(gl._showProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.uniform1f(gl.getUniformLocation(gl._showProgram, 'scale'), opt.scale || 1)
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);

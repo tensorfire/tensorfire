@@ -2602,7 +2602,8 @@ var Tensor = exports.Tensor = function () {
     }, {
         key: '_show',
         value: function _show() {
-            (0, _show3.default)(this.gl, this.tex);
+            var opt = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+            (0, _show3.default)(this.gl, this.tex, opt);
         }
     }, {
         key: 'copy',
@@ -2617,11 +2618,13 @@ var Tensor = exports.Tensor = function () {
     }, {
         key: 'show',
         value: function show() {
+            var opt = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
             if (this.nofloat) {
                 var out = this.copy('uint8');
-                out._show();
+                out._show(opt);
                 out.destroy();
-            } else this._show();
+            } else this._show(opt);
         }
     }, {
         key: 'destroy',
@@ -2920,9 +2923,11 @@ var _program = require('../runtime/program.js');
 
 var SHOW_TEXTURE_VERTEX = '\n    attribute vec2 a_position;\n    varying mediump vec2 pos;\n    void main() {\n        pos = (a_position + vec2(1, 1)) / 2.0;\n        gl_Position = vec4(a_position, 0, 1);\n    }\n';
 
-var SHOW_TEXTURE_FRAGMENT = '\n    uniform sampler2D tex;\n    varying mediump vec2 pos;\n    void main() {\n        gl_FragColor = vec4(texture2D(tex, pos).rgb, 1);\n    }\n';
+var SHOW_TEXTURE_FRAGMENT = '\n    uniform sampler2D tex;\n    uniform lowp float scale;\n    varying mediump vec2 pos;\n    void main() {\n        gl_FragColor = vec4(scale * texture2D(tex, pos).rgb, 1);\n    }\n';
 
 function showTexture(gl, tex) {
+    var opt = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
     if (!gl._showProgram) {
         gl._showProgram = (0, _program.createShaderProgram)(gl, SHOW_TEXTURE_VERTEX, SHOW_TEXTURE_FRAGMENT);
         gl.useProgram(gl._showProgram);
@@ -2933,6 +2938,7 @@ function showTexture(gl, tex) {
     gl.useProgram(gl._showProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.uniform1f(gl.getUniformLocation(gl._showProgram, 'scale'), opt.scale || 1);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);

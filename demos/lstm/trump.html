@@ -1,0 +1,201 @@
+<body>
+<script src="../../dist/demo-util.js"></script>
+<script src="../../dist/tensor.js"></script>
+<link rel="stylesheet" href="trump/twitter.css">
+
+<div class="tweet">
+    <div class="header">
+        <img src="https://pbs.twimg.com/profile_images/1980294624/DJT_Headshot_V2_400x400.jpg">
+        <div class="byline">
+            <div class="author">Donald J. Trump</div>
+            <div class="username">@realDonaldTrump</div>
+        </div>
+        <button id="refresh">Refresh</button>
+    </div>
+    <div class="body" id="generated-tweet">
+        <span style="color: gray; font-style: italic;">Initializing The Donald...</span>
+    </div>
+    <div id="timestamp"></div>
+</div>
+
+<script>
+var gl = KV.createGL(),
+	OutputTensor = KV.OutputTensor,
+	Tensor = KV.Tensor,
+	InPlaceTensor = KV.InPlaceTensor,
+	TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
+
+
+const LSTM = TP`
+    // Tensor output: [Ns, 1, 2]
+    uniform Tensor X; // [Ni, 1, 1]
+    uniform Tensor prev; // [Ns, 1, 2]
+    uniform Tensor W; // [Ns, Ns + Ni + 1, 4]
+    const int Ni = #(X.shape).x;
+    const int Ns = #(W.shape).x;
+
+    float tanh(float x){
+        float e = exp(2.0 * clamp(x, -10.0, 10.0) );
+        return (e-1.0)/(e+1.0);
+    }
+    float sigmoid(float x){ return 1.0/(1.0+exp(-clamp(x, -10.0, 10.0))); }
+    float hard_sigmoid(float x){ return clamp(x * 0.2 + 0.5, 0.0, 1.0); }
+
+    vec4 process(ivec4 pos) {
+        int j = pos.x;
+        vec4 fioc = readTensor(W, j, 0); // bias
+        for(int k = 0; k < Ni; k++) // inputs
+            fioc += readTensor(W, j, 1 + k) * readTensor(X, k).x; 
+        for(int k = 0; k < Ns; k++) // prev outputs
+            fioc += readTensor(W, j, 1 + Ni + k) * readTensor(prev, k).x; 
+        float c_t = hard_sigmoid(fioc.x) * readTensor(prev, j).y 
+                  + tanh(fioc.w) * hard_sigmoid(fioc.y); // state
+        float h_t = tanh(c_t) * hard_sigmoid(fioc.z); // output
+        return vec4(h_t, c_t, 0, 0);
+    }
+`
+const TextureBuffer = TP`
+    uniform Tensor buffer;
+    uniform Tensor data;
+    uniform int index;
+
+    vec4 process(ivec4 pos){
+        if(pos.w == index){
+            return readTensor(data, ivec4(pos.xyz, 0));
+        }else{
+            return readTensor(buffer, pos);
+        }
+    }
+`
+
+const FullyConnected = TP`
+    uniform Tensor inputs;
+    uniform Tensor W;
+    uniform Tensor b;
+    const int length = #(inputs.shape).x;
+
+    vec4 process(ivec4 pos) {
+        vec4 sum = vec4(0, 0, 0, 0);
+        for(int i = 0; i < length; i++){
+            sum += readTensor(inputs, i) * readTensor(W, i, pos.x);
+        }
+        return sum + readTensor(b, pos);
+    }
+`
+
+const HardMax = TP`
+    uniform Tensor data;
+    const int length = #(data.shape).x;
+
+    vec4 process(ivec4 pos) {
+        vec4 maxValue = vec4(-10000, -10000, -10000, -10000);
+        for(int i = 0; i < length; i++){
+            maxValue = max(maxValue, readTensor(data, i));
+        }
+        return vec4(greaterThanEqual(readTensor(data, pos), maxValue));
+    }
+`
+
+const WarmSample = TP`
+    uniform Tensor data;
+    uniform float temperature;
+    uniform float random;
+
+    const int length = #(data.shape).x;
+    
+    vec4 process(ivec4 pos) {
+        float sum = 0.0;
+        for(int i = 0; i < length; i++){
+            sum += exp(readTensor(data, i).x / temperature);
+        }
+        float samp = 0.0;
+        for(int i = 0; i < length; i++){
+            float range = exp(readTensor(data, i).x / temperature) / sum;
+            if(random > samp && random < samp + range){
+                return vec4(i, 0, 0, 0);
+            }
+            samp += range;
+        }
+        return vec4(0, 0, 0, 0);
+    }
+`
+
+const OneHot = TP`
+    uniform Tensor data;
+    
+    vec4 process(ivec4 pos) {
+        if(abs(float(pos.x) - readTensor(data, 0, 0).x) < 1.0){
+            return vec4(1, 1, 1, 1);
+        }else{
+            return vec4(0, 0, 0, 0);
+        }
+    }
+`
+
+var chars = ['\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '=', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'];
+
+var Ni = chars.length;
+var Ns = 256;
+
+
+
+async function loadArrayFromURL(fileName){
+    var xhr = new XMLHttpRequest()
+    xhr.open('GET', fileName, true)
+    xhr.responseType = 'arraybuffer'
+    xhr.send(null)
+    await new Promise(resolve => xhr.onload = resolve)
+    var buffer = new Float32Array(xhr.response)
+    var shape = fileName.match(/\d+(x\d+)*$/)[0].split('x').map(k => +k)
+    return ndarray(buffer, shape)
+}
+
+
+async function run(){
+
+	lstmWeights = new Tensor(gl, await loadArrayFromURL('trump/lstm_combined-256x351x4'));
+    denseWeights = new Tensor(gl, await loadArrayFromURL('trump/dense_1-weights-W-'+Ns+'x'+Ni))
+    denseBias = new Tensor(gl, await loadArrayFromURL('trump/dense_1-weights-b-'+Ni))
+
+    oneHotVector = new OutputTensor(gl, [Ni, 1, 4])
+    charTensor = new OutputTensor(gl, [1])
+    state = new InPlaceTensor(gl, [Ns, 1, 4])
+    denseOutput = new OutputTensor(gl, [Ni, 1, 4])
+    buffer = new InPlaceTensor(gl, [ 1, 1, 1, 300 ])
+
+    refreshTweet()
+    document.getElementById('refresh').onclick = function(){
+	    refreshTweet()
+	}
+}
+
+
+function refreshTweet(){
+	var startTime = Date.now()
+	var message = 'I AM GOING TO MAKE AMERICA GR'
+    
+    for(let i = 0; i < buffer.shape[3]; i++){
+    	if(i < message.length)
+    		charTensor.update([ chars.indexOf(message[i]), 0, 0, 0 ]);
+    	
+        OneHot(oneHotVector, { data: charTensor })
+		LSTM(state, { X: oneHotVector, prev: state, W: lstmWeights })
+		FullyConnected(denseOutput, { inputs: state, b: denseBias, W: denseWeights })
+		WarmSample(charTensor, { data: denseOutput, temperature: 0.7, random: Math.random() })
+
+        TextureBuffer(buffer, { buffer: buffer, data: charTensor, index: i })
+    }
+
+    buffer.show({ scale: 1 / Ni })
+    var message = Array.from(buffer.read().data).map(k => chars[k]).join('')
+    console.log(message)
+
+    document.getElementById('generated-tweet').innerText = message.split('\n')[1] || message.split('\n').slice(-2)[0]
+    document.getElementById('timestamp').innerText = 'generated in ' + ((Date.now() - startTime)/1000).toFixed(2) + 's'
+}
+
+
+
+
+run()
+</script>
