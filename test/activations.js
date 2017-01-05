@@ -28,6 +28,18 @@ const IDENTITY = `
 describe('Activations', () => {
 	var gl = headlessGL(100, 100, { preserveDrawingBuffer: true })
 
+	describe('input validation', () => {
+		it('should throw with invalid activation', () => {
+			var arr = ndpack([
+				[5, 6], 
+				[-3, 0]]),
+				inp = new Tensor(gl, arr),
+				out = new OutputTensor(gl, inp.shape);
+			
+			assert.throws(() => Run(IDENTITY, out, { image: inp, _activation: 'wumbo' }))
+		})
+	})
+
 	describe('linear', () => {
 		it('should not change anything', () => {
 			var arr = ndpack([

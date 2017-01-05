@@ -240,8 +240,8 @@ export class InPlaceTensor extends OutputTensor {
         var glType = ({
             float32: gl.FLOAT,
             uint8: gl.UNSIGNED_BYTE
-        })[this.type];
-
+        })[this.nofloat ? 'uint8' : this.type];
+        
         this.tex2 = makeTexture(gl, this.texSize[0], this.texSize[1], glType, null);
     }
     destroy(){
@@ -255,7 +255,8 @@ export class InPlaceTensor extends OutputTensor {
 
         // TODO: investigate performance of using multiple FBOs instead
         // of rebinding the framebuffer
-
+        var gl = this.gl;
+        
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.tex, 0);
     }
