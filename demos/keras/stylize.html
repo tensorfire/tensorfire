@@ -1,0 +1,44 @@
+<body>
+<script src="../../dist/demo-util.js"></script>
+<script src="../../dist/tensor.js"></script>
+
+<style type="text/css">
+    body {
+        font-family: sans-serif;
+    }
+</style>
+
+<script src="layers.js"></script>
+<script src="util.js"></script>
+<script src="network.js"></script>
+<script src="keras_import.js"></script>
+<script>
+var gl = KV.createGL(),
+    OutputTensor = KV.OutputTensor,
+    Tensor = KV.Tensor,
+    InPlaceTensor = KV.InPlaceTensor,
+    TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
+gl.canvas.width = 512
+gl.canvas.height = 512
+
+
+
+async function stylize(){
+    var keras_model = await loadJSON('models/the_scream.json');
+    var keras_model_meta = await loadJSON('models/the_scream_metadata.json');
+    var buffer = await loadBuffer('models/the_scream_weights.buf');
+
+    var network = import_keras_network(keras_model, keras_model_meta, buffer)
+
+    var image = (await loadArrayFromURL('convolution2d_1-input-315x420x3')).transpose(1, 0, 2)
+    
+    var compiled = await compile(gl, network, { main_input: image })
+    await run(gl, compiled, { main_input: image })
+    await destroy(gl, compiled)
+
+}
+
+stylize()
+
+
+</script>

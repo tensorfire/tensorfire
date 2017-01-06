@@ -283,6 +283,8 @@ function Convolve2D(gl, layer, deps){
             return sum;
         }
     `
+    console.assert(layer.border_mode == 'same');
+
     var imageSubsample = layer.subsample;
     var inputTensor = deps.image;
     var inputShape = inputTensor.shape;
@@ -303,10 +305,58 @@ function Convolve2D(gl, layer, deps){
     })
 }
 
+
+
+function MaxPooling2D(gl, layer, deps){
+    const SHADER = `
+        uniform Tensor image;
+        
+        uniform ivec2 strides;
+        uniform ivec2 padding;
+
+        const ivec2 pool_size = #(pool_size);
+
+        vec4 process(ivec4 pos){
+            vec4 value = vec4(0, 0, 0, 0);
+            for(int kx = 0; kx < pool_size.x; kx++){
+                int inputX = pos.x * strides.x + kx - padding.x;
+                if(inputX < 0 || inputX >= int(image.shape.x)) continue;
+
+                for(int ky = 0; ky < pool_size.y; ky++){
+                    int inputY = pos.y  * strides.y + ky - padding.y;
+                    if(inputY < 0 || inputY >= int(image.shape.y)) continue;
+
+                    value = max(value, readTensor(image, inputX, inputY, pos.zw));
+                }
+            }
+            return value;
+        }
+    `
+    // var imageSubsample = layer.subsample;
+    var inputTensor = deps.image;
+    var inputShape = inputTensor.shape;
+    var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2))
+
+    var { inputPadding, outputShape } = calcOutputShape(inputShape, 
+        [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.strides)
+
+
+    var outputTensor = new OutputTensor(gl, outputShape)
+    return TensorProgram(SHADER, outputTensor, {
+        kernel: kernelTensor,
+        image: inputTensor,
+
+        imagePadding: inputPadding,
+        imageSubsample: imageSubsample,
+        _activation: layer.activation
+    })
+}
+
 const LAYER_TYPES = {
     InputLayer,
     Convolve2D,
     ComputeMean,
+    MaxPooling2D,
     SquaredResidual,
     BatchNormalize,
     Activation,

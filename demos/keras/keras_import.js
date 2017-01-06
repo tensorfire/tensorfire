@@ -47,18 +47,39 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                 },
                 _keras: layer
             })
-        }else if(layer.class_name == 'Merge'){
-            console.assert(layer.config.mode == "sum")
-            console.assert(inbound.length == 2)
+        }else if(layer.class_name == 'MaxPooling2D'){
             network.push({
                 name: layer.name,
-                type: 'Sum',
-                deps: {
-                    a: inbound[0],
-                    b: inbound[1],  
-                },
+                type: 'MaxPooling2D',
+                border_mode: layer.config.border_mode,
+                pool_size: layer.config.pool_size,
+                strides: layer.config.strides,
+                deps: { image: inbound[0] },
                 _keras: layer
             })
+        }else if(layer.class_name == 'Merge'){
+            console.assert(inbound.length == 2)
+            if(layer.config.mode == "sum"){
+                network.push({
+                    name: layer.name,
+                    type: 'Sum',
+                    deps: {
+                        a: inbound[0],
+                        b: inbound[1],  
+                    },
+                    _keras: layer
+                })
+            }else if(layer.config.mode == "concat"){
+                network.push({
+                    name: layer.name,
+                    type: 'Concat',
+                    deps: {
+                        a: inbound[0],
+                        b: inbound[1],  
+                    },
+                    _keras: layer
+                })
+            }
         }else if(layer.class_name == 'BatchNormalization'){
             network.push({
                 name: layer.name + '_mean',
@@ -107,8 +128,22 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                 deps: { },
                 _keras: layer
             })
+        }else if(layer.class_name == 'Dropout'){
+            network.push({
+                name: layer.name,
+                type: 'Identity',
+                deps: { image: inbound[0] },
+                _keras: layer
+            })
+        }else if(layer.class_name == "GlobalAveragePooling2D"){
+            network.push({
+                name: layer.name,
+                type: 'ComputeMean',
+                deps: { image: inbound[0] },
+                _keras: layer
+            })
         }else{
-            console.warn(layer)
+            console.error(layer)
         }
     })
 
@@ -137,6 +172,13 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
         input.name = layer.name;
         input.activation = layer.activation;
         rename(input.name, new_name)
+    }
+
+    // remove dropout and stuff
+    for(let layer of network){
+        if(layer.type != 'Identity') continue;
+        network.splice(network.indexOf(layer), 1);
+        rename(layer.name, layer.deps.image);
     }
 
     return network
