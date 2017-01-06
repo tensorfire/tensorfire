@@ -2494,6 +2494,7 @@ var Tensor = exports.Tensor = function () {
         _classCallCheck(this, Tensor);
 
         if (!gl.createTexture) throw new Error('Invalid WebGLRenderingContext');
+
         this.gl = gl;
 
         if (shape.shape) {
@@ -2924,7 +2925,7 @@ var _program = require('../runtime/program.js');
 
 var SHOW_TEXTURE_VERTEX = '\n    attribute vec2 a_position;\n    varying mediump vec2 pos;\n    void main() {\n        pos = (a_position + vec2(1, 1)) / 2.0;\n        gl_Position = vec4(a_position, 0, 1);\n    }\n';
 
-var SHOW_TEXTURE_FRAGMENT = '\n    uniform sampler2D tex;\n    uniform lowp float scale;\n    uniform lowp float offset;\n    uniform bool transpose;\n    uniform bool flipX;\n    uniform bool flipY;\n\n    varying mediump vec2 pos;\n    void main() {\n        mediump vec2 p = pos;\n        if(flipX) p.x = 1.0 - p.x;\n        if(flipY) p.y = 1.0 - p.y;\n        if(transpose) p = p.yx;\n        gl_FragColor = vec4(vec3(offset, offset, offset) \n            + scale * texture2D(tex, p).rgb, 1);\n    }\n';
+var SHOW_TEXTURE_FRAGMENT = '\n    uniform sampler2D tex;\n    uniform lowp float scale;\n    uniform lowp float offset;\n    uniform bool transpose;\n    uniform bool flipX;\n    uniform bool flipY;\n    uniform int channels;\n\n    varying mediump vec2 pos;\n\nvec4 colormap(float x) {\n    float r = clamp(8.0 / 3.0 * x, 0.0, 1.0);\n    float g = clamp(8.0 / 3.0 * x - 1.0, 0.0, 1.0);\n    float b = clamp(4.0 * x - 3.0, 0.0, 1.0);\n    return vec4(r, g, b, 1.0);\n}\n\n    void main() {\n        mediump vec2 p = pos;\n        if(flipX) p.x = 1.0 - p.x;\n        if(flipY) p.y = 1.0 - p.y;\n        if(transpose) p = p.yx;\n        if(channels == 4){\n            gl_FragColor = vec4(vec4(offset, offset, offset, offset) \n                + scale * texture2D(tex, p));\n        }else if(channels == 3){\n            gl_FragColor = vec4(vec3(offset, offset, offset) \n                + scale * texture2D(tex, p).rgb, 1);\n        }else if(channels == 2){\n            gl_FragColor = vec4(vec2(offset, offset) \n                + scale * texture2D(tex, p).rg, 0, 1);\n        }else if(channels == 1){\n            gl_FragColor = colormap(offset + scale * texture2D(tex, p).r);\n        }\n    }\n';
 
 function showTexture(gl, tex) {
     var opt = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
@@ -2944,6 +2945,7 @@ function showTexture(gl, tex) {
     gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'transpose'), opt.transpose ? 1 : 0);
     gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'flipX'), opt.flipX ? 1 : 0);
     gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'flipY'), opt.flipY ? 1 : 0);
+    gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'channels'), opt.channels || 3);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);

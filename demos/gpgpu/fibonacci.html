@@ -2,13 +2,24 @@
 <script src="../../dist/demo-util.js"></script>
 <script src="../../dist/tensor.js"></script>
 
+<style type="text/css">
+    body {
+        font-family: sans-serif;
+    }
+</style>
+
+<h1>WebGL Fibonacci</h1>
+<p>This page implements O(log n) matrix power using exponentation by repeated squaring. It's used to compute the n'th term of the fibonacci sequence in O(log n) time.</p>
+
+
 <script>
 var gl = KV.createGL(),
     OutputTensor = KV.OutputTensor,
     Tensor = KV.Tensor,
     InPlaceTensor = KV.InPlaceTensor,
     TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
-
+gl.canvas.width = 16
+gl.canvas.height = 16
 
 const MatrixMultiply = TP`
     uniform Tensor a;
@@ -63,4 +74,9 @@ console.log(testFib())
 console.log([1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377])
 
 console.log(ComputeNthFibonacci(42))
+
+document.body.appendChild(document.createTextNode(
+	JSON.stringify(testFib())
+))
+
 </script>

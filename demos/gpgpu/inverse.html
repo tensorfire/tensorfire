@@ -1,6 +1,13 @@
 <body>
 <script src="../../dist/demo-util.js"></script>
 <script src="../../dist/tensor.js"></script>
+<style type="text/css">
+    body {
+        font-family: sans-serif;
+    }
+</style>
+<h1>WebGL Matrix Inverse</h1>
+<p>Click anywhere on the page to toggle between the original augmented matrix and the result after Gauss-Jordan elimination.</p>
 
 <script>
 var gl = KV.createGL(),
@@ -53,6 +60,7 @@ ndops.assign(augmented.hi(null, matrix.shape[0]), matrix)
 for(var i = 0; i < matrix.shape[0]; i++)
     augmented.set(i, i + matrix.shape[0], 1);
 
+var orig = new Tensor(gl, augmented)
 var mat = new InPlaceTensor(gl, augmented)
 
 console.time('inverting matrix')
@@ -65,8 +73,13 @@ for(var k = mat.shape[0] - 1; k >= 0; k--){
 mat.read()
 console.timeEnd('inverting matrix')
 
-mat.show({ scale: 1/2, offset: 0.5, transpose: true, flipY: true })
+show(mat)
 
-// console.log(ndshow(mat.read2()))
+function show(m){ m.show({ scale: 1/5, offset: 0.5, transpose: true, flipY: true, channels: 1 }) }
+
+var viewMode = true;
+document.body.onclick = function(){
+    show((viewMode = !viewMode) ? mat : orig)
+}
 
 </script>
