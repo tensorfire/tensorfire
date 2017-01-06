@@ -21,7 +21,14 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                 inbound.push(node[0]));
 
         if(layer.class_name == 'Convolution2D'){
-            // TODO: assert this is all zeros bias: W('b:0'),
+            console.assert(layer.config.activation == "linear")
+            console.assert(layer.config.W_regularizer == null)
+            console.assert(layer.config.b_regularizer == null)
+            console.assert(layer.config.W_constraint == null)
+            console.assert(layer.config.b_constraint == null)
+            console.assert(layer.config.dim_ordering == 'tf')
+
+            console.assert(0 == ndops.norm1(W('b:0'))) // bias must be zero
             network.push({
                 name: layer.name,
                 type: 'Convolve2D',
@@ -34,8 +41,9 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                 _keras: layer
             })
         }else if(layer.class_name == 'Deconvolution2D'){
-            // bias: W('b:0'),
-            // TODO: assert that bias is all zeroes
+            console.assert(0 == ndops.norm1(W('b:0'))) // bias must be zero
+            console.assert(layer.config.dim_ordering == 'tf')
+
             network.push({
                 name: layer.name,
                 type: 'Deconvolve2D',
@@ -48,6 +56,7 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                 _keras: layer
             })
         }else if(layer.class_name == 'MaxPooling2D'){
+            console.assert(layer.config.dim_ordering == 'tf')
             network.push({
                 name: layer.name,
                 type: 'MaxPooling2D',
@@ -69,16 +78,18 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                     },
                     _keras: layer
                 })
-            }else if(layer.config.mode == "concat"){
+            }else if(layer.config.mode == "concat" && layer.config.concat_axis === 3){
                 network.push({
                     name: layer.name,
-                    type: 'Concat',
+                    type: 'ConcatChannel',
                     deps: {
                         a: inbound[0],
                         b: inbound[1],  
                     },
                     _keras: layer
                 })
+            }else{
+                throw new Error("unsupported merge mode")
             }
         }else if(layer.class_name == 'BatchNormalization'){
             network.push({
@@ -112,15 +123,24 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                 gamma: W('gamma:0')
             });
         }else if(layer.class_name == 'Activation'){
-            network.push({
-                name: layer.name,
-                type: 'Activation',
-                activation: layer.config.activation,
-                deps: {
-                    image: inbound[0],
-                },
-                _keras: layer
-            })
+            if(layer.config.activation == 'softmax'){
+                network.push({
+                    name: layer.name,
+                    type: 'Identity',
+                    deps: { image: inbound[0] },
+                    _keras: layer
+                })
+            }else{
+                network.push({
+                    name: layer.name,
+                    type: 'Activation',
+                    activation: layer.config.activation,
+                    deps: {
+                        image: inbound[0],
+                    },
+                    _keras: layer
+                })
+            }
         }else if(layer.class_name == 'InputLayer'){
             network.push({
                 name: layer.name,
@@ -157,22 +177,22 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
     }
 
     // elide activations
-    for(let layer of network){
-        if(layer.type != 'Activation') continue;
-        // make sure nothing else depends on its input
-        if(network.some(k => k !== layer && Object.values(k.deps).includes(layer.deps.image) ))
-            continue;
-        var input = network.find(k => k.name == layer.deps.image);
-        // make sure input does not already have an attached activation
-        if(input.activation) continue;
-        // remove this thing
-        network.splice(network.indexOf(layer), 1);
-        // rename the input and set the activation
-        var new_name = input.name + '+' + layer.name;
-        input.name = layer.name;
-        input.activation = layer.activation;
-        rename(input.name, new_name)
-    }
+    // for(let layer of network){
+    //     if(layer.type != 'Activation') continue;
+    //     // make sure nothing else depends on its input
+    //     if(network.some(k => k !== layer && Object.values(k.deps).includes(layer.deps.image) ))
+    //         continue;
+    //     var input = network.find(k => k.name == layer.deps.image);
+    //     // make sure input does not already have an attached activation
+    //     if(input.activation) continue;
+    //     // remove this thing
+    //     network.splice(network.indexOf(layer), 1);
+    //     // rename the input and set the activation
+    //     var new_name = input.name + '+' + layer.name;
+    //     input.name = layer.name;
+    //     input.activation = layer.activation;
+    //     rename(input.name, new_name)
+    // }
 
     // remove dropout and stuff
     for(let layer of network){

@@ -21,6 +21,7 @@ async function compile(gl, network, options){
                 deps[dep] = info[layer.deps[dep]].output;
             }
 
+            console.log(layer.name, layer, deps)
             info[layer.name] = LAYER_TYPES[layer.type](gl, layer, deps, options)
         }
     }
@@ -59,6 +60,8 @@ async function run(gl, compiled, options){
             if(size[0] * size[1] > 1000){
                 info[layer.name].output.show({ scale: 150/255, offset: 0.5, flipY: true })    
                 await new Promise(resolve => requestAnimationFrame(resolve))
+                // console.log(ndops.norm2(info[layer.name].output.read()))
+                // await new Promise(resolve => setTimeout(resolve, 1000))
             }
             
         }

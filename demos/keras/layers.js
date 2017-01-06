@@ -18,6 +18,7 @@ function TensorProgram(shader, out, uniforms){
 
 
 function InputLayer(gl, layer, deps, options){
+    if(!options[layer.name]) throw new Error("Invalid input");
     var tensor = new OutputTensor(gl, options[layer.name]);
     return {
         output: tensor,
@@ -275,10 +276,10 @@ function Convolve2D(gl, layer, deps){
             return sum;
         }
     `
-    console.assert(layer.border_mode == 'same');
+    console.assert(layer.kernel.shape[2] == deps.image.shape[2])
     var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2))
     var { inputPadding, outputShape } = calcOutputShape(deps.image.shape, 
-        [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.subsample)
+        [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.subsample, layer.border_mode)
     var outputTensor = new OutputTensor(gl, outputShape)
 
     return TensorProgram(SHADER, outputTensor, {
@@ -300,49 +301,88 @@ function MaxPooling2D(gl, layer, deps){
         uniform ivec2 strides;
         uniform ivec2 padding;
 
-        const ivec2 pool_size = #(pool_size);
+        const ivec2 pool_size = #(_pool_size);
 
         vec4 process(ivec4 pos){
-            vec4 value = vec4(0, 0, 0, 0);
+            vec4 value = vec4(-10000, -10000, -10000, -10000);
             for(int kx = 0; kx < pool_size.x; kx++){
                 int inputX = pos.x * strides.x + kx - padding.x;
                 if(inputX < 0 || inputX >= int(image.shape.x)) continue;
-
                 for(int ky = 0; ky < pool_size.y; ky++){
                     int inputY = pos.y  * strides.y + ky - padding.y;
                     if(inputY < 0 || inputY >= int(image.shape.y)) continue;
-
-                    value = max(value, readTensor(image, inputX, inputY, pos.zw));
+                    value = max(value, readTensor(image, inputX, inputY, pos.z, pos.w));
                 }
             }
             return value;
         }
     `
-    var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2))
+
 
     var { inputPadding, outputShape } = calcOutputShape(deps.image.shape, 
-        [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.strides)
+        [ layer.pool_size[0], layer.pool_size[1], -1, deps.image.shape[2]], 
+        layer.strides, layer.border_mode)
 
 
     var outputTensor = new OutputTensor(gl, outputShape)
     return TensorProgram(SHADER, outputTensor, {
-        kernel: kernelTensor,
         image: deps.image,
 
-        imagePadding: inputPadding,
-        // imageSubsample: imageSubsample,
+        padding: inputPadding,
+        _pool_size: layer.pool_size,
+        strides: layer.strides,
+
         _activation: layer.activation
     })
 }
 
+
+function ConcatChannel(gl, layer, deps){
+    const SHADER = `
+        uniform Tensor a;
+        uniform Tensor b;
+
+        vec4 process(ivec4 pos) {
+            if(pos.z < a.shape.z / 4){
+                return readTensor(a, pos);
+            }else{
+                return readTensor(b, ivec4(pos.xy, pos.z - a.shape.z / 4, pos.w));
+            }
+        }
+    `
+    // the third channel must be divisible by 4 because
+    // of the channel multiplexing stuff
+
+    console.assert(deps.a.shape[2] % 4 == 0)
+    console.assert(deps.b.shape[2] % 4 == 0)
+
+    console.assert(deps.a.shape[0] == deps.b.shape[0])
+    console.assert(deps.a.shape[1] == deps.b.shape[1])
+    console.assert(deps.a.shape[3] == deps.b.shape[3])
+
+    var output = new OutputTensor(gl, [
+        deps.a.shape[0], deps.a.shape[1], 
+        deps.a.shape[2] + deps.b.shape[2],
+        deps.a.shape[3]]);
+
+    return TensorProgram(SHADER, output, {
+        a: deps.a,
+        b: deps.b,
+        _activation: layer.activation
+    })
+}
+
+
+
 const LAYER_TYPES = {
     InputLayer,
     Convolve2D,
+    Sum,
     ComputeMean,
     MaxPooling2D,
     SquaredResidual,
     BatchNormalize,
     Activation,
-    Sum,
+    ConcatChannel,
     Deconvolve2D
 }
