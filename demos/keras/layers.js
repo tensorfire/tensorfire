@@ -132,8 +132,8 @@ function Deconvolve2D(gl, layer, deps){
     var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2).step(-1, -1))
 
     var outputShape = [
-        deps.image.shape[0] * imageSubsample[0], 
-        deps.image.shape[1] * imageSubsample[1], 
+        deps.image.shape[0] * layer.subsample[0], 
+        deps.image.shape[1] * layer.subsample[1], 
         kernelTensor.shape[2]
     ];
 
