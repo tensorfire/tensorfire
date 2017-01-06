@@ -48,8 +48,7 @@ function ComputeMean(gl, layer, deps){
             return sum / float(tileSize.x * tileSize.y);
         }
     `
-    var inputShape = deps.image.shape;
-    var meanTensor = new OutputTensor(gl, [1, 1, inputShape[2]])
+    var meanTensor = new OutputTensor(gl, [1, 1, deps.image.shape[2]])
     return TensorProgram(SHADER, meanTensor, {
         image: deps.image,
         _activation: layer.activation
@@ -130,25 +129,20 @@ function Deconvolve2D(gl, layer, deps){
             return sum;
         }
     `
-    var imagePadding = layer.padding;
-    var imageSubsample = layer.subsample;
-    var inputTensor = deps.image;
-    var inputShape = inputTensor.shape;
-
     var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2).step(-1, -1))
 
     var outputShape = [
-        inputShape[0] * imageSubsample[0], 
-        inputShape[1] * imageSubsample[1], 
+        deps.image.shape[0] * imageSubsample[0], 
+        deps.image.shape[1] * imageSubsample[1], 
         kernelTensor.shape[2]
     ];
 
     var output = new OutputTensor(gl, outputShape)
     return TensorProgram(SHADER, output, {
-        image: inputTensor,
+        image: deps.image,
         kernel: kernelTensor,
-        imagePadding: imagePadding,
-        imageSubsample: imageSubsample,
+        imagePadding: layer.padding,
+        imageSubsample: layer.subsample,
         _activation: layer.activation
     })
 }
@@ -167,8 +161,8 @@ function SquaredResidual(gl, layer, deps){
     console.assert(deps.mean.shape[0] == 1)
     console.assert(deps.mean.shape[1] == 1)
     console.assert(deps.image.shape[2] == deps.mean.shape[2])
-    var inputShape = deps.image.shape;
-    var residualTensor = new OutputTensor(gl, inputShape)
+
+    var residualTensor = new OutputTensor(gl, deps.image.shape)
 
     return TensorProgram(SHADER, residualTensor, {
         image: deps.image,
@@ -201,9 +195,7 @@ function BatchNormalize(gl, layer, deps){
 
     var betaTensor = new Tensor(gl, ndarray(layer.beta.data, [1, 1, layer.beta.size]));
     var gammaTensor = new Tensor(gl, ndarray(layer.gamma.data, [1, 1, layer.gamma.size]));
-
-    var inputShape = deps.image.shape;
-    var normalizedTensor = new OutputTensor(gl, inputShape)
+    var normalizedTensor = new OutputTensor(gl, deps.image.shape)
 
     return TensorProgram(SHADER, normalizedTensor, { 
         image: deps.image, 
@@ -284,23 +276,17 @@ function Convolve2D(gl, layer, deps){
         }
     `
     console.assert(layer.border_mode == 'same');
-
-    var imageSubsample = layer.subsample;
-    var inputTensor = deps.image;
-    var inputShape = inputTensor.shape;
     var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2))
-
-    var { inputPadding, outputShape } = calcOutputShape(inputShape, 
-        [0, 1, 3, 2].map(k => kernelTensor.shape[k]), imageSubsample)
-
-
+    var { inputPadding, outputShape } = calcOutputShape(deps.image.shape, 
+        [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.subsample)
     var outputTensor = new OutputTensor(gl, outputShape)
+
     return TensorProgram(SHADER, outputTensor, {
         kernel: kernelTensor,
-        image: inputTensor,
+        image: deps.image,
 
         imagePadding: inputPadding,
-        imageSubsample: imageSubsample,
+        imageSubsample: layer.subsample,
         _activation: layer.activation
     })
 }
@@ -332,22 +318,19 @@ function MaxPooling2D(gl, layer, deps){
             return value;
         }
     `
-    // var imageSubsample = layer.subsample;
-    var inputTensor = deps.image;
-    var inputShape = inputTensor.shape;
     var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2))
 
-    var { inputPadding, outputShape } = calcOutputShape(inputShape, 
+    var { inputPadding, outputShape } = calcOutputShape(deps.image.shape, 
         [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.strides)
 
 
     var outputTensor = new OutputTensor(gl, outputShape)
     return TensorProgram(SHADER, outputTensor, {
         kernel: kernelTensor,
-        image: inputTensor,
+        image: deps.image,
 
         imagePadding: inputPadding,
-        imageSubsample: imageSubsample,
+        // imageSubsample: imageSubsample,
         _activation: layer.activation
     })
 }
