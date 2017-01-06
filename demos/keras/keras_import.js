@@ -177,22 +177,22 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
     }
 
     // elide activations
-    // for(let layer of network){
-    //     if(layer.type != 'Activation') continue;
-    //     // make sure nothing else depends on its input
-    //     if(network.some(k => k !== layer && Object.values(k.deps).includes(layer.deps.image) ))
-    //         continue;
-    //     var input = network.find(k => k.name == layer.deps.image);
-    //     // make sure input does not already have an attached activation
-    //     if(input.activation) continue;
-    //     // remove this thing
-    //     network.splice(network.indexOf(layer), 1);
-    //     // rename the input and set the activation
-    //     var new_name = input.name + '+' + layer.name;
-    //     input.name = layer.name;
-    //     input.activation = layer.activation;
-    //     rename(input.name, new_name)
-    // }
+    for(let layer of network){
+        if(layer.type != 'Activation') continue;
+        // make sure nothing else depends on its input
+        if(network.some(k => k !== layer && Object.values(k.deps).includes(layer.deps.image) ))
+            continue;
+        var input = network.find(k => k.name == layer.deps.image);
+        // make sure input does not already have an attached activation
+        if(input.activation) continue;
+        // remove this thing
+        network.splice(network.indexOf(layer), 1);
+        // rename the input and set the activation
+        var new_name = input.name + '+' + layer.name;
+        input.name = layer.name;
+        input.activation = layer.activation;
+        rename(input.name, new_name)
+    }
 
     // remove dropout and stuff
     for(let layer of network){
