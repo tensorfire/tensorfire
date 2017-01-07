@@ -1,7 +1,9 @@
 import showTexture from './show.js'
+import { makeTexture, makeFrameBuffer, checkRenderFloat } from './helpers.js'
 import { packTensor, unpackTensor } from './pack.js'
 import { Run } from '../runtime/index.js'
 import ndshow from 'ndarray-show'
+
 
 //            Tensor: plain old tensors that can be used as inputs
 //                    but they can't be used as destinations and 
@@ -66,7 +68,22 @@ export class Tensor {
             }
         }
 
-        if(this.type === 'float32' && (gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat)){
+        if(this instanceof OutputTensor && !gl.NO_FLOAT_TEXTURES){
+            if(!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT){
+                if(!checkRenderFloat(gl)){
+                    console.info("This browser supports OES_texture_float, " + 
+                        "but can not render to floating textures. " + 
+                        "Using float codec workaround for output tensors from now on.")
+                    gl.NO_RENDER_FLOAT = true;
+                }
+                gl.RENDER_FLOAT_TESTED = true;
+            }
+        }
+        
+        if(this.type === 'float32' && (
+            gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat
+            || (gl.NO_RENDER_FLOAT && (this instanceof OutputTensor))
+        )){
             this.nofloat = true;
             var width = shape[0] * 4;    
         }else{
@@ -274,26 +291,4 @@ export class InPlaceTensor extends OutputTensor {
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.tex, 0);
     }
 }
-
-
-function makeFrameBuffer(gl, texture){
-    var framebuffer = gl.createFramebuffer();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
-    return framebuffer;
-}
-
-
-function makeTexture(gl){
-    var texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-    return texture;
-}
-
 

@@ -1901,7 +1901,7 @@ Object.defineProperty(exports, 'createGL', {
   }
 });
 
-},{"./runtime/index.js":16,"./tensor/index.js":19,"./util.js":22}],13:[function(require,module,exports){
+},{"./runtime/index.js":16,"./tensor/index.js":20,"./util.js":23}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1909,6 +1909,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.checkLinkError = checkLinkError;
 exports.checkShaderError = checkShaderError;
+exports.checkFramebufferError = checkFramebufferError;
 // code for pretty printing shader errors from regl
 
 function checkLinkError(gl, program, fragShader, vertShader, command) {
@@ -1997,6 +1998,20 @@ function checkShaderError(gl, shader, source, type, command) {
         });
 
         throw new Error('Error compiling ' + typeName + ' shader, ' + files[0].name);
+    }
+}
+
+function checkFramebufferError(gl) {
+
+    var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (status != gl.FRAMEBUFFER_COMPLETE) {
+        var statusCode = {};
+        statusCode[gl.FRAMEBUFFER_COMPLETE] = 'complete';
+        statusCode[gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT] = 'incomplete attachment';
+        statusCode[gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS] = 'incomplete dimensions';
+        statusCode[gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT] = 'incomplete, missing attachment';
+        statusCode[gl.FRAMEBUFFER_UNSUPPORTED] = 'unsupported';
+        throw new Error('framebuffer configuration not supported, status = ' + statusCode[status]);
     }
 }
 
@@ -2123,7 +2138,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var TENSOR_FRAGMENT_HEADER = '// TENSOR_FRAGMENT_HEADER\n\nprecision highp float;\n\nstruct Tensor {\n    sampler2D tex;\n    ivec2     texSize;\n    ivec4     shape; // [width, height, channel+depth, batch]\n    int       cols;\n};\n\nint   imod(int f, int p){ return f - p * (f / p); }\nint   vec2tile(ivec2 v, int rows){ return rows * v.y + v.x; }\nivec2 tile2vec(int f, int rows){ return ivec2(imod(f, rows), f / rows); }\nint   ceildiv(int a, int b){ return (a - 1) / b + 1; }\n\nvec4 readTensor(Tensor t, ivec4 pos);\nvec4 readTensor(Tensor t, ivec3 pos){ return readTensor(t, ivec4(pos, 0)); }\nvec4 readTensor(Tensor t, ivec2 pos){ return readTensor(t, ivec4(pos, 0, 0)); }\n\nvec4 readTensor(Tensor t, int x, int y, int z, int w){ return readTensor(t, ivec4(x, y, z, w)); }\nvec4 readTensor(Tensor t, int x, int y, int z){ return readTensor(t, ivec4(x, y, z, 0)); }\nvec4 readTensor(Tensor t, int x, int y){ return readTensor(t, ivec4(x, y, 0, 0)); }\nvec4 readTensor(Tensor t, int x){ return readTensor(t, ivec4(x, 0, 0, 0)); }\nvec4 readTensor(Tensor t){ return readTensor(t, ivec4(0, 0, 0, 0)); }\n\nuniform ivec4 _outputShape;\nuniform int _outputCols;\n\nvec4 process(ivec4 pos);\nvoid main();\n';
 var READ_TENSOR_NORMAL = '// READ_TENSOR_NORMAL\n\nvec4 readTensor(Tensor t, ivec4 pos){\n    return texture2D(t.tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw, ceildiv(t.shape.z, 4))\n        , t.cols) * t.shape.xy) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(t.texSize));\n}\n\nvec4 readTensorX(Tensor t, ivec4 pos){\n    return readTensor(t, pos);\n}\n\nfloat readTensorChannel(Tensor t, ivec4 pos, int ch){\n\tif(ch == 0) return readTensor(t, pos).r;\n\tif(ch == 1) return readTensor(t, pos).g;\n\tif(ch == 2) return readTensor(t, pos).b;\n\tif(ch == 3) return readTensor(t, pos).a;\n}';
-var READ_TENSOR_NOFLOAT = '// READ_TENSOR_NOFLOAT\n\nfloat readTensorChannel(Tensor t, ivec4 pos, int ch){\n    return decode_float(texture2D(t.tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw, ceildiv(t.shape.z, 4))\n        , t.cols) * t.shape.xy) +\n        vec2(pos.x * 4 + ch, pos.y) + vec2(0.5, 0.5)\n    ) / vec2(t.texSize)));\n}\n\nvec4 _readTensorChannel(Tensor t, ivec4 pos, int ch){\n    if(ch == 0){\n        return vec4(value, 0, 0, 0);\n    }else if(ch == 1){\n        return vec4(0, value, 0, 0);\n    }else if(ch == 2){\n        return vec4(0, 0, value, 0);\n    }else if(ch == 3){\n        return vec4(0, 0, 0, value);\n    }\n}\n\nvec4 readTensor(Tensor t, ivec4 pos){\n    return _readTensorChannel(t, pos, 0) +\n         + _readTensorChannel(t, pos, 1)\n         + _readTensorChannel(t, pos, 2)\n         + _readTensorChannel(t, pos, 3);\n}\n\nvec4 readTensorX(Tensor t, ivec4 pos){\n    int ch = imod(int(gl_FragCoord.x), 4);\n    return _readTensorChannel(t, pos, ch);\n}\n';
+var READ_TENSOR_NOFLOAT = '// READ_TENSOR_NOFLOAT\n\nfloat readTensorChannel(Tensor t, ivec4 pos, int ch){\n    return decode_float(texture2D(t.tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw, ceildiv(t.shape.z, 4))\n        , t.cols) * t.shape.xy) +\n        vec2(pos.x * 4 + ch, pos.y) + vec2(0.5, 0.5)\n    ) / vec2(t.texSize)));\n}\n\nvec4 _readTensorChannel(Tensor t, ivec4 pos, int ch){\n    float value = readTensorChannel(t, pos, ch);\n    if(ch == 0){\n        return vec4(value, 0, 0, 0);\n    }else if(ch == 1){\n        return vec4(0, value, 0, 0);\n    }else if(ch == 2){\n        return vec4(0, 0, value, 0);\n    }else if(ch == 3){\n        return vec4(0, 0, 0, value);\n    }\n}\n\nvec4 readTensor(Tensor t, ivec4 pos){\n    return _readTensorChannel(t, pos, 0) +\n         + _readTensorChannel(t, pos, 1)\n         + _readTensorChannel(t, pos, 2)\n         + _readTensorChannel(t, pos, 3);\n}\n\nvec4 readTensorX(Tensor t, ivec4 pos){\n    int ch = imod(int(gl_FragCoord.x), 4);\n    return _readTensorChannel(t, pos, ch);\n}\n';
 var WRITE_TENSOR_NORMAL = '// WRITE_TENSOR_NORMAL\n\nvoid main(){\n    int tile = vec2tile(ivec2(gl_FragCoord.xy) / _outputShape.xy, _outputCols);\n    int chunks = ceildiv(_outputShape.z, 4);\n    if(tile >= chunks * _outputShape.w){\n        // draw a checkerboard, rather than have the gpu just spit out random noise\n        gl_FragColor = vec4(mod(gl_FragCoord.x - gl_FragCoord.y, 2.0), 0.2, 0.1, 1);\n        return;\n    }\n    gl_FragColor = activationFunc(process(ivec4(\n        mod(gl_FragCoord.xy, vec2(_outputShape.xy)), \n        tile2vec(tile, chunks))));\n}\n';
 var WRITE_TENSOR_NOFLOAT = '// WRITE_TENSOR_NOFLOAT\n\nvoid main(){\n    int x = int(gl_FragCoord.x) / 4;\n\n    int tile = vec2tile(ivec2(x, gl_FragCoord.y) / _outputShape.xy, _outputCols);\n    int chunks = ceildiv(_outputShape.z, 4);\n    if(tile >= chunks * _outputShape.w){\n        // draw a checkerboard, rather than have the gpu just spit out random noise\n        gl_FragColor = vec4(mod(gl_FragCoord.x - gl_FragCoord.y, 2.0), 0.2, 0.1, 1);\n        return;\n    }\n    vec4 value = activationFunc(process(ivec4(\n        mod(vec2(x, gl_FragCoord.y), vec2(_outputShape.xy)), \n        tile2vec(tile, chunks))));\n    \n    int ch = imod(int(gl_FragCoord.x), 4);\n    if(ch == 0){\n        gl_FragColor = encode_float(value.x);\n    }else if(ch == 1){\n        gl_FragColor = encode_float(value.y);\n    }else if(ch == 2){\n        gl_FragColor = encode_float(value.z);\n    }else if(ch == 3){\n        gl_FragColor = encode_float(value.w);\n    }\n}\n';
 var TENSOR_FLOAT_UTILS = '// TENSOR_FLOAT_UTILS\n\n// https://github.com/mikolalysenko/glsl-read-float/blob/master/index.glsl\n\n#define FLOAT_MAX  1.70141184e38\n#define FLOAT_MIN  1.17549435e-38\n\nvec4 encode_float(float v) {\n    highp float av = abs(v);\n\n    //Handle special cases\n    if(av < FLOAT_MIN) {\n        return vec4(0.0, 0.0, 0.0, 0.0);\n    } else if(v > FLOAT_MAX) {\n        return vec4(127.0, 128.0, 0.0, 0.0) / 255.0;\n    } else if(v < -FLOAT_MAX) {\n        return vec4(255.0, 128.0, 0.0, 0.0) / 255.0;\n    }\n\n    highp vec4 c = vec4(0,0,0,0);\n\n    //Compute exponent and mantissa\n    highp float e = floor(log2(av));\n    highp float m = av * pow(2.0, -e) - 1.0;\n    \n    //Unpack mantissa\n    c[1] = floor(128.0 * m);\n    m -= c[1] / 128.0;\n    c[2] = floor(32768.0 * m);\n    m -= c[2] / 32768.0;\n    c[3] = floor(8388608.0 * m);\n    \n    //Unpack exponent\n    highp float ebias = e + 127.0;\n    c[0] = floor(ebias / 2.0);\n    ebias -= c[0] * 2.0;\n    c[1] += floor(ebias) * 128.0; \n\n    //Unpack sign bit\n    c[0] += 128.0 * step(0.0, -v);\n\n    //Scale back to range\n    return c.abgr / 255.0;\n}\n\n// https://github.com/spite/scotlandjs-2015/blob/master/demo/index.html\n\n// This implementation seems to be broken. Logan, you should fix this.\n// Look, I called you out by name, in the comments of the source code\n\nfloat decode_float( vec4 val ) {\n    float sign = ( val.a * 255. / pow( 2., 7. ) ) >= 1. ? -1. : 1.;\n    float s = val.a * 255.;\n    if( s > 128. ) s -= 128.;\n    float exponent = s * 2. + floor( val.b * 255. / pow( 2., 7. ) );\n    float mantissa = ( val.r * 255. + val.g * 255. * 256. \n            + clamp( val.b * 255. - 128., 0., 255. ) * 256. * 256. );\n    float t = val.b * 255.;\n    if( t > 128. ) t -= 128.;\n    mantissa = t * 256. * 256. + val.g * 255. * 256. + val.r * 255.;\n    return sign * pow( 2., exponent - 127. ) * ( 1. + mantissa / pow ( 2., 23. ) );\n}\n';
@@ -2165,7 +2180,7 @@ function assembleFragmentShader(shaderGen, output, uniforms) {
     return fragmentShader;
 }
 
-},{"../tensor/index.js":19,"./glsl/activations.js":15}],15:[function(require,module,exports){
+},{"../tensor/index.js":20,"./glsl/activations.js":15}],15:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -2197,6 +2212,8 @@ var _frag = require('./frag.js');
 var _frag2 = _interopRequireDefault(_frag);
 
 var _index = require('../tensor/index.js');
+
+var _check = require('./check.js');
 
 var _tnsl = require('./tnsl.js');
 
@@ -2262,10 +2279,13 @@ function Run(shaderGen, output) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, output.fbo);
     gl.viewport(0, 0, output.texSize[0], output.texSize[1]);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); // draw to framebuffer
+
+    (0, _check.checkFramebufferError)(gl);
+
     return output;
 }
 
-},{"../tensor/index.js":19,"./frag.js":14,"./program.js":17,"./tnsl.js":18}],17:[function(require,module,exports){
+},{"../tensor/index.js":20,"./check.js":13,"./frag.js":14,"./program.js":17,"./tnsl.js":18}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2448,6 +2468,61 @@ function TNSL(str) {
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.checkRenderFloat = checkRenderFloat;
+exports.makeFrameBuffer = makeFrameBuffer;
+exports.makeTexture = makeTexture;
+
+var _program = require('../runtime/program.js');
+
+var CHECK_FLOAT_VERTEX = '\n    attribute vec2 a_position;\n    void main() {\n        gl_Position = vec4(a_position, 0, 1);\n    }\n';
+var CHECK_FLOAT_FRAGMENT = '\n    void main() {\n        gl_FragColor = vec4(3.14159, -2.71828, 1.61828, 42);\n    }\n';
+
+function checkRenderFloat(gl) {
+    var tex = makeTexture(gl);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 10, 10, 0, gl.RGBA, gl.FLOAT, null);
+    var fbo = makeFrameBuffer(gl, tex);
+
+    var program = (0, _program.createShaderProgram)(gl, CHECK_FLOAT_VERTEX, CHECK_FLOAT_FRAGMENT);
+    gl.useProgram(program);
+    (0, _program.bindAttributeBuffer)(gl, program);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.viewport(0, 0, 10, 10);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    gl.deleteTexture(tex);
+    gl.deleteFramebuffer(fbo);
+    gl.deleteProgram(program);
+
+    return status == gl.FRAMEBUFFER_COMPLETE;
+}
+
+function makeFrameBuffer(gl, texture) {
+    var framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    return framebuffer;
+}
+
+function makeTexture(gl) {
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    return texture;
+}
+
+},{"../runtime/program.js":17}],20:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
 exports.InPlaceTensor = exports.OutputTensor = exports.Tensor = undefined;
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
@@ -2457,6 +2532,8 @@ var _createClass = function () { function defineProperties(target, props) { for 
 var _show2 = require('./show.js');
 
 var _show3 = _interopRequireDefault(_show2);
+
+var _helpers = require('./helpers.js');
 
 var _pack = require('./pack.js');
 
@@ -2541,7 +2618,17 @@ var Tensor = exports.Tensor = function () {
             }
         }
 
-        if (this.type === 'float32' && (gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat)) {
+        if (this instanceof OutputTensor && !gl.NO_FLOAT_TEXTURES) {
+            if (!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT) {
+                if (!(0, _helpers.checkRenderFloat)(gl)) {
+                    console.info("This browser supports OES_texture_float, " + "but can not render to floating textures. " + "Using float codec workaround for output tensors from now on.");
+                    gl.NO_RENDER_FLOAT = true;
+                }
+                gl.RENDER_FLOAT_TESTED = true;
+            }
+        }
+
+        if (this.type === 'float32' && (gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && this instanceof OutputTensor)) {
             this.nofloat = true;
             var width = shape[0] * 4;
         } else {
@@ -2559,7 +2646,7 @@ var Tensor = exports.Tensor = function () {
 
         if (typeof data == 'string') data = null;
 
-        this.tex = makeTexture(gl);
+        this.tex = (0, _helpers.makeTexture)(gl);
         this.update(data);
     }
 
@@ -2662,7 +2749,7 @@ var OutputTensor = exports.OutputTensor = function (_Tensor) {
 
         var _this2 = _possibleConstructorReturn(this, (_ref = OutputTensor.__proto__ || Object.getPrototypeOf(OutputTensor)).call.apply(_ref, [this, gl].concat(args)));
 
-        _this2.fbo = makeFrameBuffer(gl, _this2.tex);
+        _this2.fbo = (0, _helpers.makeFrameBuffer)(gl, _this2.tex);
         return _this2;
     }
 
@@ -2782,7 +2869,7 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
             uint8: gl.UNSIGNED_BYTE
         }[_this3.nofloat ? 'uint8' : _this3.type];
 
-        _this3.tex2 = makeTexture(gl);
+        _this3.tex2 = (0, _helpers.makeTexture)(gl);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, _this3.texSize[0], _this3.texSize[1], 0, gl.RGBA, glType, null);
         return _this3;
     }
@@ -2812,26 +2899,7 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
     return InPlaceTensor;
 }(OutputTensor);
 
-function makeFrameBuffer(gl, texture) {
-    var framebuffer = gl.createFramebuffer();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
-    return framebuffer;
-}
-
-function makeTexture(gl) {
-    var texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-    return texture;
-}
-
-},{"../runtime/index.js":16,"./pack.js":20,"./show.js":21,"ndarray-show":8}],20:[function(require,module,exports){
+},{"../runtime/index.js":16,"./helpers.js":19,"./pack.js":21,"./show.js":22,"ndarray-show":8}],21:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -2913,7 +2981,7 @@ function unpackTensor(data, shape, cols) {
     return array;
 }
 
-},{"ndarray":9,"ndarray-ops":7}],21:[function(require,module,exports){
+},{"ndarray":9,"ndarray-ops":7}],22:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2952,7 +3020,7 @@ function showTexture(gl, tex) {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-},{"../runtime/program.js":17}],22:[function(require,module,exports){
+},{"../runtime/program.js":17}],23:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {

@@ -1,6 +1,7 @@
 import getTensorProgram from './program.js'
 import assembleFragmentShader from './frag.js'
 import { Tensor, OutputTensor, InPlaceTensor } from '../tensor/index.js'
+import { checkFramebufferError } from './check.js'
 import TNSL from './tnsl.js'
 
 
@@ -59,5 +60,8 @@ export function Run(shaderGen, output, uniforms = {}){
     gl.bindFramebuffer(gl.FRAMEBUFFER, output.fbo);
     gl.viewport(0, 0, output.texSize[0], output.texSize[1]);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); // draw to framebuffer
+
+    checkFramebufferError(gl);
+    
     return output;
 }

@@ -93,6 +93,20 @@ export function checkShaderError (gl, shader, source, type, command) {
     }
 }
 
+export function checkFramebufferError(gl){
+    
+    var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if(status != gl.FRAMEBUFFER_COMPLETE){
+        var statusCode = {}
+        statusCode[gl.FRAMEBUFFER_COMPLETE] = 'complete'
+        statusCode[gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT] = 'incomplete attachment'
+        statusCode[gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS] = 'incomplete dimensions'
+        statusCode[gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT] = 'incomplete, missing attachment'
+        statusCode[gl.FRAMEBUFFER_UNSUPPORTED] = 'unsupported'
+        throw new Error('framebuffer configuration not supported, status = ' + statusCode[status])
+    }
+}
+
 
 function leftPad (str, n) {
     str = str + ''

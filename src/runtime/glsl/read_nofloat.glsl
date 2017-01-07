@@ -10,6 +10,7 @@ float readTensorChannel(Tensor t, ivec4 pos, int ch){
 }
 
 vec4 _readTensorChannel(Tensor t, ivec4 pos, int ch){
+    float value = readTensorChannel(t, pos, ch);
     if(ch == 0){
         return vec4(value, 0, 0, 0);
     }else if(ch == 1){
