@@ -356,7 +356,7 @@ function SquaredResidual(gl, layer, deps){
     })
 }
 
-function BatchwiseNormalize(gl, layer, deps){
+function InstanceNormalize(gl, layer, deps){
     const SHADER = `
         uniform Tensor image;
         uniform Tensor mean;
@@ -394,7 +394,7 @@ function BatchwiseNormalize(gl, layer, deps){
 }
 
 
-function RunningBatchNormalization(gl, layer, deps){
+function BatchNormalize(gl, layer, deps){
     const SHADER = `
         uniform Tensor image;
         uniform Tensor beta;
@@ -663,8 +663,8 @@ const LAYER_TYPES = {
     SquaredResidual,
     ZeroPadding2D,
     AveragePooling2D,
-    BatchwiseNormalize,
-    RunningBatchNormalization,
+    InstanceNormalize,
+    BatchNormalize,
     Activation,
     ConcatChannel,
     Deconvolve2D

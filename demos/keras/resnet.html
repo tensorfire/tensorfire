@@ -87,7 +87,7 @@ async function resnet(){
 
     console.timeEnd('running network')
 
-    compiled.info.fc1000.output.show({ offset: 0.5, scale: 1, flipY: true })
+    compiled.info.fc1000_softmax.output.show({ offset: 0, scale: 1, flipY: true })
 
     var table = h('table', h('tbody', 
         results.map(k => 

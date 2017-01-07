@@ -141,7 +141,7 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                     deps: { image: layer.name + '_residual' }
                 }, {
                     name: layer.name,
-                    type: 'BatchwiseNormalize',
+                    type: 'InstanceNormalize',
                     deps: {
                         image: inbound[0],
                         mean: layer.name + '_mean',
@@ -153,7 +153,7 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
             }else if(layer.config.mode == 0){
                 network.push({
                     name: layer.name,
-                    type: 'RunningBatchNormalization',
+                    type: 'BatchNormalize',
                     epsilon: layer.config.epsilon,
                     running_mean: W('running_mean:0'),
                     running_std: W('running_std:0'),
