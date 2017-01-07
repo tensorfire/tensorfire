@@ -77,6 +77,44 @@ function Sum(gl, layer, deps){
     })
 }
 
+function ZeroPadding2D(gl, layer, deps){
+    const SHADER = `
+        uniform Tensor image;
+        uniform ivec2 padding;
+
+        vec4 process(ivec4 pos) {
+            if(pos.x < padding.x || pos.y < padding.y){
+                return vec4(0, 0, 0, 0);
+            }else if(pos.x >= image.shape.x + padding.x 
+                || pos.y >= image.shape.x + padding.y){
+                return vec4(0, 0, 0, 0);
+            }else{
+                return readTensor(image, ivec4(pos.xy - padding.xy, pos.zw));    
+            }
+        }
+    `
+    if(layer.padding.length == 2){
+        var padding = [
+            layer.padding[0], layer.padding[0], 
+            layer.padding[1], layer.padding[1]
+        ];
+    }else if(layer.padding.length == 4){
+        var padding = layer.padding;
+    }else{
+        throw new Error('invalid padding length')
+    }
+    var output = new OutputTensor(gl, [
+        deps.image.shape[0] + padding[0] + padding[1],
+        deps.image.shape[1] + padding[2] + padding[3],
+        deps.image.shape[2],
+        deps.image.shape[3]])
+    return TensorProgram(SHADER, output, {
+        image: deps.image,
+        padding: layer.padding,
+        _activation: layer.activation
+    })
+}
+
 function Activation(gl, layer, deps){
     const SHADER = `
         uniform Tensor image;
@@ -92,6 +130,79 @@ function Activation(gl, layer, deps){
         _activation: layer.activation
     })
 }
+
+
+function unsqueeze (a, axis) {
+    var shape, stride
+
+    if (axis !== undefined && (!Number.isFinite(axis) || (axis % 1 !== axis))) {
+        throw new Error('axis of dimension to unsqueeze must be an integer')
+    }
+    axis = axis === undefined ? a.shape.length : axis
+
+    shape = a.shape.slice(0)
+    stride = a.stride.slice(0)
+    shape.splice(axis || 0, 0, 1)
+    stride.splice(axis || 0, 0, (stride[axis] || 1) * (shape[axis + 1] || 1))
+
+    return ndarray(a.data, shape, stride, a.offset)
+}
+
+function ChannelFullyConnected(gl, layer, deps){
+    const SHADER = `
+        uniform Tensor image;
+        uniform Tensor weights;
+        uniform Tensor bias;
+
+        const int imageTileCount = (#(image.shape).z - 1) / 4 + 1;
+        vec4 process(ivec4 pos) {
+            vec4 sum = readTensor(bias, 0, 0, pos.z, 0);
+
+            for(int f = 0; f < imageTileCount; f++){
+                vec4 inputPix = readTensor(image, 0, 0, f);
+
+                sum += inputPix.r * readTensor(weights, 0, 0, pos.z, 4 * f + 0)
+                     + inputPix.g * readTensor(weights, 0, 0, pos.z, 4 * f + 1)
+                     + inputPix.b * readTensor(weights, 0, 0, pos.z, 4 * f + 2)
+                     + inputPix.a * readTensor(weights, 0, 0, pos.z, 4 * f + 3);
+            }
+            return sum;
+        }
+    `
+
+    console.assert(deps.image.shape[0] == 1)
+    console.assert(deps.image.shape[1] == 1)
+    console.assert(deps.image.shape[3] == 1)
+    console.assert(deps.image.shape[2] == layer.weights.shape[0])
+
+    var bias = new Tensor(gl, unsqueeze(unsqueeze(layer.bias, 0), 0))
+
+
+    console.assert(bias.shape[0] == 1)
+    console.assert(bias.shape[1] == 1)
+    console.assert(bias.shape[2] == layer.weights.shape[1])
+        // [ 1, 1, layer.bias ])
+
+
+    var weights = new Tensor(gl, unsqueeze(unsqueeze(layer.weights.transpose(1, 0), 0), 0))
+        // [ 1, 1, layer.weights.shape[1], layer.weights.shape[0] ])
+
+    console.assert(weights.shape[0] == 1)
+    console.assert(weights.shape[1] == 1)
+    console.assert(weights.shape[2] == layer.weights.shape[1])
+    console.assert(weights.shape[3] == layer.weights.shape[0])
+
+    var output = new OutputTensor(gl, [1, 1, layer.weights.shape[1]])
+
+    return TensorProgram(SHADER, output, {
+        image: deps.image,
+        weights: weights,
+        bias: bias,
+        _activation: layer.activation
+    })
+}
+
+
 
 
 
@@ -337,6 +448,49 @@ function MaxPooling2D(gl, layer, deps){
 }
 
 
+
+function AveragePooling2D(gl, layer, deps){
+    const SHADER = `
+        uniform Tensor image;
+        
+        uniform ivec2 strides;
+        uniform ivec2 padding;
+
+        const ivec2 pool_size = #(_pool_size);
+
+        vec4 process(ivec4 pos){
+            vec4 value = vec4(0, 0, 0, 0);
+            for(int kx = 0; kx < pool_size.x; kx++){
+                int inputX = pos.x * strides.x + kx - padding.x;
+                if(inputX < 0 || inputX >= int(image.shape.x)) continue;
+                for(int ky = 0; ky < pool_size.y; ky++){
+                    int inputY = pos.y  * strides.y + ky - padding.y;
+                    if(inputY < 0 || inputY >= int(image.shape.y)) continue;
+                    value += readTensor(image, inputX, inputY, pos.z, pos.w);
+                }
+            }
+            return value / float(pool_size.x * pool_size.y);
+        }
+    `
+
+
+    var { inputPadding, outputShape } = calcOutputShape(deps.image.shape, 
+        [ layer.pool_size[0], layer.pool_size[1], -1, deps.image.shape[2]], 
+        layer.strides, layer.border_mode)
+
+    var outputTensor = new OutputTensor(gl, outputShape)
+    return TensorProgram(SHADER, outputTensor, {
+        image: deps.image,
+
+        padding: inputPadding,
+        _pool_size: layer.pool_size,
+        strides: layer.strides,
+
+        _activation: layer.activation
+    })
+}
+
+
 function ConcatChannel(gl, layer, deps){
     const SHADER = `
         uniform Tensor a;
@@ -376,11 +530,14 @@ function ConcatChannel(gl, layer, deps){
 
 const LAYER_TYPES = {
     InputLayer,
+    ChannelFullyConnected,
     Convolve2D,
     Sum,
     ComputeMean,
     MaxPooling2D,
     SquaredResidual,
+    ZeroPadding2D,
+    AveragePooling2D,
     BatchNormalize,
     Activation,
     ConcatChannel,

@@ -28,7 +28,7 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
             console.assert(layer.config.b_constraint == null)
             console.assert(layer.config.dim_ordering == 'tf')
 
-            console.assert(0 == ndops.norm1(W('b:0'))) // bias must be zero
+            console.assert(ndops.norm1(W('b:0')) < 1e-5) // bias must be zero
             network.push({
                 name: layer.name,
                 type: 'Convolve2D',
@@ -41,7 +41,7 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                 _keras: layer
             })
         }else if(layer.class_name == 'Deconvolution2D'){
-            console.assert(0 == ndops.norm1(W('b:0'))) // bias must be zero
+            console.assert(ndops.norm1(W('b:0')) < 1e-5) // bias must be zero
             console.assert(layer.config.dim_ordering == 'tf')
 
             network.push({
@@ -64,6 +64,37 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                 pool_size: layer.config.pool_size,
                 strides: layer.config.strides,
                 deps: { image: inbound[0] },
+                _keras: layer
+            })
+        }else if(layer.class_name == 'AveragePooling2D'){
+            console.assert(layer.config.dim_ordering == 'tf')
+            network.push({
+                name: layer.name,
+                type: 'AveragePooling2D',
+                border_mode: layer.config.border_mode,
+                pool_size: layer.config.pool_size,
+                strides: layer.config.strides,
+                deps: { image: inbound[0] },
+                _keras: layer
+            })
+        }else if(layer.class_name == 'ZeroPadding2D'){
+            network.push({
+                name: layer.name,
+                type: 'ZeroPadding2D',
+                deps: { image: inbound[0] },
+                padding: layer.config.padding,
+                _keras: layer
+            })
+        }else if(layer.class_name == 'Dense'){
+            // not really sure about this one,
+            // console.assert(ndops.norm1(W('b:0')) < 1e-5)
+
+            network.push({
+                name: layer.name,
+                type: 'ChannelFullyConnected',
+                deps: { image: inbound[0] },
+                bias: W('b:0'),
+                weights: W('W:0'),
                 _keras: layer
             })
         }else if(layer.class_name == 'Merge'){
@@ -148,7 +179,7 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                 deps: { },
                 _keras: layer
             })
-        }else if(layer.class_name == 'Dropout'){
+        }else if(layer.class_name == 'Dropout' || layer.class_name == 'Flatten'){
             network.push({
                 name: layer.name,
                 type: 'Identity',
@@ -163,7 +194,7 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                 _keras: layer
             })
         }else{
-            console.error(layer)
+            console.error(layer, keras_model_meta.filter(k => k.layer_name == layer.name))
         }
     })
 

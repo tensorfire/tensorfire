@@ -27,6 +27,7 @@ async function squeezenet(){
     var keras_model_meta = await loadJSON('models/squeeze_metadata.json');
     var buffer = await loadBuffer('models/squeeze_weights.buf');
 
+    console.log(keras_model, keras_model_meta, buffer)
     
     var image = (await loadArrayFromURL('data/cat-227x227x3')).transpose(1, 0, 2);
     ;(new Tensor(gl, image)).show({ offset: 0.5, scale: 1/256, flipY: true })

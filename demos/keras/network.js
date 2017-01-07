@@ -2,6 +2,7 @@ async function compile(gl, network, options){
     var info = {}
 
     console.time('compiling network')
+    var finished = 0;
     while(true){
         var pending = network
             .filter(k => !(k.name in info));
@@ -23,6 +24,8 @@ async function compile(gl, network, options){
 
             console.log(layer.name, layer, deps)
             info[layer.name] = LAYER_TYPES[layer.type](gl, layer, deps, options)
+            finished++;
+            if(options.progress) await options.progress(finished / network.length, layer);
         }
     }
     console.timeEnd('compiling network')
@@ -34,7 +37,6 @@ async function compile(gl, network, options){
 async function run(gl, compiled, options){
     var { network, info } = compiled;
 
-    console.time('running network')
     // reset status of all layers
     for(let layer of network){
         info[layer.name].done = false;
@@ -54,19 +56,15 @@ async function run(gl, compiled, options){
         for(let layer of ready) {
             info[layer.name].run(options)
             info[layer.name].done = true;
-
-            console.log(layer.name, info[layer.name].output.shape)
-            var size = info[layer.name].output.texSize;
-            if(size[0] * size[1] > 1000){
-                info[layer.name].output.show({ scale: 150/255, offset: 0.5, flipY: true })    
-                await new Promise(resolve => requestAnimationFrame(resolve))
-                // console.log(ndops.norm2(info[layer.name].output.read()))
-                // await new Promise(resolve => setTimeout(resolve, 1000))
+            if(options.layerPause){
+                var size = info[layer.name].output.texSize;
+                if(size[0] * size[1] > 1000){ 
+                    info[layer.name].output.show({ scale: 150/255, offset: 0.5, flipY: true });
+                    await new Promise(resolve => requestAnimationFrame(resolve))
+                }
             }
-            
         }
     }
-    console.timeEnd('running network')
 }
 
 async function destroy(gl, compiled){
