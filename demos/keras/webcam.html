@@ -1,0 +1,155 @@
+<body>
+<script src="../../dist/demo-util.js"></script>
+<script src="../../dist/tensor.js"></script>
+
+<style type="text/css">
+    body {
+        font-family: sans-serif;
+    }
+    #results {
+        display: inline-block;
+    }
+</style>
+<label><input type="checkbox" id="woot" onchange="woot()"> do the thing </label>
+
+<br>
+<video autoplay="true" id="videoElement" style="width: 300px"></video>
+
+<canvas id="canvas" width="227" height="227"></canvas>
+<canvas id="glCanvas" width="227" height="227"></canvas>
+
+<div id="results"></div>
+
+<script src="layers.js"></script>
+<script src="util.js"></script>
+<script src="network.js"></script>
+<script src="imagenet.js"></script>
+<script src="keras_import.js"></script>
+<script>
+var gl = KV.createGL(document.getElementById('glCanvas')),
+    OutputTensor = KV.OutputTensor,
+    Tensor = KV.Tensor,
+    InPlaceTensor = KV.InPlaceTensor,
+    TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
+gl.canvas.width = 227
+gl.canvas.height = 227
+
+var canvas = document.getElementById('canvas'),
+    ctx = canvas.getContext('2d');
+
+var img = new Image;
+img.src = '../toy/doge.jpg'
+img.onload = function(){
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+}
+
+var lastFrame;
+function woot() {
+    if(document.getElementById('woot').checked){
+        videoLoop()
+    }else{
+        cancelAnimationFrame(lastFrame)
+    }
+}
+
+async function videoLoop(){
+    await update();
+
+    lastFrame = requestAnimationFrame(videoLoop)
+}
+
+var video = document.getElementById('videoElement')
+
+async function squeezenet(){
+    var keras_model = await loadJSON('models/parkay.json');
+    var keras_model_meta = await loadJSON('models/parkay_metadata.json');
+    var buffer = await loadBuffer('models/parkay_weights.buf');
+
+    console.log(keras_model, keras_model_meta, buffer)
+    
+    // var image = (await loadArrayFromURL('data/cat-227x227x3')).transpose(1, 0, 2);
+    
+    // ;(new Tensor(gl, image)).show({ offset: 0.5, scale: 1/256, flipY: true })
+
+
+    var network = import_keras_network(keras_model, keras_model_meta, buffer)
+
+
+    var compiled = await compile(gl, network, { input_1: zeros([227, 227, 3]) })
+    C = compiled
+
+    // await destroy(gl, compiled)
+    await update()
+}
+
+
+var longTimeAverage = new Float32Array(1000)
+
+async function update(){
+    var compiled = C;
+    if(hasVideo){
+        var vwidth = canvas.height / video.videoHeight * video.videoWidth;
+        ctx.drawImage(video, -(vwidth - canvas.height)/2, 0, vwidth, canvas.height)    
+    }
+    
+    var im = ctx.getImageData(0, 0, 227, 227);
+    var dat = new Float32Array(im.data);
+    for(var i = 0; i < dat.length; i+= 4){
+        dat[i + 0] -= 104.006
+        dat[i + 1] -= 116.669
+        dat[i + 2] -= 122.679
+    }
+    var image = ndarray(dat, [ 227, 227, 4 ]).hi(null, null, 3)//.transpose(1, 0)
+
+    ;(new Tensor(gl, image)).show({ offset: 0.5, scale: 1/256, flipY: true })
+
+
+    var startTime = Date.now()
+        // console.time('running')
+    await run(gl, compiled, { input_1: image })
+
+    var data = compiled.info.loss.output.read().data
+    
+    var endTime = Date.now();
+
+    var freshness = 0.1;
+    for(var i = 0; i < 1000; i++){
+        longTimeAverage[i] = longTimeAverage[i] * (1 - freshness) + freshness * data[i]
+    }
+    var results = Array.from(longTimeAverage)
+        .map((k, i) => [imagenetClasses[i][1], k])
+        .sort((b, a) => a[1] - b[1])
+        .slice(0, 10);
+
+
+    // console.timeEnd('running')
+
+    compiled.info.loss.output.show({ offset: 0, scale: 1, flipY: true })
+
+    var table = h('table', h('tbody', 
+        results.map(k => 
+            h('tr', [
+                h('td', k[0]),
+                h('td', (k[1] * 100).toFixed(2) + '%' )
+            ])
+        )
+    ))
+
+    document.getElementById('results').innerHTML = (endTime - startTime) + 'ms '
+    document.getElementById('results').appendChild(table)
+
+}
+
+var hasVideo = false;
+
+navigator.getUserMedia({video: true}, function(stream){
+    
+    video.src = window.URL.createObjectURL(stream);
+    hasVideo = true;
+}, function(){
+    console.log('error')
+})
+
+squeezenet()
+
+</script>
