@@ -64,28 +64,20 @@ async function resnet(){
     document.getElementById('progress').style.display = 'none'
     await new Promise(resolve => requestAnimationFrame(resolve))
 
+    for(var i = 0; i < 5; i++){
+        console.time('running network')
+        await run(gl, compiled, { input_1: image, layerPause: false })
+        
+        var results = Array.from(compiled.info.fc1000_softmax.output.read().data)
+            .map((k, i) => [imagenetClasses[i][1], k])
+            .sort((b, a) => a[1] - b[1])
+            .slice(0, 10);
+
+        console.timeEnd('running network')
+
+        await new Promise(resolve => requestAnimationFrame(resolve))    
+    }
     
-    console.time('running network')
-    await run(gl, compiled, { input_1: image, layerPause: false })
-    
-    var results = Array.from(compiled.info.fc1000_softmax.output.read().data)
-        .map((k, i) => [imagenetClasses[i][1], k])
-        .sort((b, a) => a[1] - b[1])
-        .slice(0, 10);
-
-    console.timeEnd('running network')
-
-    await new Promise(resolve => requestAnimationFrame(resolve))
-
-    console.time('running network')
-    await run(gl, compiled, { input_1: image, layerPause: false })
-    
-    var results = Array.from(compiled.info.fc1000_softmax.output.read().data)
-        .map((k, i) => [imagenetClasses[i][1], k])
-        .sort((b, a) => a[1] - b[1])
-        .slice(0, 10);
-
-    console.timeEnd('running network')
 
     compiled.info.fc1000_softmax.output.show({ offset: 0, scale: 1, flipY: true })
 

@@ -39,3 +39,11 @@ async function loadImage(url){
     })
 }
 
+
+function h(type, children = []){
+    var el = document.createElement(type);
+    (Array.isArray(children) ? children : [ children ])
+        .forEach(k => el.appendChild(typeof k != 'object' ? 
+            document.createTextNode(k) : k));
+    return el
+}

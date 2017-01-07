@@ -11,6 +11,7 @@
 <script src="layers.js"></script>
 <script src="util.js"></script>
 <script src="network.js"></script>
+<script src="imagenet.js"></script>
 <script src="keras_import.js"></script>
 <script>
 var gl = KV.createGL(),
@@ -23,9 +24,9 @@ gl.canvas.height = 512
 
 
 async function squeezenet(){
-    var keras_model = await loadJSON('models/squeeze.json');
-    var keras_model_meta = await loadJSON('models/squeeze_metadata.json');
-    var buffer = await loadBuffer('models/squeeze_weights.buf');
+    var keras_model = await loadJSON('models/parkay.json');
+    var keras_model_meta = await loadJSON('models/parkay_metadata.json');
+    var buffer = await loadBuffer('models/parkay_weights.buf');
 
     console.log(keras_model, keras_model_meta, buffer)
     
@@ -38,7 +39,32 @@ async function squeezenet(){
 
     var compiled = await compile(gl, network, { input_1: image })
     C = compiled
+
+    for(var i = 0; i < 10; i++){
+
+    console.time('running')
     await run(gl, compiled, { input_1: image })
+
+    
+    var results = Array.from(compiled.info.loss.output.read().data)
+        .map((k, i) => [imagenetClasses[i][1], k])
+        .sort((b, a) => a[1] - b[1])
+        .slice(0, 10);
+
+    console.timeEnd('running')
+    
+    }
+
+    var table = h('table', h('tbody', 
+        results.map(k => 
+            h('tr', [
+                h('td', k[0]),
+                h('td', (k[1] * 100).toFixed(2) + '%' )
+            ])
+        )
+    ))
+
+    document.body.appendChild(table)
     // await destroy(gl, compiled)
 
 

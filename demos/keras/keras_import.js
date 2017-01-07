@@ -27,18 +27,32 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
             console.assert(layer.config.b_constraint == null)
             console.assert(layer.config.dim_ordering == 'tf')
 
-            console.assert(ndops.norm1(W('b:0')) < 1e-5) // bias must be zero
-            network.push({
-                name: layer.name,
-                type: 'Convolve2D',
-                subsample: layer.config.subsample,
-                border_mode: layer.config.border_mode,
-                kernel: W('W:0'),
-                deps: {
-                    image: inbound[0]
-                },
-                _keras: layer
-            })
+            if(ndops.norm1(W('b:0')) < 1e-5){
+                network.push({
+                    name: layer.name,
+                    type: 'Convolve2D',
+                    subsample: layer.config.subsample,
+                    border_mode: layer.config.border_mode,
+                    kernel: W('W:0'),
+                    deps: {
+                        image: inbound[0]
+                    },
+                    _keras: layer
+                })
+            }else{
+                network.push({
+                    name: layer.name,
+                    type: 'BiasConvolve2D',
+                    subsample: layer.config.subsample,
+                    border_mode: layer.config.border_mode,
+                    kernel: W('W:0'),
+                    bias: W('b:0'),
+                    deps: {
+                        image: inbound[0]
+                    },
+                    _keras: layer
+                })
+            }
         }else if(layer.class_name == 'Deconvolution2D'){
             console.assert(ndops.norm1(W('b:0')) < 1e-5) // bias must be zero
             console.assert(layer.config.dim_ordering == 'tf')

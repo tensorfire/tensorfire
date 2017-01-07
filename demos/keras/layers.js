@@ -526,6 +526,63 @@ function Convolve2D(gl, layer, deps){
     })
 }
 
+function BiasConvolve2D(gl, layer, deps){
+    const SHADER = `
+        uniform Tensor image;
+        uniform Tensor kernel;
+        uniform Tensor bias;
+
+        uniform ivec2 imagePadding;
+        uniform ivec2 imageSubsample;
+
+        const ivec2 kernelTileSize = #(kernel.shape).xy;
+        const int imageTileCount = (#(image.shape).z - 1) / 4 + 1;
+
+        vec4 process(ivec4 pos){
+            vec4 sum = readTensor(bias, 0, 0, pos.z);
+
+            for(int f = 0; f < imageTileCount; f++){
+                for(int kx = 0; kx < kernelTileSize.x; kx++){
+                    int inputX = pos.x * imageSubsample.x + kx - imagePadding.x;
+                    if(inputX < 0 || inputX >= int(image.shape.x)) continue;
+
+                    for(int ky = 0; ky < kernelTileSize.y; ky++){
+                        int inputY = pos.y  * imageSubsample.y + ky - imagePadding.y;
+                        if(inputY < 0 || inputY >= int(image.shape.y)) continue;
+
+                        vec4 inputPix = readTensor(image, inputX, inputY, f);
+
+                        sum += inputPix.r * readTensor(kernel, kx, ky, pos.z, 4 * f + 0)
+                             + inputPix.g * readTensor(kernel, kx, ky, pos.z, 4 * f + 1)
+                             + inputPix.b * readTensor(kernel, kx, ky, pos.z, 4 * f + 2)
+                             + inputPix.a * readTensor(kernel, kx, ky, pos.z, 4 * f + 3);
+                    }
+                }
+            }
+            return sum;
+        }
+    `
+    console.assert(layer.kernel.shape[2] == deps.image.shape[2])
+    console.assert(layer.bias.shape[0] == layer.kernel.shape[3])
+
+    var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2))
+    var biasTensor = new Tensor(gl, ndarray(layer.bias.data, [1, 1, layer.bias.size]));
+
+    var { inputPadding, outputShape } = calcOutputShape(deps.image.shape, 
+        [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.subsample, layer.border_mode)
+    var outputTensor = new OutputTensor(gl, outputShape)
+
+    return TensorProgram(SHADER, outputTensor, {
+        kernel: kernelTensor,
+        bias: biasTensor,
+        image: deps.image,
+
+        imagePadding: inputPadding,
+        imageSubsample: layer.subsample,
+        _activation: layer.activation
+    })
+}
+
 
 
 function MaxPooling2D(gl, layer, deps){
@@ -655,6 +712,7 @@ const LAYER_TYPES = {
     InputLayer,
     ChannelFullyConnected,
     Convolve2D,
+    BiasConvolve2D,
     Sum,
     ComputeMean,
     ExpSum,

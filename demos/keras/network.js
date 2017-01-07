@@ -58,10 +58,10 @@ async function run(gl, compiled, options){
             info[layer.name].done = true;
             if(options.layerPause){
                 var size = info[layer.name].output.texSize;
-                if(size[0] * size[1] > 1000){ 
+                // if(size[0] * size[1] > 1000){ 
                     info[layer.name].output.show({ scale: 150/255, offset: 0.5, flipY: true });
                     await new Promise(resolve => requestAnimationFrame(resolve))
-                }
+                // }
             }
 
             // info[layer.name].output.show({ scale: 150/255, offset: 0.5, flipY: true });
