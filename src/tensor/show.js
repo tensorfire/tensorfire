@@ -10,15 +10,17 @@ const SHOW_TEXTURE_VERTEX = `
 `
 
 const SHOW_TEXTURE_FRAGMENT = `
+    precision mediump float;
+
     uniform sampler2D tex;
-    uniform lowp float scale;
-    uniform lowp float offset;
+    uniform float scale;
+    uniform float offset;
     uniform bool transpose;
     uniform bool flipX;
     uniform bool flipY;
     uniform int channels;
 
-    varying mediump vec2 pos;
+    varying vec2 pos;
 
     vec4 colormap(float x) {
         float r = clamp(8.0 / 3.0 * x, 0.0, 1.0);
@@ -28,7 +30,7 @@ const SHOW_TEXTURE_FRAGMENT = `
     }
 
     void main() {
-        mediump vec2 p = pos;
+        vec2 p = pos;
         if(flipX) p.x = 1.0 - p.x;
         if(flipY) p.y = 1.0 - p.y;
         if(transpose) p = p.yx;
