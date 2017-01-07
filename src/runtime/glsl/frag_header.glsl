@@ -22,6 +22,7 @@ vec4 readTensor(Tensor t, int x, int y, int z, int w){ return readTensor(t, ivec
 vec4 readTensor(Tensor t, int x, int y, int z){ return readTensor(t, ivec4(x, y, z, 0)); }
 vec4 readTensor(Tensor t, int x, int y){ return readTensor(t, ivec4(x, y, 0, 0)); }
 vec4 readTensor(Tensor t, int x){ return readTensor(t, ivec4(x, 0, 0, 0)); }
+vec4 readTensor(Tensor t){ return readTensor(t, ivec4(0, 0, 0, 0)); }
 
 uniform ivec4 _outputShape;
 uniform int _outputCols;

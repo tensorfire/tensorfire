@@ -56,6 +56,79 @@ function ComputeMean(gl, layer, deps){
     })
 }
 
+// function SoftmaxHelper(gl, layer, deps){
+//     const SHADER = `
+//         uniform Tensor image;
+//         const channels = (#(image.shape).z - 1) / 4 + 1;
+
+//         vec4 process(ivec4 pos) {
+//             float maxVal = vec4(-10000);
+//             float sumVal = vec4(0);
+
+//             for(int i = 0; i < channels; i++){
+//                 vec4 pix = readTensor(image, 0, 0, i);
+//                 maxVal = max(maxVal, pix);
+//                 sumVal += pix;
+//             }
+
+//             return vec4(
+//                 dot(sumVal, vec4(1)) / float(image.shape.z),
+//                 max(max(pix.r, pix.g), max(pix.b, pix.a)),
+//                 0, 0);
+//         }
+//     `
+//     var softmaxHelper = new OutputTensor(gl, [1])
+//     return TensorProgram(SHADER, softmaxHelper, {
+//         image: deps.image
+//     })
+// }
+
+
+function ExpSum(gl, layer, deps){
+    const SHADER = `
+        uniform Tensor image;
+        const int channels = (#(image.shape).z - 1) / 4 + 1;
+
+        vec4 process(ivec4 pos) {
+            vec4 sumVal = vec4(0);
+            for(int i = 0; i < channels; i++){
+                sumVal += exp(readTensor(image, 0, 0, i));
+            }
+            return vec4(dot(sumVal, vec4(1)));
+        }
+    `
+    console.assert(deps.image.shape[0] == 1)
+    console.assert(deps.image.shape[1] == 1)
+    console.assert(deps.image.shape[3] == 1)
+    var softmaxHelper = new OutputTensor(gl, [1, 1, 4])
+    return TensorProgram(SHADER, softmaxHelper, {
+        image: deps.image
+    })
+}
+
+
+function Softmax(gl, layer, deps){
+    const SHADER = `
+        uniform Tensor image;
+        uniform Tensor helper;
+
+        vec4 process(ivec4 pos) {
+            return exp(readTensor(image, pos)) / readTensor(helper, 0);
+        }
+    `
+    console.assert(deps.helper.shape[0] == 1)
+    console.assert(deps.helper.shape[1] == 1)
+    console.assert(deps.helper.shape[2] == 4)
+    console.assert(deps.helper.shape[3] == 1)
+
+    var output = new OutputTensor(gl, deps.image.shape)
+
+    return TensorProgram(SHADER, output, {
+        image: deps.image,
+        helper: deps.helper,
+    })
+}
+
 
 function Sum(gl, layer, deps){
     const SHADER = `
@@ -534,6 +607,8 @@ const LAYER_TYPES = {
     Convolve2D,
     Sum,
     ComputeMean,
+    ExpSum,
+    Softmax,
     MaxPooling2D,
     SquaredResidual,
     ZeroPadding2D,

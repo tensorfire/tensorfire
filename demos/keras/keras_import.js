@@ -11,7 +11,7 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
 
     // console.log(ndshow(getWeight("batchnormalization_14_beta:0")))
 
-    keras_model.config.layers.forEach(layer => {
+    for(let layer of keras_model.config.layers){
         var inbound = []
 
         function W(name){ return getWeight(layer.name + '_' + name) }
@@ -21,7 +21,6 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                 inbound.push(node[0]));
 
         if(layer.class_name == 'Convolution2D'){
-            console.assert(layer.config.activation == "linear")
             console.assert(layer.config.W_regularizer == null)
             console.assert(layer.config.b_regularizer == null)
             console.assert(layer.config.W_constraint == null)
@@ -88,7 +87,6 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
         }else if(layer.class_name == 'Dense'){
             // not really sure about this one,
             // console.assert(ndops.norm1(W('b:0')) < 1e-5)
-
             network.push({
                 name: layer.name,
                 type: 'ChannelFullyConnected',
@@ -154,24 +152,15 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                 gamma: W('gamma:0')
             });
         }else if(layer.class_name == 'Activation'){
-            if(layer.config.activation == 'softmax'){
-                network.push({
-                    name: layer.name,
-                    type: 'Identity',
-                    deps: { image: inbound[0] },
-                    _keras: layer
-                })
-            }else{
-                network.push({
-                    name: layer.name,
-                    type: 'Activation',
-                    activation: layer.config.activation,
-                    deps: {
-                        image: inbound[0],
-                    },
-                    _keras: layer
-                })
-            }
+            network.push({
+                name: layer.name,
+                type: 'Activation',
+                activation: layer.config.activation,
+                deps: {
+                    image: inbound[0],
+                },
+                _keras: layer
+            })
         }else if(layer.class_name == 'InputLayer'){
             network.push({
                 name: layer.name,
@@ -196,15 +185,45 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
         }else{
             console.error(layer, keras_model_meta.filter(k => k.layer_name == layer.name))
         }
-    })
+    }
 
-    function rename(oldName, newName){
+    function rename_deps(oldName, newName){
+        // console.log('renaming', oldName, newName)
         for(let layer of network){
-            if(layer.name == oldName) layer.name = newName;
             for(let dep in layer.deps){
                 if(layer.deps[dep] == oldName) layer.deps[dep] = newName;
             }
         }
+    }
+    // expand inline activations
+    for(let layer of network){
+        if(!layer._keras) continue;
+        var activation = layer._keras.config.activation;
+        if(!activation || activation == 'linear') continue;
+        // delete layer._keras.config.activation;
+
+        rename_deps(layer.name, layer.name + '_' + activation);
+        network.splice(network.indexOf(layer) + 1, 0, {
+            type: 'Activation',
+            name: layer.name + '_' + activation,
+            deps: { image: layer.name },
+            activation: activation
+        });
+    }
+
+    // expand softmax activations
+    for(let layer of network){
+        if(layer.type != 'Activation') continue;
+        if(layer.activation != 'softmax') continue;
+        network.splice(network.indexOf(layer), 1, {
+            type: 'ExpSum',
+            name: layer.name + '_expsum',
+            deps: { image: layer.deps.image },
+        }, {
+            type: 'Softmax',
+            name: layer.name,
+            deps: { image: layer.deps.image, helper: layer.name + '_expsum' },
+        });
     }
 
     // elide activations
@@ -220,16 +239,16 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
         network.splice(network.indexOf(layer), 1);
         // rename the input and set the activation
         var new_name = input.name + '+' + layer.name;
-        input.name = layer.name;
+        rename_deps(layer.name, new_name)
+        input.name = new_name;
         input.activation = layer.activation;
-        rename(input.name, new_name)
     }
 
     // remove dropout and stuff
     for(let layer of network){
         if(layer.type != 'Identity') continue;
         network.splice(network.indexOf(layer), 1);
-        rename(layer.name, layer.deps.image);
+        rename_deps(layer.name, layer.deps.image);
     }
 
     return network
