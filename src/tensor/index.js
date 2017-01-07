@@ -61,28 +61,37 @@ export class Tensor {
         }
 
         if(!gl.NO_FLOAT_TEXTURES){
-            if(!gl.getExtension('OES_texture_float') && !gl.FORCE_FLOAT_TEXTURES){
+            if(!gl.getExtension('OES_texture_float')){
                 console.info("This browser does not seem to support OES_texture_float. "
                     + "Using float codec workaround from now on.")
                 gl.NO_FLOAT_TEXTURES = true;
-            }
-        }
-
-        if(this instanceof OutputTensor && !gl.NO_FLOAT_TEXTURES){
-            if(!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT){
+            }else if(!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT){
                 if(!checkRenderFloat(gl)){
                     console.info("This browser supports OES_texture_float, " + 
                         "but can not render to floating textures. " + 
-                        "Using float codec workaround for output tensors from now on.")
+                        "Using float codec workaround from now on.")
                     gl.NO_RENDER_FLOAT = true;
                 }
                 gl.RENDER_FLOAT_TESTED = true;
             }
         }
+
+        // if(this instanceof OutputTensor && !gl.NO_FLOAT_TEXTURES){
+        //     if(!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT){
+        //         if(!checkRenderFloat(gl)){
+        //             console.info("This browser supports OES_texture_float, " + 
+        //                 "but can not render to floating textures. " + 
+        //                 "Using float codec workaround for output tensors from now on.")
+        //             gl.NO_RENDER_FLOAT = true;
+        //         }
+        //         gl.RENDER_FLOAT_TESTED = true;
+        //     }
+        // }
         
         if(this.type === 'float32' && (
             gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat
-            || (gl.NO_RENDER_FLOAT && (this instanceof OutputTensor))
+            || gl.NO_RENDER_FLOAT // we always use nofloat to avoid heterogeneous nofloat situations
+            // || (gl.NO_RENDER_FLOAT && (this instanceof OutputTensor)) 
         )){
             this.nofloat = true;
             var width = shape[0] * 4;    
