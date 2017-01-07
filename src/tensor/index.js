@@ -76,6 +76,11 @@ export class Tensor {
             }
         }
 
+        // we could get away with only using nofloat for output tensors
+        // on systems like mobile safari, but this leaves open the risk
+        // of having heterogeneous nofloat, so we'll be safe and just
+        // nofloat everything on these systems.
+
         // if(this instanceof OutputTensor && !gl.NO_FLOAT_TEXTURES){
         //     if(!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT){
         //         if(!checkRenderFloat(gl)){

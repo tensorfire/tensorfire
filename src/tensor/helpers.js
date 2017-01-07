@@ -12,6 +12,11 @@ const CHECK_FLOAT_FRAGMENT = `
     }
 `;
 
+// some browsers (e.g. mobile safari) are capable of initializing floating 
+// point textures but unable to write to them. The only way of finding this
+// out is by trying to render to a floating point texture and noticing
+// the invalid framebuffer status.
+
 export function checkRenderFloat(gl){
     var tex = makeTexture(gl)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 10, 10, 0, gl.RGBA, gl.FLOAT, null);
