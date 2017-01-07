@@ -8,6 +8,8 @@
     }
 </style>
 <h1>ResNet-50</h1>
+<!-- <script src="weblas.js"></script>
+<script src="keras.js"></script> -->
 
 <script src="layers.js"></script>
 <script src="util.js"></script>
@@ -59,17 +61,13 @@ async function resnet(){
     })
     C = compiled
 
+    document.getElementById('progress').style.display = 'none'
     await new Promise(resolve => requestAnimationFrame(resolve))
 
     
     console.time('running network')
     await run(gl, compiled, { input_1: image, layerPause: false })
-    compiled.info.fc1000.output.show({ offset: 0.5, scale: 1, flipY: true })
-
     
-
-
-
     var results = Array.from(compiled.info.fc1000_softmax.output.read().data)
         .map((k, i) => [imagenetClasses[i][1], k])
         .sort((b, a) => a[1] - b[1])
@@ -77,11 +75,25 @@ async function resnet(){
 
     console.timeEnd('running network')
 
+    await new Promise(resolve => requestAnimationFrame(resolve))
+
+    console.time('running network')
+    await run(gl, compiled, { input_1: image, layerPause: false })
+    
+    var results = Array.from(compiled.info.fc1000_softmax.output.read().data)
+        .map((k, i) => [imagenetClasses[i][1], k])
+        .sort((b, a) => a[1] - b[1])
+        .slice(0, 10);
+
+    console.timeEnd('running network')
+
+    compiled.info.fc1000.output.show({ offset: 0.5, scale: 1, flipY: true })
+
     var table = h('table', h('tbody', 
         results.map(k => 
             h('tr', [
                 h('td', k[0]),
-                h('td', k[1])
+                h('td', (k[1] * 100).toFixed(2) + '%' )
             ])
         )
     ))
@@ -93,5 +105,53 @@ async function resnet(){
 }
 
 resnet()
+
+
+// function isClose(a, b){
+//     var delta = 0;
+//     for(var i = 0; i < a.data.length; i++){
+//         delta += Math.abs(a.data[i] - b.data[i])
+//     }
+//     return delta
+// }
+
+// function layerClose(name){
+//     a = model.modelLayersMap.get(name).result.tensor
+//     b = C.info[name].output.read()
+//     return isClose(a, b)
+// }
+
+// layerClose('zeropadding2d_1')
+
+// async function wat(){
+//     var image = (await loadArrayFromURL('data/cat-227x227x3')).transpose(1, 0, 2).hi(224, 224, null);
+
+//     model = new KerasJS.Model({
+//         filepaths: {
+//             model: 'models/resnet50.json',
+//             weights: 'models/resnet50_weights.buf',
+//             metadata: 'models/resnet50_metadata.json'
+//         },
+//         gpu: true,
+//         // gpu: false,
+//         layerCallPauses: true
+//     })
+
+//     await model.ready()
+
+//     var blah = zeros([224, 224, 3])
+//     ndops.assign(blah, image);
+
+//     console.time('start')
+//     var output = await model.predict({
+//         input_1: new Float32Array(blah.data)
+//     })
+//     console.time('start')
+
+//     console.log(output)
+// }
+
+
+// wat()
 
 </script>

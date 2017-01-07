@@ -63,6 +63,10 @@ async function run(gl, compiled, options){
                     await new Promise(resolve => requestAnimationFrame(resolve))
                 }
             }
+
+            // info[layer.name].output.show({ scale: 150/255, offset: 0.5, flipY: true });
+            // await new Promise(resolve => requestAnimationFrame(resolve))
+            // await new Promise(resolve => setTimeout(resolve, 1000))
         }
     }
 }

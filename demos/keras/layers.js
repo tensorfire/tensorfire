@@ -356,7 +356,7 @@ function SquaredResidual(gl, layer, deps){
     })
 }
 
-function BatchNormalize(gl, layer, deps){
+function BatchwiseNormalize(gl, layer, deps){
     const SHADER = `
         uniform Tensor image;
         uniform Tensor mean;
@@ -364,7 +364,7 @@ function BatchNormalize(gl, layer, deps){
         uniform Tensor beta;
         uniform Tensor gamma;
 
-        const float eps = 0.01;
+        const float eps = 0.00001;
 
         vec4 process(ivec4 pos) {
             vec4 tileMean = readTensor(mean, 0, 0, pos.z);
@@ -387,6 +387,56 @@ function BatchNormalize(gl, layer, deps){
         mean: deps.mean, 
         variance: deps.variance, 
 
+        beta: betaTensor,
+        gamma: gammaTensor,
+        _activation: layer.activation
+    })
+}
+
+
+function RunningBatchNormalization(gl, layer, deps){
+    const SHADER = `
+        uniform Tensor image;
+        uniform Tensor beta;
+        uniform Tensor gamma;
+
+        vec4 process(ivec4 pos) {
+            return (readTensor(image, pos.xyz) + 
+                readTensor(beta, 0, 0, pos.z)) * 
+                readTensor(gamma, 0, 0, pos.z);
+        }
+    `
+
+
+    console.assert(layer.beta.size == layer.gamma.size)
+    console.assert(layer.beta.size == deps.image.shape[2])
+
+    var beta = new Float32Array(layer.beta.size),
+        gamma = new Float32Array(layer.gamma.size);
+
+    for(var i = 0; i < layer.beta.size; i++){
+        var std_gamma = Math.sqrt(layer.running_std.get(i) + layer.epsilon) / layer.gamma.get(i);
+        gamma[i] = 1 / std_gamma
+        beta[i] = -layer.running_mean.get(i) + layer.beta.get(i) * std_gamma;
+    }
+
+    // var gamma = 1 / (tileStd * tileGamma);
+    // var beta = -tileMean + tileBeta * (tileStd * tileGamma)
+
+    // (pix - tileMean + tileBeta * (tileStd * tileGamma)) / tileStd * tileGamma
+
+    // (x - mean) / (std / gamma) + beta
+    // (x - mean + beta * (std / gamma)) / (std / gamma)
+    // (x + BETA) * GAMMA
+    // BETA = - mean + beta * (std / gamma)
+    // GAMMA = 1 / (std / gamma)
+
+    var betaTensor = new Tensor(gl, ndarray(beta, [1, 1, layer.beta.size]));
+    var gammaTensor = new Tensor(gl, ndarray(gamma, [1, 1, layer.gamma.size]));
+    var normalizedTensor = new OutputTensor(gl, deps.image.shape)
+
+    return TensorProgram(SHADER, normalizedTensor, { 
+        image: deps.image, 
         beta: betaTensor,
         gamma: gammaTensor,
         _activation: layer.activation
@@ -613,7 +663,8 @@ const LAYER_TYPES = {
     SquaredResidual,
     ZeroPadding2D,
     AveragePooling2D,
-    BatchNormalize,
+    BatchwiseNormalize,
+    RunningBatchNormalization,
     Activation,
     ConcatChannel,
     Deconvolve2D

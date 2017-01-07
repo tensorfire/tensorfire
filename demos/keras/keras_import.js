@@ -121,36 +121,50 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
                 throw new Error("unsupported merge mode")
             }
         }else if(layer.class_name == 'BatchNormalization'){
-            network.push({
-                name: layer.name + '_mean',
-                type: 'ComputeMean',
-                deps: {
-                    image: inbound[0]
-                }
-            }, {
-                name: layer.name + '_residual',
-                type: 'SquaredResidual',
-                deps: {
-                    image: inbound[0],
-                    mean: layer.name + '_mean', 
-                }
-            }, {
-                name: layer.name + '_variance',
-                type: 'ComputeMean',
-                deps: {
-                    image: layer.name + '_residual',    
-                }
-            }, {
-                name: layer.name,
-                type: 'BatchNormalize',
-                deps: {
-                    image: inbound[0],
-                    mean: layer.name + '_mean',
-                    variance: layer.name + '_variance',
-                },
-                beta: W('beta:0'),
-                gamma: W('gamma:0')
-            });
+            console.assert(layer.config.axis == 3)
+            if(layer.config.mode == 2){                
+              // feature-wise normalization, using per-batch statistics
+                network.push({
+                    name: layer.name + '_mean',
+                    type: 'ComputeMean',
+                    deps: { image: inbound[0] }
+                }, {
+                    name: layer.name + '_residual',
+                    type: 'SquaredResidual',
+                    deps: {
+                        image: inbound[0],
+                        mean: layer.name + '_mean', 
+                    }
+                }, {
+                    name: layer.name + '_variance',
+                    type: 'ComputeMean',
+                    deps: { image: layer.name + '_residual' }
+                }, {
+                    name: layer.name,
+                    type: 'BatchwiseNormalize',
+                    deps: {
+                        image: inbound[0],
+                        mean: layer.name + '_mean',
+                        variance: layer.name + '_variance',
+                    },
+                    beta: W('beta:0'),
+                    gamma: W('gamma:0')
+                });    
+            }else if(layer.config.mode == 0){
+                network.push({
+                    name: layer.name,
+                    type: 'RunningBatchNormalization',
+                    epsilon: layer.config.epsilon,
+                    running_mean: W('running_mean:0'),
+                    running_std: W('running_std:0'),
+                    beta: W('beta:0'),
+                    gamma: W('gamma:0'),
+                    deps: { image: inbound[0], }
+                })
+            }else{
+                throw new Error('unsupported batch normalization mode')
+            }
+            
         }else if(layer.class_name == 'Activation'){
             network.push({
                 name: layer.name,
@@ -197,6 +211,7 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
     }
     // expand inline activations
     for(let layer of network){
+        if(layer.type == 'Activation') continue;
         if(!layer._keras) continue;
         var activation = layer._keras.config.activation;
         if(!activation || activation == 'linear') continue;
