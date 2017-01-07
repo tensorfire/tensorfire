@@ -13,7 +13,7 @@ vec4 readTensorX(Tensor t, ivec4 pos){
     return readTensor(t, pos);
 }
 
-vec4 readTensorChannel(Tensor t, ivec4 pos, int ch){
+float readTensorChannel(Tensor t, ivec4 pos, int ch){
 	if(ch == 0) return readTensor(t, pos).r;
 	if(ch == 1) return readTensor(t, pos).g;
 	if(ch == 2) return readTensor(t, pos).b;
