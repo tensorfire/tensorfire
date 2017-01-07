@@ -42,18 +42,19 @@ async function squeezenet(){
 
     for(var i = 0; i < 10; i++){
 
-    console.time('running')
-    await run(gl, compiled, { input_1: image })
+        console.time('running')
+        await run(gl, compiled, { input_1: image })
 
-    
-    var results = Array.from(compiled.info.loss.output.read().data)
-        .map((k, i) => [imagenetClasses[i][1], k])
-        .sort((b, a) => a[1] - b[1])
-        .slice(0, 10);
+        
+        var results = Array.from(compiled.info.loss.output.read().data)
+            .map((k, i) => [imagenetClasses[i][1], k])
+            .sort((b, a) => a[1] - b[1])
+            .slice(0, 10);
 
-    console.timeEnd('running')
-    
+        console.timeEnd('running')
+
     }
+    compiled.info.loss.output.show({ offset: 0, scale: 1, flipY: true })
 
     var table = h('table', h('tbody', 
         results.map(k => 
