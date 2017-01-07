@@ -22,12 +22,12 @@
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
         <span class="quiet">Statements</span>
-        <span class='fraction'>14/14</span>
+        <span class='fraction'>19/19</span>
       </div>
       <div class='fl pad1y space-right2'>
-        <span class="strong">80% </span>
+        <span class="strong">73.33% </span>
         <span class="quiet">Branches</span>
-        <span class='fraction'>4/5</span>
+        <span class='fraction'>11/15</span>
       </div>
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
@@ -37,7 +37,7 @@
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
         <span class="quiet">Lines</span>
-        <span class='fraction'>14/14</span>
+        <span class='fraction'>19/19</span>
       </div>
     </div>
   </div>
@@ -80,7 +80,43 @@
 35
 36
 37
-38</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -92,6 +128,37 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -108,6 +175,11 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
@@ -129,11 +201,42 @@ const SHOW_TEXTURE_VERTEX = `
 `
 &nbsp;
 const SHOW_TEXTURE_FRAGMENT = `
+    precision mediump float;
+&nbsp;
     uniform sampler2D tex;
-    uniform lowp float scale;
-    varying mediump vec2 pos;
+    uniform float scale;
+    uniform float offset;
+    uniform bool transpose;
+    uniform bool flipX;
+    uniform bool flipY;
+    uniform int channels;
+&nbsp;
+    varying vec2 pos;
+&nbsp;
+    vec4 colormap(float x) {
+        float r = clamp(8.0 / 3.0 * x, 0.0, 1.0);
+        float g = clamp(8.0 / 3.0 * x - 1.0, 0.0, 1.0);
+        float b = clamp(4.0 * x - 3.0, 0.0, 1.0);
+        return vec4(r, g, b, 1.0);
+    }
+&nbsp;
     void main() {
-        gl_FragColor = vec4(scale * texture2D(tex, pos).rgb, 1);
+        vec2 p = pos;
+        if(flipX) p.x = 1.0 - p.x;
+        if(flipY) p.y = 1.0 - p.y;
+        if(transpose) p = p.yx;
+        if(channels == 4){
+            gl_FragColor = vec4(vec4(offset, offset, offset, offset) 
+                + scale * texture2D(tex, p));
+        }else if(channels == 3){
+            gl_FragColor = vec4(vec3(offset, offset, offset) 
+                + scale * texture2D(tex, p).rgb, 1);
+        }else if(channels == 2){
+            gl_FragColor = vec4(vec2(offset, offset) 
+                + scale * texture2D(tex, p).rg, 0, 1);
+        }else if(channels == 1){
+            gl_FragColor = colormap(offset + scale * texture2D(tex, p).r);
+        }
     }
 `
 &nbsp;
@@ -149,6 +252,11 @@ export default function showTexture(gl, tex, opt = <span class="branch-0 cbranch
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.uniform1f(gl.getUniformLocation(gl._showProgram, 'scale'), opt.scale || 1)
+    gl.uniform1f(gl.getUniformLocation(gl._showProgram, 'offset'), opt.offset || 0)
+    gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'transpose'), opt.transpose ? <span class="branch-0 cbranch-no" title="branch not covered" >1 </span>: 0)
+    gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'flipX'), opt.flipX ? <span class="branch-0 cbranch-no" title="branch not covered" >1 </span>: 0)
+    gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'flipY'), opt.flipY ? <span class="branch-0 cbranch-no" title="branch not covered" >1 </span>: 0)
+    gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'channels'), opt.channels || 3);
 &nbsp;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
@@ -160,7 +268,7 @@ export default function showTexture(gl, tex, opt = <span class="branch-0 cbranch
 </div><!-- /wrapper -->
 <div class='footer quiet pad2 space-top1 center small'>
   Code coverage
-  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Thu Jan 05 2017 02:08:56 GMT-0500 (EST)
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Sat Jan 07 2017 02:29:12 GMT-0500 (EST)
 </div>
 </div>
 <script src="../../prettify.js"></script>
