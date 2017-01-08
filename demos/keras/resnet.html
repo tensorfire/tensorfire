@@ -41,8 +41,12 @@ async function resnet(){
     var keras_model = await loadJSON('models/resnet50.json');
     var keras_model_meta = await loadJSON('models/resnet50_metadata.json');
     
-    // var buffer = await loadBuffer('https://transcranial.github.io/keras-js-demos-data/resnet50/resnet50_weights.buf');
-    var buffer = await loadBuffer('models/resnet50_weights.buf');
+    try {
+        var buffer = await loadBuffer('models/resnet50_weights.buf');    
+    } catch (err) {
+        var buffer = await loadBuffer('https://transcranial.github.io/keras-js-demos-data/resnet50/resnet50_weights.buf');
+    }
+    
 
     console.log(keras_model, keras_model_meta, buffer)
     
