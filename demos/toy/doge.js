@@ -56,12 +56,12 @@ loadImage('./doge.jpg', function(im){
     // doge = new Tensor(gl, ndoge.transpose(1, 0, 2))
 
     // we can load directly from imagedata
-    doge = new Tensor(gl, im)
+    global.doge = new Tensor(gl, im)
 
-    multidoge = new OutputTensor(gl, [im.width, im.height, 4 * 4])
+    global.multidoge = new OutputTensor(gl, [im.width, im.height, 4 * 4])
     ColorizeQuad(multidoge, { image: doge })
 
-    hyperdoge = new OutputTensor(gl, [im.width, im.height, 4 * 4, 2])
+    global.hyperdoge = new OutputTensor(gl, [im.width, im.height, 4 * 4, 2])
 
     ColorMirror(hyperdoge, { image: multidoge })
     hyperdoge.show()
