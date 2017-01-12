@@ -137,7 +137,7 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
         }else if(layer.class_name == 'BatchNormalization'){
             console.assert(layer.config.axis == 3)
             if(layer.config.mode == 2){                
-              // feature-wise normalization, using per-batch statistics
+                // feature-wise normalization, using per-batch statistics
                 network.push({
                     name: layer.name + '_mean',
                     type: 'ComputeMean',
