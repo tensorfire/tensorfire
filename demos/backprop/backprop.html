@@ -136,6 +136,8 @@ l1_error = new OutputTensor(gl, [4, 4])
 l1_delta = new OutputTensor(gl, [4, 4])
 
 
+
+
 for(var i = 0; i < 10000; i++){
 
     ForwardLayer(l1, { inputs: X, weights: syn0 })
@@ -153,6 +155,7 @@ for(var i = 0; i < 10000; i++){
     UpdateWeights(syn0, { weights: syn0, outputs: X, delta: l1_delta, alpha: 10 })
 
 }
+
 
 console.log(syn1.print2())
 console.log(syn0.print2())

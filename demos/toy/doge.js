@@ -5,6 +5,8 @@ var gl = KV.createGL(),
     TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
 
 
+global.gl = gl;
+
 const ColorizeQuad = TP`
     uniform Tensor image;
 
@@ -17,6 +19,15 @@ const ColorizeQuad = TP`
             * vec4(pos.z==0?2:1, pos.z==1?2:1, pos.z==2?2:1, 1);
     }
 `
+
+const RawMirror = TP`
+    uniform Tensor image;
+
+    vec4 process(ivec4 pos) {
+        return vec4(vec2(pos.xy) / 256.0, 0, 1);
+        // return texture2D(image.tex, vec2(pos.xy) / vec2(_outputShape.xy));
+    }
+`;
 
 
 const ColorMirror = TP`
@@ -51,12 +62,15 @@ function loadImage(url, cb){
 
 loadImage('./doge.jpg', function(im){
     // we can convert the image data into an ndarray
-    // var ndoge = ndarray(new Float32Array(im.data), [im.width, im.height, 4]);
-    // ndops.divseq(ndoge, 255)
-    // doge = new Tensor(gl, ndoge.transpose(1, 0, 2))
+    var ndoge = ndarray(new Float32Array(im.data), [im.width, im.height, 4]);
+    ndops.divseq(ndoge, 255)
+    global.doge = new Tensor(gl, ndoge.transpose(1, 0, 2))
+
+    global.mirror = new OutputTensor(gl, [im.width, im.height, 4]);
+    RawMirror(mirror, { image: doge })
 
     // we can load directly from imagedata
-    global.doge = new Tensor(gl, im)
+    // global.doge = new Tensor(gl, im)
 
     global.multidoge = new OutputTensor(gl, [im.width, im.height, 4 * 4])
     ColorizeQuad(multidoge, { image: doge })
@@ -64,6 +78,6 @@ loadImage('./doge.jpg', function(im){
     global.hyperdoge = new OutputTensor(gl, [im.width, im.height, 4 * 4, 2])
 
     ColorMirror(hyperdoge, { image: multidoge })
-    hyperdoge.show()
+    mirror.show()
 
 })
