@@ -66,8 +66,8 @@ loadImage('./doge.jpg', function(im){
     ndops.divseq(ndoge, 255)
     global.doge = new Tensor(gl, ndoge.transpose(1, 0, 2))
 
-    global.mirror = new OutputTensor(gl, [im.width, im.height, 4]);
-    RawMirror(mirror, { image: doge })
+    // global.mirror = new OutputTensor(gl, [im.width, im.height, 4]);
+    // RawMirror(mirror, { image: doge })
 
     // we can load directly from imagedata
     // global.doge = new Tensor(gl, im)
@@ -78,6 +78,6 @@ loadImage('./doge.jpg', function(im){
     global.hyperdoge = new OutputTensor(gl, [im.width, im.height, 4 * 4, 2])
 
     ColorMirror(hyperdoge, { image: multidoge })
-    mirror.show()
+    hyperdoge.show()
 
 })
