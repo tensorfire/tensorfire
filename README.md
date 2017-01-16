@@ -77,92 +77,92 @@ Formats:
 
 Pseudocode
 
-function Compile(shader, output, params){
-	code = ''
-	code += lookupTensorWriteGLSL(output.encoding)
-	for name in params {
-		if param is Tensor {
-			code += lookupTensorReadGLSL(param)
+	function Compile(shader, output, params){
+		code = ''
+		code += lookupTensorWriteGLSL(output.encoding)
+		for name in params {
+			if param is Tensor {
+				code += lookupTensorReadGLSL(param)
+			}
 		}
+		cacheProgram(compileAndLink(code))
 	}
-	cacheProgram(compileAndLink(code))
-}
 
-function Run(shader, output, params){
-	Compile(shader, output, params)
-	for name in params {
-		if param is Tensor {
-			for uniform in tensor {
-				setUniform(lookupUniform(uniform), tensor[uniform])
+	function Run(shader, output, params){
+		Compile(shader, output, params)
+		for name in params {
+			if param is Tensor {
+				for uniform in tensor {
+					setUniform(lookupUniform(uniform), tensor[uniform])
+				}
 			}
 		}
 	}
-}
 
 
 Tensor API:
 
-class Tensor {
-	type: uint8 | float32
-	
-	_type: uint8 | float32
-	_format: fixnum | nofloat | normal | simple
+	class Tensor {
+		type: uint8 | float32
+		
+		_type: uint8 | float32
+		_format: fixnum | nofloat | normal | simple
 
-	constructor(shape){
-		this._uniforms = format.allocate(shape)
+		constructor(shape){
+			this._uniforms = format.allocate(shape)
 
-	}
-	_read(){
-		return gl.readPixels...
-	}
+		}
+		_read(){
+			return gl.readPixels...
+		}
 
-	read(){
-		return format.unpack(this._read())
-	}
+		read(){
+			return format.unpack(this._read())
+		}
 
 
-	_update(data){
-		gl.bindTexture(this.tex)
-		gl.texImage2D(data)
+		_update(data){
+			gl.bindTexture(this.tex)
+			gl.texImage2D(data)
+		}
+		update(data){
+			this._update(format.pack(data))
+		}
 	}
-	update(data){
-		this._update(format.pack(data))
-	}
-}
 
 
 
 Texture (really low level)
 
-class Texture {
-	type: uint8 | float32
-	constructor(texSize){
-		gl.createTexture
+	class Texture {
+		type: uint8 | float32
+		constructor(texSize){
+			gl.createTexture
+		}
+		update(data){
+			gl.texImage2D()
+		}
+		read(){
+			gl.readPixels()
+		}
 	}
-	update(data){
-		gl.texImage2D()
-	}
-	read(){
-		gl.readPixels()
-	}
-}
 
 
 
 
 Texture (Low Level) API:
 
-class Texture {
-	constructor(type, format, shape){
-		this.uniforms = format.init(shape)
+	class Texture {
+		constructor(type, format, shape){
+			this.uniforms = format.init(shape)
+		}
+		update(data){
+			gl.texImage2D(format.pack(this.uniforms, data))
+		}
+		read(){
+			return format.unpack(gl.readPixels());
+		}
 	}
-	update(data){
-		gl.texImage2D(format.pack(this.uniforms, data))
-	}
-	read(){
-		return format.unpack(gl.readPixels());
-	}
-}
 
 
 The texture is a low-level API. The "type" is "uint8" if the underlying texture representation is a gl.UNSIGNED_BYTE, "type" is only "float32" if the underlying texture representation is a gl.FLOAT.
