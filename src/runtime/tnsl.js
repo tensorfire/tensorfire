@@ -21,7 +21,9 @@ export default function TNSL(str){
         throw new Error('TNSL shader preprocessor only accepts strings');
     
     return function(uniforms, output){
-        return str.replace(/\#\(([\w\.\s]+)\)/g, function(all, body){
+        return str
+        .replace(/uniform\s*Tensor\s*([\w_]+)\s*;/g, '/* (Tensor $1) */')
+        .replace(/\#\(([\w\.\s]+)\)/g, function(all, body){
             var obj = uniforms;
             for(let part of body.split('.'))
                 obj = obj[part.trim()];
@@ -32,6 +34,9 @@ export default function TNSL(str){
                     'vec' + obj.length + '(' + obj.join(',') + ')'
             }
             throw new Error('Can not inline expression ' + body);
+        })
+        .replace(/\#\s*(\w+)\s*\[(.*)\]/g, function(all, tensor, body){
+            return tensor + '_read(ivec4(' + body + '))'
         })
     }
 }

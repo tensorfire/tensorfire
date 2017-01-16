@@ -9,12 +9,10 @@ const TENSOR_VERTEX_SHADER = `
     }
 `
 
-// for the purposes of setUniform, we pretend tex is an int
-const TENSOR_FIELDS = { 'tex': 'int', 'texSize': 'ivec2', 'shape': 'ivec4', 'cols': 'int' }
-
 
 const UNIFORM_SETTERS = { vec4: '4fv', vec3: '3fv', vec2: '2fv', float: '1f',
-                          ivec4: '4iv', ivec3: '3iv', ivec2: '2iv', int: '1i' };
+                          ivec4: '4iv', ivec3: '3iv', ivec2: '2iv', int: '1i',
+                          sampler2D: '1i' };
 
 export default function getTensorProgram(gl, fragmentShader){
     if(!gl._tensorPrograms) gl._tensorPrograms = {};
@@ -41,15 +39,15 @@ function createTensorProgram(gl, fragmentShader){
 
     for(let name in uniformTypes){
         let type = uniformTypes[name];
-        if(type == 'Tensor'){
-            for(let field in TENSOR_FIELDS)
-                addUniform(name + '.' + field, TENSOR_FIELDS[field]);
-        }else if((type) in UNIFORM_SETTERS){
+        if((type) in UNIFORM_SETTERS){
             addUniform(name, type);
         }else throw new Error("Unknown uniform type " + type);
     }
 
     function setUniform(name, value){
+        if(!(name in uniformLocs)){
+            throw new Error("Could not find uniform " + name);
+        }
         gl['uniform' + UNIFORM_SETTERS[uniformLocs[name].type]](uniformLocs[name].loc, value)
     }
 

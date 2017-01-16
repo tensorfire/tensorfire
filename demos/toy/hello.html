@@ -1,0 +1,42 @@
+<body>
+<h1>Multicolored Doge</h1>
+<style type="text/css">
+    body {
+        font-family: sans-serif;
+    }
+</style>
+<script src="../../dist/demo-util.js"></script>
+<script src="../../dist/tensor.js"></script>
+<script>
+
+var gl = KV.createGL(),
+    OutputTensor = KV.OutputTensor,
+    Tensor = KV.Tensor,
+    InPlaceTensor = KV.InPlaceTensor,
+    TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
+
+
+
+const MakeGradient = TP`
+    vec4 process(ivec4 pos) {
+        return vec4(vec2(pos.yx) / 512.0, 0, 1);
+    }
+`;
+
+const Grayscale = TP`
+    uniform Tensor image;
+    vec4 process(ivec4 pos) {
+        return vec4(vec3(dot(#image[pos].rgb, vec3(0.2126, 0.7152, 0.0722))), 1);
+    }
+`;
+
+
+grad = new OutputTensor(gl, [512, 512, 4 * 4])
+MakeGradient(grad)
+grad.show()
+
+gray = new OutputTensor(gl, [512, 512, 4 * 4]);
+Grayscale(gray, { image: grad })
+gray.show()
+
+</script>

@@ -30,22 +30,24 @@ export function Run(shaderGen, output, uniforms = {}){
     for(let name in uniforms){
         if(name.startsWith('_')) continue;
         
-        if(!(name in tp.uniformTypes)) throw new Error("Unknown uniform " + name);
-        let value = uniforms[name], 
-            type = tp.uniformTypes[name];
+        if((name + '_tex') in tp.uniformTypes){
+            let tensor = uniforms[name];
+            if(tensor === output) mustSwap = true;
 
-        if(type == 'Tensor'){
-            if(value === output) mustSwap = true;
-
-            setUniform(name + '.texSize', value.texSize)
-            setUniform(name + '.shape', value.shape)
-            setUniform(name + '.cols', value.cols)
+            for(let uniform in tensor._info){
+                setUniform(name + '_' + uniform, tensor._info[uniform])
+            }
 
             gl.activeTexture(gl['TEXTURE' + texIndex]);
-            gl.bindTexture(gl.TEXTURE_2D, value.tex);
-            setUniform(name + '.tex', texIndex)
+            gl.bindTexture(gl.TEXTURE_2D, tensor.tex);
+            setUniform(name + '_tex', texIndex);
+
             texIndex++
-        }else setUniform(name, value);
+        }else if(name in tp.uniformTypes){
+            setUniform(name, uniforms[name])
+        }else{
+            throw new Error("Unknown uniform " + name);
+        }
     }
 
     // Ordinarily we can't write to the same texture that we're using as
@@ -54,11 +56,15 @@ export function Run(shaderGen, output, uniforms = {}){
     // of a pair of textures which are swapped for these in-place operations. 
     if(mustSwap) output.swap();
 
-    setUniform('_outputShape', output.shape)
-    setUniform('_outputCols', output.cols)
-    
+    // setUniform('_outputShape', output.shape)
+    // setUniform('_outputCols', output.cols)
+
+    for(let uniform in output._info){
+        setUniform('out_' + uniform, output._info[uniform])
+    }
+
     gl.bindFramebuffer(gl.FRAMEBUFFER, output.fbo);
-    gl.viewport(0, 0, output.texSize[0], output.texSize[1]);
+    gl.viewport(0, 0, output._info.texSize[0], output._info.texSize[1]);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); // draw to framebuffer
 
     checkFramebufferError(gl);
