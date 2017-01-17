@@ -9,5 +9,5 @@ void main(){
     if(tile >= chunks * @shape.w){ checkerboard(); return; }
     gl_FragColor = activationFunc(process(ivec4(
         mod(gl_FragCoord.xy, vec2(@shape.xy)), 
-        tile2vec(tile, chunks))));
+        tile2vec(tile, chunks) * ivec2(4, 1))));
 }

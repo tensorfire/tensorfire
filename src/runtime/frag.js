@@ -5,7 +5,17 @@ import { readFileSync } from 'fs';
 
 import ACTIVATIONS from './activations.js'
 const TENSOR_FRAGMENT_HEADER = readFileSync(__dirname + '/../format/util.glsl', 'utf8')
-
+const TENSOR_PROCESSF = `
+float processf(ivec4 pos);
+vec4 process(ivec4 pos){
+    return vec4(
+        processf(ivec4(pos.xy, pos.z + 0, pos.w)),
+        processf(ivec4(pos.xy, pos.z + 1, pos.w)),
+        processf(ivec4(pos.xy, pos.z + 2, pos.w)),
+        processf(ivec4(pos.xy, pos.z + 3, pos.w))
+    );
+}
+`
 export default function assembleFragmentShader(shaderGen, output, uniforms){
     var tensorShader = shaderGen(uniforms, output);
     
@@ -27,6 +37,10 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
     }
     fragmentShader += activation;
     fragmentShader += output._format.writeShader.replace(/@/g, 'out_');
+
+    if(/processf/.test(tensorShader)){
+        fragmentShader += TENSOR_PROCESSF;
+    }
 
     fragmentShader += tensorShader 
 

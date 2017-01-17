@@ -73,7 +73,7 @@ export class Tensor extends BaseTensor {
 
         
         var nofloat = (type === 'float32' && (
-            true || 
+            // true || 
             gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat
             || (gl.NO_RENDER_FLOAT && options.output) 
         ));
