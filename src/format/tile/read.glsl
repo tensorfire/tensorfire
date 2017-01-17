@@ -11,3 +11,5 @@ vec4 @read(ivec4 pos){
         vec2(pos.xy) + vec2(0.5, 0.5)
     ) / vec2(@texSize));
 }
+
+float @readf(ivec4 pos){ return _readf(@read, pos); }
