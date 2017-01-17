@@ -75,19 +75,3 @@ void main(){
         gl_FragColor = encode_float(value.w);
     }
 }
-
-// void main(){
-// 	int shapez = ceildiv(@shape.z, 4);
-// 	int tile = vec2tile(ivec2(gl_FragCoord.x / 4, gl_FragCoord.y), @texSize.x / 4);
-// 	int chunks = @shape.x * @shape.y * shapez * @shape.w;
-// 	if(tile >= chunks){ checkerboard(); return; }
-
-// 	vec4 value = activationFunc(process(ivec4(
-// 		imod(tile, @shape.x),
-// 		imod(tile / @shape.x, @shape.y),
-// 		imod(tile / @shape.x / @shape.y, shapez ),
-// 		tile / @shape.x / @shape.y / shapez
-// 	)));
-
-
-// }
