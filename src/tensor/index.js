@@ -3,10 +3,13 @@ import { testRenderFloat } from './testing.js'
 import { makeFrameBuffer } from './helpers.js'
 import * as NormalFormat from '../format/normal/index.js'
 import * as NofloatFormat from '../format/nofloat/index.js'
+import { Run } from '../runtime/index.js'
 
 export class Tensor extends BaseTensor {
 	// constructor(gl, shape = [], data = null, options = {})
-	constructor(gl, shape = [], data = null, options = {}){
+	constructor(gl, shape = [], data = null, ...stuff){
+		var options = Object.assign({}, ...stuff);
+
 		// constructor(gl, type, format, shape)
 		// less restrictive constructors
 		if(!gl.NO_FLOAT_TEXTURES){
@@ -14,26 +17,96 @@ export class Tensor extends BaseTensor {
                 console.info("This browser does not seem to support OES_texture_float. "
                     + "Using float codec workaround from now on.")
                 gl.NO_FLOAT_TEXTURES = true;
-            }else if(!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT){
+            }
+        }
+
+        if(!gl.NO_FLOAT_TEXTURES){
+            if(!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT){
                 if(!testRenderFloat(gl)){
                     console.info("This browser supports OES_texture_float, " + 
                         "but can not render to floating textures. " + 
-                        "Using float codec workaround from now on.")
+                        "Using float codec workaround for output tensors from now on.")
                     gl.NO_RENDER_FLOAT = true;
                 }
                 gl.RENDER_FLOAT_TESTED = true;
             }
         }
 
-		super(gl, 'float32', NormalFormat, shape);
-		// super(gl, 'uint8', NofloatFormat, shape);
+        if(shape.shape){
+            // ndarrays can be passed instead of raw data
+            options = data;
+            data = shape;
+            shape = shape.shape;
+        }
+        if(shape.width && shape.height && shape.data){
+            // imagedata objects can be passed
+            options = data;
+            data = shape.data;
+            shape = [shape.width, shape.height]
+        }
+
+        options = options || {};
+
+        var type;
+        if(data === null || data === 'nofloat' || data instanceof Float32Array 
+            || data === 'float32' || data instanceof Float64Array || Array.isArray(data)){
+            // null defaults to a float32 texture type
+            type = 'float32'
+        }else if(data instanceof Uint8Array || data === 'uint8' || data instanceof Uint8ClampedArray){
+            type = 'uint8'
+        }else if(data.shape){
+            if(data.data instanceof Uint8Array){
+                type = 'uint8'
+            }else{
+                type = 'float32'
+            }
+        }else{
+            throw new Error("Invalid format for data: must be Uint8Array or Float32Array or ndarray");
+        }
+
+        
+        var nofloat = (type === 'float32' && (
+            gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat
+            || (gl.NO_RENDER_FLOAT && options.output) 
+        ));
+
+        if(typeof data == 'string') data = null;
+
+        if(nofloat){
+            super(gl, 'uint8', NofloatFormat, shape);
+        }else{
+        	super(gl, type, NormalFormat, shape);
+        }
+
+        this.type = type;
 	}
+
+	show(opt = {}){
+		this._show(opt)
+	}
+
+	copy(dtype = 'float32', constructor = OutputTensor){
+        const TENSOR_IDENTITY = `
+            uniform Tensor image;
+            vec4 process(ivec4 pos) { return #image[pos]; }
+        `;
+        var out = new constructor(this.gl, this.shape, dtype);
+        Run(TENSOR_IDENTITY, out, { image: this })
+        return out
+    }
+
+    show(opt = {}){
+        if(this._format !== NormalFormat){
+            var out = this.copy('uint8')
+            out._show(opt)
+            out.destroy()
+        }else this._show(opt);
+    }
 }
 
 export class OutputTensor extends Tensor {
-	constructor(...args){
-		super(...args)
-
+	constructor(gl, shape = [], data = null, ...stuff){
+		super(gl, shape, data, ...stuff, { output: true })
 		this.fbo = makeFrameBuffer(this.gl, this.tex);
 	}
 

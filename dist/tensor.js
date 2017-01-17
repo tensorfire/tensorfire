@@ -501,6 +501,7 @@ function Run(shaderGen, output) {
 
         if (name + '_tex' in tp.uniformTypes) {
             var tensor = uniforms[name];
+            if (tensor.gl !== output.gl) throw new Error('Uniforms must belong to same GL context as output');
             if (tensor === output) mustSwap = true;
 
             for (var uniform in tensor._info) {
@@ -912,15 +913,10 @@ var BaseTensor = function () {
 			(0, _show3.default)(this.gl, this.tex, opt);
 		}
 	}, {
-		key: 'show',
-		value: function show() {
-			var opt = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
-			this._show(opt);
+		key: 'destroy',
+		value: function destroy() {
+			this.gl.deleteTexture(this.tex);
 		}
-
-		// destroy(){ this.gl.deleteTexture(this.tex) }
-
 	}]);
 
 	return BaseTensor;
@@ -959,13 +955,13 @@ function makeTexture(gl) {
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-	value: true
+    value: true
 });
 exports.InPlaceTensor = exports.OutputTensor = exports.Tensor = undefined;
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _base = require('./base.js');
 
@@ -983,6 +979,8 @@ var _index2 = require('../format/nofloat/index.js');
 
 var NofloatFormat = _interopRequireWildcard(_index2);
 
+var _index3 = require('../runtime/index.js');
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -994,96 +992,180 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var Tensor = exports.Tensor = function (_BaseTensor) {
-	_inherits(Tensor, _BaseTensor);
+    _inherits(Tensor, _BaseTensor);
 
-	// constructor(gl, shape = [], data = null, options = {})
-	function Tensor(gl) {
-		var shape = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-		var data = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-		var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+    // constructor(gl, shape = [], data = null, options = {})
+    function Tensor(gl) {
+        var shape = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+        var data = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-		_classCallCheck(this, Tensor);
+        _classCallCheck(this, Tensor);
 
-		// constructor(gl, type, format, shape)
-		// less restrictive constructors
-		if (!gl.NO_FLOAT_TEXTURES) {
-			if (!gl.getExtension('OES_texture_float')) {
-				console.info("This browser does not seem to support OES_texture_float. " + "Using float codec workaround from now on.");
-				gl.NO_FLOAT_TEXTURES = true;
-			} else if (!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT) {
-				if (!(0, _testing.testRenderFloat)(gl)) {
-					console.info("This browser supports OES_texture_float, " + "but can not render to floating textures. " + "Using float codec workaround from now on.");
-					gl.NO_RENDER_FLOAT = true;
-				}
-				gl.RENDER_FLOAT_TESTED = true;
-			}
-		}
+        for (var _len = arguments.length, stuff = Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
+            stuff[_key - 3] = arguments[_key];
+        }
 
-		return _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, 'float32', NormalFormat, shape));
-		// super(gl, 'uint8', NofloatFormat, shape);
-	}
+        var options = Object.assign.apply(Object, [{}].concat(stuff));
 
-	return Tensor;
+        // constructor(gl, type, format, shape)
+        // less restrictive constructors
+        if (!gl.NO_FLOAT_TEXTURES) {
+            if (!gl.getExtension('OES_texture_float')) {
+                console.info("This browser does not seem to support OES_texture_float. " + "Using float codec workaround from now on.");
+                gl.NO_FLOAT_TEXTURES = true;
+            }
+        }
+
+        if (!gl.NO_FLOAT_TEXTURES) {
+            if (!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT) {
+                if (!(0, _testing.testRenderFloat)(gl)) {
+                    console.info("This browser supports OES_texture_float, " + "but can not render to floating textures. " + "Using float codec workaround for output tensors from now on.");
+                    gl.NO_RENDER_FLOAT = true;
+                }
+                gl.RENDER_FLOAT_TESTED = true;
+            }
+        }
+
+        if (shape.shape) {
+            // ndarrays can be passed instead of raw data
+            options = data;
+            data = shape;
+            shape = shape.shape;
+        }
+        if (shape.width && shape.height && shape.data) {
+            // imagedata objects can be passed
+            options = data;
+            data = shape.data;
+            shape = [shape.width, shape.height];
+        }
+
+        options = options || {};
+
+        var type;
+        if (data === null || data === 'nofloat' || data instanceof Float32Array || data === 'float32' || data instanceof Float64Array || Array.isArray(data)) {
+            // null defaults to a float32 texture type
+            type = 'float32';
+        } else if (data instanceof Uint8Array || data === 'uint8' || data instanceof Uint8ClampedArray) {
+            type = 'uint8';
+        } else if (data.shape) {
+            if (data.data instanceof Uint8Array) {
+                type = 'uint8';
+            } else {
+                type = 'float32';
+            }
+        } else {
+            throw new Error("Invalid format for data: must be Uint8Array or Float32Array or ndarray");
+        }
+
+        var nofloat = type === 'float32' && (gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && options.output);
+
+        if (typeof data == 'string') data = null;
+
+        if (nofloat) {
+            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, 'uint8', NofloatFormat, shape));
+        } else {
+            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, type, NormalFormat, shape));
+        }
+
+        _this.type = type;
+        return _possibleConstructorReturn(_this);
+    }
+
+    _createClass(Tensor, [{
+        key: 'show',
+        value: function show() {
+            var opt = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+            this._show(opt);
+        }
+    }, {
+        key: 'copy',
+        value: function copy() {
+            var dtype = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'float32';
+            var constructor = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : OutputTensor;
+
+            var TENSOR_IDENTITY = '\n            uniform Tensor image;\n            vec4 process(ivec4 pos) { return #image[pos]; }\n        ';
+            var out = new constructor(this.gl, this.shape, dtype);
+            (0, _index3.Run)(TENSOR_IDENTITY, out, { image: this });
+            return out;
+        }
+    }, {
+        key: 'show',
+        value: function show() {
+            var opt = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+            if (this._format !== NormalFormat) {
+                var out = this.copy('uint8');
+                out._show(opt);
+                out.destroy();
+            } else this._show(opt);
+        }
+    }]);
+
+    return Tensor;
 }(_base2.default);
 
 var OutputTensor = exports.OutputTensor = function (_Tensor) {
-	_inherits(OutputTensor, _Tensor);
+    _inherits(OutputTensor, _Tensor);
 
-	function OutputTensor() {
-		var _ref;
+    function OutputTensor(gl) {
+        var _ref;
 
-		_classCallCheck(this, OutputTensor);
+        var shape = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+        var data = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-		for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-			args[_key] = arguments[_key];
-		}
+        _classCallCheck(this, OutputTensor);
 
-		var _this2 = _possibleConstructorReturn(this, (_ref = OutputTensor.__proto__ || Object.getPrototypeOf(OutputTensor)).call.apply(_ref, [this].concat(args)));
+        for (var _len2 = arguments.length, stuff = Array(_len2 > 3 ? _len2 - 3 : 0), _key2 = 3; _key2 < _len2; _key2++) {
+            stuff[_key2 - 3] = arguments[_key2];
+        }
 
-		_this2.fbo = (0, _helpers.makeFrameBuffer)(_this2.gl, _this2.tex);
-		return _this2;
-	}
+        var _this2 = _possibleConstructorReturn(this, (_ref = OutputTensor.__proto__ || Object.getPrototypeOf(OutputTensor)).call.apply(_ref, [this, gl, shape, data].concat(stuff, [{ output: true }])));
 
-	_createClass(OutputTensor, [{
-		key: 'destroy',
-		value: function destroy() {
-			_get(OutputTensor.prototype.__proto__ || Object.getPrototypeOf(OutputTensor.prototype), 'destroy', this).call(this);
-			this.gl.deleteFramebuffer(this.fbo);
-		}
-	}, {
-		key: '_read',
-		value: function _read() {
-			// this.gl.readPixels(...)
-		}
-	}, {
-		key: 'read',
-		value: function read() {
-			return this._format.unpack(this._info, this._read());
-		}
-	}]);
+        _this2.fbo = (0, _helpers.makeFrameBuffer)(_this2.gl, _this2.tex);
+        return _this2;
+    }
 
-	return OutputTensor;
+    _createClass(OutputTensor, [{
+        key: 'destroy',
+        value: function destroy() {
+            _get(OutputTensor.prototype.__proto__ || Object.getPrototypeOf(OutputTensor.prototype), 'destroy', this).call(this);
+            this.gl.deleteFramebuffer(this.fbo);
+        }
+    }, {
+        key: '_read',
+        value: function _read() {
+            // this.gl.readPixels(...)
+        }
+    }, {
+        key: 'read',
+        value: function read() {
+            return this._format.unpack(this._info, this._read());
+        }
+    }]);
+
+    return OutputTensor;
 }(Tensor);
 
 var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
-	_inherits(InPlaceTensor, _OutputTensor);
+    _inherits(InPlaceTensor, _OutputTensor);
 
-	function InPlaceTensor() {
-		var _ref2;
+    function InPlaceTensor() {
+        var _ref2;
 
-		_classCallCheck(this, InPlaceTensor);
+        _classCallCheck(this, InPlaceTensor);
 
-		for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-			args[_key2] = arguments[_key2];
-		}
+        for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+            args[_key3] = arguments[_key3];
+        }
 
-		return _possibleConstructorReturn(this, (_ref2 = InPlaceTensor.__proto__ || Object.getPrototypeOf(InPlaceTensor)).call.apply(_ref2, [this].concat(args)));
-	}
+        return _possibleConstructorReturn(this, (_ref2 = InPlaceTensor.__proto__ || Object.getPrototypeOf(InPlaceTensor)).call.apply(_ref2, [this].concat(args)));
+    }
 
-	return InPlaceTensor;
+    return InPlaceTensor;
 }(OutputTensor);
 
-},{"../format/nofloat/index.js":1,"../format/normal/index.js":2,"./base.js":11,"./helpers.js":12,"./testing.js":15}],14:[function(require,module,exports){
+},{"../format/nofloat/index.js":1,"../format/normal/index.js":2,"../runtime/index.js":7,"./base.js":11,"./helpers.js":12,"./testing.js":15}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {

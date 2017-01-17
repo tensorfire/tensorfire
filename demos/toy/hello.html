@@ -38,16 +38,17 @@ const Transpose = TP`
 `;
 
 
-grad = new OutputTensor(gl, [512, 512, 4 * 154])
+grad = new OutputTensor(gl, [512, 512, 4 * 15], 'nofloat')
 MakeGradient(grad)
 grad.show()
 
-gray = new OutputTensor(gl, grad.shape);
+gray = new OutputTensor(gl, grad.shape, 'nofloat');
 Grayscale(gray, { image: grad })
 gray.show()
 
-Grayscale(gray, { image: grad })
-gray.show()
+tr = new OutputTensor(gl, grad.shape);
+Transpose(tr, { image: gray })
+tr.show()
 
 
 

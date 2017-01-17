@@ -43,6 +43,7 @@ export function Run(shaderGen, output, uniforms = {}){
         
         if((name + '_tex') in tp.uniformTypes){
             let tensor = uniforms[name];
+            if(tensor.gl !== output.gl) throw new Error('Uniforms must belong to same GL context as output');
             if(tensor === output) mustSwap = true;
 
             for(let uniform in tensor._info){

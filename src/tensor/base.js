@@ -47,9 +47,5 @@ export default class BaseTensor {
 	}
 	
 	_show(opt = {}){ showTexture(this.gl, this.tex, opt) }
-	show(opt = {}){
-		this._show(opt)
-	}
-
-	// destroy(){ this.gl.deleteTexture(this.tex) }
+    destroy(){ this.gl.deleteTexture(this.tex) }
 }
