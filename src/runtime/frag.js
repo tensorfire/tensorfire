@@ -33,7 +33,6 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
         activation = ACTIVATIONS[uniforms._activation.toLowerCase()]
     }
     fragmentShader += activation;
-
     fragmentShader += output._format.writeShader.replace(/@/g, 'out_');
 
 

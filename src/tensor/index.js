@@ -2,6 +2,7 @@ import BaseTensor from './base.js';
 import { testRenderFloat } from './testing.js'
 import { makeFrameBuffer } from './helpers.js'
 import * as NormalFormat from '../format/normal/index.js'
+import * as NofloatFormat from '../format/nofloat/index.js'
 
 export class Tensor extends BaseTensor {
 	// constructor(gl, shape = [], data = null, options = {})
@@ -25,6 +26,7 @@ export class Tensor extends BaseTensor {
         }
 
 		super(gl, 'float32', NormalFormat, shape);
+		// super(gl, 'uint8', NofloatFormat, shape);
 	}
 }
 

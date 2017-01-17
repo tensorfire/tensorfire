@@ -56,9 +56,6 @@ export function Run(shaderGen, output, uniforms = {}){
     // of a pair of textures which are swapped for these in-place operations. 
     if(mustSwap) output.swap();
 
-    // setUniform('_outputShape', output.shape)
-    // setUniform('_outputCols', output.cols)
-
     for(let uniform in output._info){
         setUniform('out_' + uniform, output._info[uniform])
     }
