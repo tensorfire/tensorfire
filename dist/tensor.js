@@ -152,7 +152,7 @@ Object.defineProperty(exports, 'createGL', {
   }
 });
 
-},{"./runtime/index.js":7,"./tensor/index.js":12,"./util.js":15}],4:[function(require,module,exports){
+},{"./runtime/index.js":7,"./tensor/index.js":13,"./util.js":16}],4:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -403,13 +403,8 @@ var _activations2 = _interopRequireDefault(_activations);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-// const TENSOR_FRAGMENT_HEADER = readFileSync(__dirname + '/glsl/frag_header.glsl', 'utf8');
-// const READ_TENSOR_NORMAL = readFileSync(__dirname + '/glsl/read_normal.glsl', 'utf8')
-// const READ_TENSOR_NOFLOAT = readFileSync(__dirname + '/glsl/read_nofloat.glsl', 'utf8')
-// const WRITE_TENSOR_NORMAL = readFileSync(__dirname + '/glsl/write_normal.glsl', 'utf8')
-// const WRITE_TENSOR_NOFLOAT = readFileSync(__dirname + '/glsl/write_nofloat.glsl', 'utf8')
 // import { Tensor, OutputTensor, InPlaceTensor } from '../tensor/index.js'
-var TENSOR_FRAGMENT_HEADER = 'precision mediump float;\n\nint   imod(int f, int p){ return f - p * (f / p); }\nint   vec2tile(ivec2 v, int rows){ return rows * v.y + v.x; }\nivec2 tile2vec(int f, int rows){ return ivec2(imod(f, rows), f / rows); }\nint   ceildiv(int a, int b){ return (a - 1) / b + 1; }\nvoid  checkerboard(){ gl_FragColor = vec4(mod(gl_FragCoord.x - gl_FragCoord.y, 2.0), 0.2, 0.1, 1); }\n\n';
+var TENSOR_FRAGMENT_HEADER = '#ifdef GL_FRAGMENT_PRECISION_HIGH\n\tprecision highp float;\n#else\n\tprecision mediump float;\n#endif\n\nint   imod(int f, int p){ return f - p * (f / p); }\nint   vec2tile(ivec2 v, int rows){ return rows * v.y + v.x; }\nivec2 tile2vec(int f, int rows){ return ivec2(imod(f, rows), f / rows); }\nint   ceildiv(int a, int b){ return (a - 1) / b + 1; }\nvoid  checkerboard(){ gl_FragColor = vec4(mod(gl_FragCoord.x - gl_FragCoord.y, 2.0), 0.2, 0.1, 1); }\n\n';
 
 function assembleFragmentShader(shaderGen, output, uniforms) {
     var tensorShader = shaderGen(uniforms, output);
@@ -434,31 +429,10 @@ function assembleFragmentShader(shaderGen, output, uniforms) {
 
     fragmentShader += tensorShader;
 
-    console.log('assembling', tensorShader, output, uniforms, fragmentShader);
-    // var nofloats = Object.keys(uniforms)
-    //     .map(k => uniforms[k])
-    //     .filter(k => k instanceof Tensor)
-    //     .map(k => !!k.nofloat)
-
-    // if(nofloats.some(k => k != nofloats[0]))
-    //     throw new Error("Heterogeneous NOFLOAT parameters not supported.");
-
-    // var shaderBody = '';
-    // shaderBody += output.nofloat ? WRITE_TENSOR_NOFLOAT : WRITE_TENSOR_NORMAL;
-    // shaderBody += nofloats[0] ? READ_TENSOR_NOFLOAT : READ_TENSOR_NORMAL;
-    // shaderBody += tensorShader;
-
-    // var fragmentShader = TENSOR_FRAGMENT_HEADER;
-
-
-    // if(/encode_float|decode_float/.test(shaderBody))
-    //     fragmentShader += TENSOR_FLOAT_UTILS;
-    // fragmentShader += shaderBody;
-
     return fragmentShader;
 }
 
-},{"../tensor/base.js":10,"./activations.js":4}],7:[function(require,module,exports){
+},{"../tensor/base.js":11,"./activations.js":4}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -483,17 +457,23 @@ var _tnsl = require('./tnsl.js');
 
 var _tnsl2 = _interopRequireDefault(_tnsl);
 
+var _timer = require('./timer.js');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function Compile(shaderGen, output) {
     var uniforms = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
 
+    var startTime = (0, _timer.now)();
     if (!(output instanceof _index.OutputTensor)) throw new Error("First argument must be an instance of OutputTensor");
 
     if (typeof shaderGen === 'string') shaderGen = (0, _tnsl2.default)(shaderGen);
 
     var gl = output.gl;
-    return (0, _program2.default)(gl, (0, _frag2.default)(shaderGen, output, uniforms));
+    var program = (0, _program2.default)(gl, (0, _frag2.default)(shaderGen, output, uniforms));
+    var compileTime = (0, _timer.now)() - startTime;
+    // console.log('Compile Time', compileTime)
+    return program;
 }
 
 function Run(shaderGen, output) {
@@ -502,6 +482,12 @@ function Run(shaderGen, output) {
     var tp = Compile(shaderGen, output, uniforms);
 
     var gl = output.gl;
+
+    (0, _timer.beginTimer)(gl, {
+        shader: shaderGen,
+        output: output
+    });
+
     gl.useProgram(tp.program);
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
@@ -549,10 +535,17 @@ function Run(shaderGen, output) {
 
     (0, _check.checkFramebufferError)(gl);
 
+    // var runTime = now() - startTime;
+    // timer.end()
+    (0, _timer.endTimer)(gl, function (info) {
+        console.log('GPU time: ', info);
+    });
+    // console.log('CPU Run Time', runTime)
+
     return output;
 }
 
-},{"../tensor/index.js":12,"./check.js":5,"./frag.js":6,"./program.js":8,"./tnsl.js":9}],8:[function(require,module,exports){
+},{"../tensor/index.js":13,"./check.js":5,"./frag.js":6,"./program.js":8,"./timer.js":9,"./tnsl.js":10}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -664,6 +657,124 @@ function compileShader(gl, shaderSource, shaderType) {
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+exports.now = now;
+exports.beginTimer = beginTimer;
+exports.endTimer = endTimer;
+function now() {
+	if (typeof performance === 'undefined') {
+		return Date.now();
+	} else {
+		return performance.now();
+	}
+}
+
+function getTimer(gl) {
+	if (gl.NO_PROFILE) return;
+	if (typeof gl.TIMER_POOL === 'undefined') {
+		gl.TIMER_POOL = createTimer(gl);
+	}
+	return gl.TIMER_POOL;
+}
+
+function beginTimer(gl) {
+	var info = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+	var timer = getTimer(gl);
+	if (timer) {
+		timer.begin(info);
+	}
+}
+
+function endTimer(gl, callback) {
+	var timer = getTimer(gl);
+	if (timer) {
+		timer.end(callback);
+	}
+}
+
+function createTimer(gl) {
+	var extTimer = gl.getExtension('ext_disjoint_timer_query');
+
+	var queryPool = [];
+	function allocQuery() {
+		return queryPool.pop() || extTimer.createQueryEXT();
+	}
+	function freeQuery(query) {
+		queryPool.push(query);
+	}
+
+	var pendingQueries = [];
+	function beginQuery(info) {
+		var query = allocQuery();
+		extTimer.beginQueryEXT(extTimer.TIME_ELAPSED_EXT, query);
+		pendingQueries.push([query, info]);
+	}
+
+	function endQuery() {
+		extTimer.endQueryEXT(extTimer.TIME_ELAPSED_EXT);
+	}
+
+	function callback(info, time) {
+		var fn = info.callback;
+		info.gpuTime = time;
+		delete info.callback;
+		if (fn) fn(info);
+	}
+
+	function monitorPending() {
+		for (var i = 0; i < pendingQueries.length; ++i) {
+			var query = pendingQueries[i][0];
+			if (extTimer.getQueryObjectEXT(query, extTimer.QUERY_RESULT_AVAILABLE_EXT)) {
+				var queryTime = extTimer.getQueryObjectEXT(query, extTimer.QUERY_RESULT_EXT);
+				callback(pendingQueries[i][1], queryTime / 1e6);
+				freeQuery(query);
+				pendingQueries.splice(i, 1);
+				i--;
+			}
+		}
+	}
+
+	var isPolling = false;
+	function loop() {
+		// console.log('loop', pendingQueries.length)
+		if (pendingQueries.length > 0) {
+			monitorPending();
+			requestAnimationFrame(loop);
+		} else {
+			isPolling = false;
+		}
+	}
+
+	var currentInfo = null;
+	return {
+		begin: function begin() {
+			var info = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+			if (currentInfo) throw new Error('beginTimer was called before previous endTimer');
+			currentInfo = info;
+			info.cpuStartTime = now();
+			beginQuery(currentInfo);
+		},
+		end: function end(fn) {
+			currentInfo.cpuEndTime = now();
+			currentInfo.callback = fn;
+			currentInfo = null;
+			endQuery();
+
+			if (isPolling === false) {
+				isPolling = true;
+				requestAnimationFrame(loop);
+			}
+		}
+	};
+}
+
+},{}],10:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = TNSL;
@@ -728,7 +839,7 @@ function TNSL(str) {
     };
 }
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -817,7 +928,7 @@ var BaseTensor = function () {
 
 exports.default = BaseTensor;
 
-},{"./helpers.js":11,"./show.js":13}],11:[function(require,module,exports){
+},{"./helpers.js":12,"./show.js":14}],12:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -844,7 +955,7 @@ function makeTexture(gl) {
     return texture;
 }
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -972,7 +1083,7 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
 	return InPlaceTensor;
 }(OutputTensor);
 
-},{"../format/nofloat/index.js":1,"../format/normal/index.js":2,"./base.js":10,"./helpers.js":11,"./testing.js":14}],13:[function(require,module,exports){
+},{"../format/nofloat/index.js":1,"../format/normal/index.js":2,"./base.js":11,"./helpers.js":12,"./testing.js":15}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1011,7 +1122,7 @@ function showTexture(gl, tex) {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-},{"../runtime/program.js":8}],14:[function(require,module,exports){
+},{"../runtime/program.js":8}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1052,7 +1163,7 @@ function testRenderFloat(gl) {
     return status == gl.FRAMEBUFFER_COMPLETE;
 }
 
-},{"../runtime/program.js":8,"./helpers.js":11}],15:[function(require,module,exports){
+},{"../runtime/program.js":8,"./helpers.js":12}],16:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {

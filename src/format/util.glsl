@@ -1,4 +1,8 @@
-precision mediump float;
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+	precision highp float;
+#else
+	precision mediump float;
+#endif
 
 int   imod(int f, int p){ return f - p * (f / p); }
 int   vec2tile(ivec2 v, int rows){ return rows * v.y + v.x; }

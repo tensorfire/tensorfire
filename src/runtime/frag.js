@@ -4,13 +4,6 @@ import BaseTensor from '../tensor/base.js'
 import { readFileSync } from 'fs';
 
 import ACTIVATIONS from './activations.js'
-
-
-// const TENSOR_FRAGMENT_HEADER = readFileSync(__dirname + '/glsl/frag_header.glsl', 'utf8');
-// const READ_TENSOR_NORMAL = readFileSync(__dirname + '/glsl/read_normal.glsl', 'utf8')
-// const READ_TENSOR_NOFLOAT = readFileSync(__dirname + '/glsl/read_nofloat.glsl', 'utf8')
-// const WRITE_TENSOR_NORMAL = readFileSync(__dirname + '/glsl/write_normal.glsl', 'utf8')
-// const WRITE_TENSOR_NOFLOAT = readFileSync(__dirname + '/glsl/write_nofloat.glsl', 'utf8')
 const TENSOR_FRAGMENT_HEADER = readFileSync(__dirname + '/../format/util.glsl', 'utf8')
 
 export default function assembleFragmentShader(shaderGen, output, uniforms){
@@ -35,32 +28,7 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
     fragmentShader += activation;
     fragmentShader += output._format.writeShader.replace(/@/g, 'out_');
 
-
-
     fragmentShader += tensorShader 
-
-
-    console.log('assembling', tensorShader, output, uniforms, fragmentShader)
-    // var nofloats = Object.keys(uniforms)
-    //     .map(k => uniforms[k])
-    //     .filter(k => k instanceof Tensor)
-    //     .map(k => !!k.nofloat)
-
-    // if(nofloats.some(k => k != nofloats[0]))
-    //     throw new Error("Heterogeneous NOFLOAT parameters not supported.");
-
-    // var shaderBody = '';
-    // shaderBody += output.nofloat ? WRITE_TENSOR_NOFLOAT : WRITE_TENSOR_NORMAL;
-    // shaderBody += nofloats[0] ? READ_TENSOR_NOFLOAT : READ_TENSOR_NORMAL;
-    // shaderBody += tensorShader;
-    
-    // var fragmentShader = TENSOR_FRAGMENT_HEADER;
-
-    
-
-    // if(/encode_float|decode_float/.test(shaderBody))
-    //     fragmentShader += TENSOR_FLOAT_UTILS;
-    // fragmentShader += shaderBody;
 
     return fragmentShader;
 }

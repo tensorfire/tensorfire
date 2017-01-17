@@ -3,22 +3,33 @@ import assembleFragmentShader from './frag.js'
 import { Tensor, OutputTensor, InPlaceTensor } from '../tensor/index.js'
 import { checkFramebufferError } from './check.js'
 import TNSL from './tnsl.js'
+import { beginTimer, endTimer, now } from './timer.js'
 
 
 export function Compile(shaderGen, output, uniforms = {}){
+    var startTime = now();
     if(!(output instanceof OutputTensor)) 
         throw new Error("First argument must be an instance of OutputTensor");
     
     if(typeof shaderGen === 'string') shaderGen = TNSL(shaderGen);
     
     var gl = output.gl;
-    return getTensorProgram(gl, assembleFragmentShader(shaderGen, output, uniforms));
+    var program = getTensorProgram(gl, assembleFragmentShader(shaderGen, output, uniforms));
+    var compileTime = now() - startTime;
+    // console.log('Compile Time', compileTime)
+    return program;
 }
 
 export function Run(shaderGen, output, uniforms = {}){
     var tp = Compile(shaderGen, output, uniforms);
 
     var gl = output.gl;
+    
+    beginTimer(gl, {
+        shader: shaderGen,
+        output: output
+    })
+
     gl.useProgram(tp.program);
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
@@ -66,5 +77,12 @@ export function Run(shaderGen, output, uniforms = {}){
 
     checkFramebufferError(gl);
     
+    // var runTime = now() - startTime;
+    // timer.end()
+    endTimer(gl, function(info){
+        console.log('GPU time: ', info)
+    })
+    // console.log('CPU Run Time', runTime)
+
     return output;
 }

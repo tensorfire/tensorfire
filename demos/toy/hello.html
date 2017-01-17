@@ -30,13 +30,25 @@ const Grayscale = TP`
     }
 `;
 
+const Transpose = TP`
+    uniform Tensor image;
+    vec4 process(ivec4 pos) {
+        return #image[pos.yxzw];
+    }
+`;
 
-grad = new OutputTensor(gl, [512, 512, 4 * 4])
+
+grad = new OutputTensor(gl, [512, 512, 4 * 154])
 MakeGradient(grad)
 grad.show()
 
-gray = new OutputTensor(gl, [512, 512, 4 * 4]);
+gray = new OutputTensor(gl, grad.shape);
 Grayscale(gray, { image: grad })
 gray.show()
+
+Grayscale(gray, { image: grad })
+gray.show()
+
+
 
 </script>

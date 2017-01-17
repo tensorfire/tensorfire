@@ -1,3 +1,5 @@
+#ifndef DECODE_FLOAT
+#define DECODE_FLOAT
 // https://github.com/spite/scotlandjs-2015/blob/master/demo/index.html
 
 // This implementation seems to be broken. Logan, you should fix this.
@@ -15,8 +17,8 @@ float decode_float( vec4 val ) {
     mantissa = t * 256. * 256. + val.g * 255. * 256. + val.r * 255.;
     return sign * pow( 2., exponent - 127. ) * ( 1. + mantissa / pow ( 2., 23. ) );
 }
-
-//////////////////////////////
+#endif
+////////////////////////////////
 
 uniform sampler2D @tex;
 uniform ivec2 @texSize;

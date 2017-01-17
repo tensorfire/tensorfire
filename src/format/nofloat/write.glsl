@@ -1,3 +1,5 @@
+#ifndef ENCODE_FLOAT
+#define ENCODE_FLOAT
 // https://github.com/mikolalysenko/glsl-read-float/blob/master/index.glsl
 
 #define FLOAT_MAX  1.70141184e38
@@ -40,7 +42,7 @@ vec4 encode_float(float v) {
     //Scale back to range
     return c.abgr / 255.0;
 }
-
+#endif
 ////////////////////////////////
 
 uniform ivec2 @texSize;
