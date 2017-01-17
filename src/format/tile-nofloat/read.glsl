@@ -29,7 +29,7 @@ float @readch(ivec4 pos, int ch){
     return decode_float(texture2D(@tex, (
         vec2(tile2vec(
             vec2tile(pos.zw, ceildiv(@shape.z, 4))
-        , @cols) * @shape.xy) +
+        , @cols) * ivec2(@shape.x*4, @shape.y)) +
         vec2(pos.x * 4 + ch, pos.y) + vec2(0.5, 0.5)
     ) / vec2(@texSize)));
 }

@@ -10,7 +10,7 @@ export function init(shape){
     // minimal amount of wasted space.
 
     var tiles = Math.ceil(shape[2] / 4) * shape[3],
-        cols = Math.max(1, Math.min(tiles, Math.round(
+        cols = Math.max(1, Math.min(tiles, Math.ceil(
             Math.sqrt(shape[0] * shape[1] * tiles) / width)));
 
     var texSize = [width * cols, shape[1] * Math.ceil(tiles / cols)]
