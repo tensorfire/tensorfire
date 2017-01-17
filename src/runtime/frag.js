@@ -16,6 +16,15 @@ vec4 process(ivec4 pos){
     );
 }
 `
+
+const TENSOR_UNPROCESSF = `
+vec4 process(ivec4 pos);
+float processf(ivec4 pos){
+    return chsel(process(ivec4(pos.xy, 4 * (pos.z / 4), pos.w)), imod(pos.z, 4));
+}
+`;
+
+
 export default function assembleFragmentShader(shaderGen, output, uniforms){
     var tensorShader = shaderGen(uniforms, output);
     
@@ -38,9 +47,12 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
     fragmentShader += activation;
     fragmentShader += output._format.writeShader.replace(/@/g, 'out_');
 
-    if(/processf/.test(tensorShader)){
+    if(/float processf/.test(tensorShader) && !/float processf/.test(fragmentShader)){
         fragmentShader += TENSOR_PROCESSF;
+    }else if(/vec4 process\b/.test(tensorShader) && !/vec4 process\b/.test(fragmentShader)){
+        fragmentShader += TENSOR_UNPROCESSF;
     }
+
 
     fragmentShader += tensorShader 
 
