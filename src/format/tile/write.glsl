@@ -7,8 +7,8 @@ void main(){
     int tile = vec2tile(ivec2(gl_FragCoord.xy) / @shape.xy, @cols);
     int chunks = ceildiv(@shape.z, 4);
     if(tile * 4 >= @shape.z * @shape.w){ checkerboard(); return; }
-    gl_FragColor = activationFunc(process(ivec4(
+    gl_FragColor = process(ivec4(
         mod(gl_FragCoord.xy, vec2(@shape.xy)), 
-        tile2vec(tile, chunks) * ivec2(4, 1))));
+        tile2vec(tile, chunks) * ivec2(4, 1)));
 }
 

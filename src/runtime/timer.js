@@ -31,7 +31,7 @@ export function endTimer(gl, callback){
 function createTimer(gl){
 	var extTimer = gl.getExtension('ext_disjoint_timer_query');
 
-	if(!extTimer) return null;
+	return null;
 
 	var queryPool = []
     function allocQuery () {

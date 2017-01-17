@@ -186,3 +186,81 @@ This also works:
 
 	if(tile >= @shape.z / 4 * @shape.w)
 
+
+
+# Functions must return
+
+Microsoft Edge throws `SCRIPT5022: Error linking program with vertex shader, "unknown", and fragment shader "unknown"`: `WEBGL11102: linkProgram: Internal linker error` when code includes this:
+
+	float chsel(vec4 val, int ch){
+		if(ch == 0) return val.r;
+		if(ch == 1) return val.g;
+		if(ch == 2) return val.b;
+		if(ch == 3) return val.a;
+	}
+
+The program needs to return for all possible conditional paths, so changing it to this fixes the problem. 
+
+	float chsel(vec4 val, int ch){
+		if(ch == 0) return val.r;
+		if(ch == 1) return val.g;
+		if(ch == 2) return val.b;
+		return val.a;
+	}
+
+
+# This one is insane
+
+
+So this code works fine:
+
+    uniform Tensor argle;
+    uniform Tensor bargle;
+
+	vec4 process(ivec4 pos){
+	    vec4 derp = (argle_read(pos) + bargle_read(pos));
+	    return vec4(
+	        derp.r,
+	        derp.r,
+	        derp.r,
+	        2
+	    );
+	}
+
+But this code throws a link error:
+
+    uniform Tensor argle;
+    uniform Tensor bargle;
+
+	vec4 process(ivec4 pos){
+	    vec4 derp = (argle_read(pos) + bargle_read(pos));
+	    return vec4(
+	        derp.r,
+	        derp.r,
+	        derp.r,
+	        1
+	    );
+	}
+
+
+Error linking program with vertex shader, "unknown", and fragment shader "unknown"
+--From Vertex Shader:
+--From Fragment Shader:
+
+
+Note that this works fine:
+
+	vec4 xprocess(ivec4 pos) {
+        return argle_read(pos) + bargle_read(pos);
+    }
+
+    vec4 process(ivec4 pos) {
+        vec4 val = xprocess(pos);
+        return vec4(val.rgb, chsel(val, 3));
+    }
+
+But this doesn't:
+
+	vec4 xprocess(ivec4 pos) {
+        return argle_read(pos) + bargle_read(pos);
+    }
