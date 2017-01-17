@@ -12,4 +12,7 @@ vec4 @read(ivec4 pos){
     ) / vec2(@texSize));
 }
 
-float @readf(ivec4 pos){ return _readf(@read, pos); }
+float @readf(ivec4 pos){ 
+	return chsel(@read(ivec4(pos.xy, 4 * (pos.z / 4), pos.w)), imod(pos.z, 4));
+}
+

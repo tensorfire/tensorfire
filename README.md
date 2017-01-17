@@ -171,5 +171,18 @@ The texture is a low-level API. The "type" is "uint8" if the underlying texture 
 
 
 
+# Strange Bug:
 
+This works fine:
+
+    if(tile * 4 >= @shape.z * @shape.w){ checkerboard(); return; }
+
+
+This doesn't work on Firefox under VMWare
+
+	if(tile >= ceildiv(@shape.z, 4) * @shape.w){  checkerboard(); return; }
+
+This also works:
+
+	if(tile >= @shape.z / 4 * @shape.w)
 

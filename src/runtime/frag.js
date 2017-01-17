@@ -15,6 +15,7 @@ vec4 process(ivec4 pos){
         processf(ivec4(pos.xy, pos.z + 3, pos.w))
     );
 }
+
 `
 
 const TENSOR_UNPROCESSF = `
@@ -22,6 +23,7 @@ vec4 process(ivec4 pos);
 float processf(ivec4 pos){
     return chsel(process(ivec4(pos.xy, 4 * (pos.z / 4), pos.w)), imod(pos.z, 4));
 }
+
 `;
 
 
@@ -34,7 +36,7 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
         if(uniforms[uniform] instanceof BaseTensor){
             let tensor = uniforms[uniform];
 
-            fragmentShader += tensor._format.readShader.replace(/@/g, uniform + '_');
+            fragmentShader += tensor._format.readShader.replace(/@/g, uniform + '_') + '\n\n';
         }
     }
 

@@ -1,3 +1,4 @@
+
 #ifndef ENCODE_FIXNUM
 #define ENCODE_FIXNUM
 
@@ -26,6 +27,7 @@ void main(){
         mod(vec2(gl_FragCoord.xy), vec2(@shape.xy)), 
         tile2vec(tile, @shape.z))));
 }
+
 
 
 

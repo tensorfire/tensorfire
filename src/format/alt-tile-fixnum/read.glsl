@@ -25,9 +25,9 @@ float @readf(ivec4 pos){
 
 vec4 @read(ivec4 pos){
     return vec4(
-        @readf(ivec4(pos.xy, pos.z * 4 + 0, pos.w)),
-        @readf(ivec4(pos.xy, pos.z * 4 + 1, pos.w)),
-        @readf(ivec4(pos.xy, pos.z * 4 + 2, pos.w)),
-        @readf(ivec4(pos.xy, pos.z * 4 + 3, pos.w))
+        @readf(ivec4(pos.xy, 4 * (pos.z / 4) + 0, pos.w)),
+        @readf(ivec4(pos.xy, 4 * (pos.z / 4) + 1, pos.w)),
+        @readf(ivec4(pos.xy, 4 * (pos.z / 4) + 2, pos.w)),
+        @readf(ivec4(pos.xy, 4 * (pos.z / 4) + 3, pos.w))
     );
 }

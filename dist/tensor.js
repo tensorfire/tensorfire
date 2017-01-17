@@ -7,8 +7,8 @@ Object.defineProperty(exports, "__esModule", {
 exports.init = init;
 exports.pack = pack;
 exports.unpack = unpack;
-var readShader = exports.readShader = '#ifndef DECODE_FIXNUM\n#define DECODE_FIXNUM\n// http://aras-p.info/blog/2009/07/30/encoding-floats-to-rgba-the-final/\nfloat decode_fixnum( vec4 rgba ) {\n    return (dot( rgba, vec4(1.0, 1.0/255.0, 1.0/65025.0, 1.0/160581375.0) ) - 0.5) * 2048.0;\n}\n\n\n#endif\n////////////////////////////////\n\nuniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nfloat @readf(ivec4 pos){\n    return decode_fixnum(texture2D(@tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw, @shape.z)\n        , @cols) * ivec2(@shape.xy)) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize)));\n}\n\nvec4 @read(ivec4 pos){\n    return vec4(\n        @readf(ivec4(pos.xy, pos.z * 4 + 0, pos.w)),\n        @readf(ivec4(pos.xy, pos.z * 4 + 1, pos.w)),\n        @readf(ivec4(pos.xy, pos.z * 4 + 2, pos.w)),\n        @readf(ivec4(pos.xy, pos.z * 4 + 3, pos.w))\n    );\n}';
-var writeShader = exports.writeShader = '#ifndef ENCODE_FIXNUM\n#define ENCODE_FIXNUM\n\n// http://aras-p.info/blog/2009/07/30/encoding-floats-to-rgba-the-final/\n\nvec4 encode_fixnum(float v) {\n    vec4 enc = vec4(1.0, 255.0, 65025.0, 160581375.0) * (v / 2048.0 + 0.5);\n    enc = fract(enc);\n    enc -= enc.yzww * vec4(1.0/255.0,1.0/255.0,1.0/255.0,0.0);\n    return enc;\n}\n#endif\n////////////////////////////////\n\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\n\nfloat processf(ivec4 pos);\nvoid main(){\n    int tile = vec2tile(ivec2(gl_FragCoord.xy) / @shape.xy, @cols);\n    if(tile >= @shape.z * @shape.w){ checkerboard(); return; }\n\n    gl_FragColor = encode_fixnum(processf(ivec4(\n        mod(vec2(gl_FragCoord.xy), vec2(@shape.xy)), \n        tile2vec(tile, @shape.z))));\n}\n\n// vec4 process(ivec4 pos);\n// float processf(ivec4 pos){\n// \treturn chsel(process(ivec4(pos.xy, 4 * (pos.z / 4), pos.w)), imod(pos.z, 4));\n// }\n\n';
+var readShader = exports.readShader = '#ifndef DECODE_FIXNUM\n#define DECODE_FIXNUM\n// http://aras-p.info/blog/2009/07/30/encoding-floats-to-rgba-the-final/\nfloat decode_fixnum( vec4 rgba ) {\n    return (dot( rgba, vec4(1.0, 1.0/255.0, 1.0/65025.0, 1.0/160581375.0) ) - 0.5) * 2048.0;\n}\n\n\n#endif\n////////////////////////////////\n\nuniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nfloat @readf(ivec4 pos){\n    return decode_fixnum(texture2D(@tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw, @shape.z)\n        , @cols) * ivec2(@shape.xy)) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize)));\n}\n\nvec4 @read(ivec4 pos){\n    return vec4(\n        @readf(ivec4(pos.xy, 4 * (pos.z / 4) + 0, pos.w)),\n        @readf(ivec4(pos.xy, 4 * (pos.z / 4) + 1, pos.w)),\n        @readf(ivec4(pos.xy, 4 * (pos.z / 4) + 2, pos.w)),\n        @readf(ivec4(pos.xy, 4 * (pos.z / 4) + 3, pos.w))\n    );\n}\n';
+var writeShader = exports.writeShader = '\n#ifndef ENCODE_FIXNUM\n#define ENCODE_FIXNUM\n\n// http://aras-p.info/blog/2009/07/30/encoding-floats-to-rgba-the-final/\n\nvec4 encode_fixnum(float v) {\n    vec4 enc = vec4(1.0, 255.0, 65025.0, 160581375.0) * (v / 2048.0 + 0.5);\n    enc = fract(enc);\n    enc -= enc.yzww * vec4(1.0/255.0,1.0/255.0,1.0/255.0,0.0);\n    return enc;\n}\n#endif\n////////////////////////////////\n\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\n\nfloat processf(ivec4 pos);\nvoid main(){\n    int tile = vec2tile(ivec2(gl_FragCoord.xy) / @shape.xy, @cols);\n    if(tile >= @shape.z * @shape.w){ checkerboard(); return; }\n\n    gl_FragColor = encode_fixnum(processf(ivec4(\n        mod(vec2(gl_FragCoord.xy), vec2(@shape.xy)), \n        tile2vec(tile, @shape.z))));\n}\n\n\n\n\n';
 
 function init(shape) {
   var width = shape[0];
@@ -58,8 +58,8 @@ Object.defineProperty(exports, "__esModule", {
 exports.init = init;
 exports.pack = pack;
 exports.unpack = unpack;
-var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 @read(ivec4 pos){\n    return texture2D(@tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw / ivec2(4, 1), ceildiv(@shape.z, 4))\n        , @cols) * @shape.xy) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize));\n}\n\nfloat @readf(ivec4 pos){ return _readf(@read, pos); }';
-var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 process(ivec4 pos);\nvoid main(){\n    int tile = vec2tile(ivec2(gl_FragCoord.xy) / @shape.xy, @cols);\n    int chunks = ceildiv(@shape.z, 4);\n    if(tile >= chunks * @shape.w){ checkerboard(); return; }\n    gl_FragColor = activationFunc(process(ivec4(\n        mod(gl_FragCoord.xy, vec2(@shape.xy)), \n        tile2vec(tile, chunks) * ivec2(4, 1))));\n}';
+var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 @read(ivec4 pos){\n    return texture2D(@tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw / ivec2(4, 1), ceildiv(@shape.z, 4))\n        , @cols) * @shape.xy) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize));\n}\n\nfloat @readf(ivec4 pos){ \n\treturn chsel(@read(ivec4(pos.xy, 4 * (pos.z / 4), pos.w)), imod(pos.z, 4));\n}\n\n';
+var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 process(ivec4 pos);\nvoid main(){\n    int tile = vec2tile(ivec2(gl_FragCoord.xy) / @shape.xy, @cols);\n    int chunks = ceildiv(@shape.z, 4);\n    if(tile * 4 >= @shape.z * @shape.w){ checkerboard(); return; }\n    gl_FragColor = activationFunc(process(ivec4(\n        mod(gl_FragCoord.xy, vec2(@shape.xy)), \n        tile2vec(tile, chunks) * ivec2(4, 1))));\n}\n\n';
 
 function init(shape) {
   var width = shape[0]; // var width = shape[0] * 4;    
@@ -404,10 +404,10 @@ var _activations2 = _interopRequireDefault(_activations);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // import { Tensor, OutputTensor, InPlaceTensor } from '../tensor/index.js'
-var TENSOR_FRAGMENT_HEADER = '#ifdef GL_FRAGMENT_PRECISION_HIGH\n\tprecision highp float;\n#else\n\tprecision mediump float;\n#endif\n\nint   imod(int f, int p){ return f - p * (f / p); }\nint   vec2tile(ivec2 v, int rows){ return rows * v.y + v.x; }\nivec2 tile2vec(int f, int rows){ return ivec2(imod(f, rows), f / rows); }\nint   ceildiv(int a, int b){ return (a - 1) / b + 1; }\nvoid  checkerboard(){ gl_FragColor = vec4(mod(gl_FragCoord.x - gl_FragCoord.y, 2.0), 0.2, 0.1, 1); }\n\nfloat chsel(vec4 val, int ch){\n\tif(ch == 0) return val.r;\n\tif(ch == 1) return val.g;\n\tif(ch == 2) return val.b;\n\tif(ch == 3) return val.a;\n}\n\n#define _readf(read, pos) chsel(read(ivec4(pos.xy, pos.z / 4, pos.w)), imod(pos.z, 4))\n';
-var TENSOR_PROCESSF = '\nfloat processf(ivec4 pos);\nvec4 process(ivec4 pos){\n    return vec4(\n        processf(ivec4(pos.xy, pos.z + 0, pos.w)),\n        processf(ivec4(pos.xy, pos.z + 1, pos.w)),\n        processf(ivec4(pos.xy, pos.z + 2, pos.w)),\n        processf(ivec4(pos.xy, pos.z + 3, pos.w))\n    );\n}\n';
+var TENSOR_FRAGMENT_HEADER = 'precision highp int;\nprecision highp float;\n\nint   imod(int f, int p){ return f - p * (f / p); }\nint   vec2tile(ivec2 v, int rows){ return rows * v.y + v.x; }\nivec2 tile2vec(int f, int rows){ return ivec2(imod(f, rows), f / rows); }\nint   ceildiv(int a, int b){ return (a - 1) / b + 1; }\nvoid  checkerboard(){ gl_FragColor = vec4(mod(gl_FragCoord.x - gl_FragCoord.y, 2.0), 0.2, 0.1, 1); }\n\nfloat chsel(vec4 val, int ch){\n\tif(ch == 0) return val.r;\n\tif(ch == 1) return val.g;\n\tif(ch == 2) return val.b;\n\treturn val.a;\n}\n';
+var TENSOR_PROCESSF = '\nfloat processf(ivec4 pos);\nvec4 process(ivec4 pos){\n    return vec4(\n        processf(ivec4(pos.xy, pos.z + 0, pos.w)),\n        processf(ivec4(pos.xy, pos.z + 1, pos.w)),\n        processf(ivec4(pos.xy, pos.z + 2, pos.w)),\n        processf(ivec4(pos.xy, pos.z + 3, pos.w))\n    );\n}\n\n';
 
-var TENSOR_UNPROCESSF = '\nvec4 process(ivec4 pos);\nfloat processf(ivec4 pos){\n    return chsel(process(ivec4(pos.xy, 4 * (pos.z / 4), pos.w)), imod(pos.z, 4));\n}\n';
+var TENSOR_UNPROCESSF = '\nvec4 process(ivec4 pos);\nfloat processf(ivec4 pos){\n    return chsel(process(ivec4(pos.xy, 4 * (pos.z / 4), pos.w)), imod(pos.z, 4));\n}\n\n';
 
 function assembleFragmentShader(shaderGen, output, uniforms) {
     var tensorShader = shaderGen(uniforms, output);
@@ -418,7 +418,7 @@ function assembleFragmentShader(shaderGen, output, uniforms) {
         if (uniforms[uniform] instanceof _base2.default) {
             var tensor = uniforms[uniform];
 
-            fragmentShader += tensor._format.readShader.replace(/@/g, uniform + '_');
+            fragmentShader += tensor._format.readShader.replace(/@/g, uniform + '_') + '\n\n';
         }
     }
 
@@ -567,7 +567,7 @@ exports.createShaderProgram = createShaderProgram;
 
 var _check = require('./check.js');
 
-var TENSOR_VERTEX_SHADER = '\n    // TENSOR_VERTEX_SHADER\n\n    attribute vec2 a_position;\n    void main() {\n        gl_Position = vec4(a_position, 0, 1);\n    }\n';
+var TENSOR_VERTEX_SHADER = '\n    attribute vec2 a_position;\n    void main() {\n        gl_Position = vec4(a_position, 0, 1);\n    }\n';
 
 var UNIFORM_SETTERS = { vec4: '4fv', vec3: '3fv', vec2: '2fv', float: '1f',
     ivec4: '4iv', ivec3: '3iv', ivec2: '2iv', int: '1i',

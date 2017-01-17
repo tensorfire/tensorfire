@@ -50,12 +50,12 @@ uniform ivec4 @shape;
 uniform int @cols;
 
 
-float process(ivec4 pos);
+float processf(ivec4 pos);
 void main(){
     int tile = vec2tile(ivec2(gl_FragCoord.xy) / @shape.xy, @cols);
     if(tile >= @shape.z * @shape.w){ checkerboard(); return; }
 
-    gl_FragColor = encode_float(process(ivec4(
+    gl_FragColor = encode_float(processf(ivec4(
         mod(vec2(gl_FragCoord.xy), vec2(@shape.xy)), 
         tile2vec(tile, @shape.z))));
 }
