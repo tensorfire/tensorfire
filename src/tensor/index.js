@@ -1,8 +1,13 @@
 import BaseTensor from './base.js';
 import { testRenderFloat } from './testing.js'
 import { makeFrameBuffer } from './helpers.js'
-import * as NormalFormat from '../format/normal/index.js'
-import * as NofloatFormat from '../format/nofloat/index.js'
+import * as NormalFormat from '../format/tile/index.js'
+// import * as NofloatFormat from '../format/tile-nofloat/index.js'
+// import * as FixnumFormat from '../format/tile-fixnum/index.js'
+import * as StrideFormat from '../format/stride/index.js'
+import * as NofloatFormat from '../format/stride-nofloat/index.js'
+import * as FixnumFormat from '../format/stride-fixnum/index.js'
+
 import { Run } from '../runtime/index.js'
 
 export class Tensor extends BaseTensor {
@@ -48,7 +53,7 @@ export class Tensor extends BaseTensor {
         options = options || {};
 
         var type;
-        if(data === null || data === 'nofloat' || data instanceof Float32Array 
+        if(data === null || data === 'nofloat' || data === 'stride' || data instanceof Float32Array 
             || data === 'float32' || data instanceof Float64Array || Array.isArray(data)){
             // null defaults to a float32 texture type
             type = 'float32'
@@ -70,10 +75,14 @@ export class Tensor extends BaseTensor {
             || (gl.NO_RENDER_FLOAT && options.output) 
         ));
 
+        var stride = options.stride || data === 'stride';
+
         if(typeof data == 'string') data = null;
 
         if(nofloat){
-            super(gl, 'uint8', NofloatFormat, shape);
+            super(gl, 'uint8', FixnumFormat, shape);
+        }else if(stride){
+        	super(gl, type, StrideFormat, shape);
         }else{
         	super(gl, type, NormalFormat, shape);
         }

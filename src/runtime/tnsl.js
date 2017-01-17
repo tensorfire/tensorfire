@@ -35,7 +35,7 @@ export default function TNSL(str){
             }
             throw new Error('Can not inline expression ' + body);
         })
-        .replace(/\#\s*(\w+)\s*\[(.*)\]/g, function(all, tensor, body){
+        .replace(/\#\s*(\w+)\s*\[(.*?)\]/g, function(all, tensor, body){
             return tensor + '_read(ivec4(' + body + '))'
         })
     }

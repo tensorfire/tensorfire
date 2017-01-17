@@ -7,23 +7,15 @@ Object.defineProperty(exports, "__esModule", {
 exports.init = init;
 exports.pack = pack;
 exports.unpack = unpack;
-var readShader = exports.readShader = '// https://github.com/spite/scotlandjs-2015/blob/master/demo/index.html\n\n// This implementation seems to be broken. Logan, you should fix this.\n// Look, I called you out by name, in the comments of the source code\n\nfloat decode_float( vec4 val ) {\n    float sign = ( val.a * 255. / pow( 2., 7. ) ) >= 1. ? -1. : 1.;\n    float s = val.a * 255.;\n    if( s > 128. ) s -= 128.;\n    float exponent = s * 2. + floor( val.b * 255. / pow( 2., 7. ) );\n    float mantissa = ( val.r * 255. + val.g * 255. * 256. \n            + clamp( val.b * 255. - 128., 0., 255. ) * 256. * 256. );\n    float t = val.b * 255.;\n    if( t > 128. ) t -= 128.;\n    mantissa = t * 256. * 256. + val.g * 255. * 256. + val.r * 255.;\n    return sign * pow( 2., exponent - 127. ) * ( 1. + mantissa / pow ( 2., 23. ) );\n}\n\n//////////////////////////////\n\nuniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nfloat @readch(ivec4 pos, int ch){\n    return decode_float(texture2D(@tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw, ceildiv(@shape.z, 4))\n        , @cols) * @shape.xy) +\n        vec2(pos.x * 4 + ch, pos.y) + vec2(0.5, 0.5)\n    ) / vec2(@texSize)));\n}\n\nvec4 @read(ivec4 pos){\n    return vec4(@readch(pos, 0), @readch(pos, 1), @readch(pos, 2), @readch(pos, 3));\n}\n';
-var writeShader = exports.writeShader = '// https://github.com/mikolalysenko/glsl-read-float/blob/master/index.glsl\n\n#define FLOAT_MAX  1.70141184e38\n#define FLOAT_MIN  1.17549435e-38\n\nvec4 encode_float(float v) {\n    highp float av = abs(v);\n\n    //Handle special cases\n    if(av < FLOAT_MIN) {\n        return vec4(0.0, 0.0, 0.0, 0.0);\n    } else if(v > FLOAT_MAX) {\n        return vec4(127.0, 128.0, 0.0, 0.0) / 255.0;\n    } else if(v < -FLOAT_MAX) {\n        return vec4(255.0, 128.0, 0.0, 0.0) / 255.0;\n    }\n\n    highp vec4 c = vec4(0,0,0,0);\n\n    //Compute exponent and mantissa\n    highp float e = floor(log2(av));\n    highp float m = av * pow(2.0, -e) - 1.0;\n    \n    //Unpack mantissa\n    c[1] = floor(128.0 * m);\n    m -= c[1] / 128.0;\n    c[2] = floor(32768.0 * m);\n    m -= c[2] / 32768.0;\n    c[3] = floor(8388608.0 * m);\n    \n    //Unpack exponent\n    highp float ebias = e + 127.0;\n    c[0] = floor(ebias / 2.0);\n    ebias -= c[0] * 2.0;\n    c[1] += floor(ebias) * 128.0; \n\n    //Unpack sign bit\n    c[0] += 128.0 * step(0.0, -v);\n\n    //Scale back to range\n    return c.abgr / 255.0;\n}\n\n////////////////////////////////\n\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 process(ivec4 pos);\nvoid main(){\n    int x = int(gl_FragCoord.x) / 4;\n\n    int tile = vec2tile(ivec2(x, gl_FragCoord.y) / @shape.xy, @cols);\n    int chunks = ceildiv(@shape.z, 4);\n    if(tile >= chunks * @shape.w){ checkerboard(); return; }\n\n    vec4 value = activationFunc(process(ivec4(\n        mod(vec2(x, gl_FragCoord.y), vec2(@shape.xy)), \n        tile2vec(tile, chunks))));\n    \n    int ch = imod(int(gl_FragCoord.x), 4);\n    if(ch == 0){\n        gl_FragColor = encode_float(value.x);\n    }else if(ch == 1){\n        gl_FragColor = encode_float(value.y);\n    }else if(ch == 2){\n        gl_FragColor = encode_float(value.z);\n    }else if(ch == 3){\n        gl_FragColor = encode_float(value.w);\n    }\n}\n';
+var readShader = exports.readShader = '#ifndef DECODE_FIXNUM\n#define DECODE_FIXNUM\n// http://aras-p.info/blog/2009/07/30/encoding-floats-to-rgba-the-final/\nfloat decode_fixnum( vec4 rgba ) {\n  return dot( rgba, vec4(1.0, 1.0/255.0, 1.0/65025.0, 1.0/160581375.0) );\n}\n\n#endif\n////////////////////////////////\n\n\nuniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nfloat @readch(ivec4 pos, int ch){\n\t// int tile  = ch +\n\t// \t\t\tpos.x * 4 + \n\t// \t\t\tpos.y * @shape.x * 4 + \n\t// \t\t\tpos.z * @shape.x * 4 * @shape.y +\n\t// \t\t\tpos.w * @shape.x * 4 * @shape.y * ceildiv(@shape.z, 4);\n\tint tile  = 4*(pos.x + \n\t\t\t\tpos.y * @shape.x + \n\t\t\t\tpos.z * @shape.x * @shape.y +\n\t\t\t\tpos.w * @shape.x * @shape.y * ceildiv(@shape.z, 4)) + ch;\n\n\treturn decode_fixnum(texture2D(@tex, (vec2(tile2vec(tile, @texSize.x)) + vec2(0.5, 0.5)) / vec2(@texSize)));\n}\n\nvec4 @read(ivec4 pos){\n    return vec4(@readch(pos, 0), @readch(pos, 1), @readch(pos, 2), @readch(pos, 3));\n}\n\n';
+var writeShader = exports.writeShader = '#ifndef ENCODE_FIXNUM\n#define ENCODE_FIXNUM\n\n// http://aras-p.info/blog/2009/07/30/encoding-floats-to-rgba-the-final/\n\nvec4 encode_fixnum(float v) {\n    vec4 enc = vec4(1.0, 255.0, 65025.0, 160581375.0) * v;\n    enc = fract(enc);\n    enc -= enc.yzww * vec4(1.0/255.0,1.0/255.0,1.0/255.0,0.0);\n    return enc;\n}\n\n#endif\n////////////////////////////////\n\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\n// uniform vec4 @decvec;\n\nvec4 process(ivec4 pos);\nvoid main(){\n\tint shapez = ceildiv(@shape.z, 4);\n\tint unscaled = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint tile = unscaled / 4;\n\tint chunks = @shape.x * @shape.y * shapez * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tvec4 value = activationFunc(process(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\timod(tile / @shape.x / @shape.y, shapez ),\n\t\ttile / @shape.x / @shape.y / shapez\n\t)));\n\n\tint ch = imod(unscaled, 4);\n    if(ch == 0){\n        gl_FragColor = encode_fixnum(value.x);\n    }else if(ch == 1){\n        gl_FragColor = encode_fixnum(value.y);\n    }else if(ch == 2){\n        gl_FragColor = encode_fixnum(value.z);\n    }else if(ch == 3){\n        gl_FragColor = encode_fixnum(value.w);\n    }\n}\n\n// void main(){\n// \tint shapez = ceildiv(@shape.z, 4);\n// \tint tile = vec2tile(ivec2(gl_FragCoord.x / 4, gl_FragCoord.y), @texSize.x / 4);\n// \tint chunks = @shape.x * @shape.y * shapez * @shape.w;\n// \tif(tile >= chunks){ checkerboard(); return; }\n\n// \tvec4 value = activationFunc(process(ivec4(\n// \t\timod(tile, @shape.x),\n// \t\timod(tile / @shape.x, @shape.y),\n// \t\timod(tile / @shape.x / @shape.y, shapez ),\n// \t\ttile / @shape.x / @shape.y / shapez\n// \t)));\n\n\n// }\n';
 
 function init(shape) {
-  var width = shape[0] * 4;
-  // we pick the number of columns so we can keep
-  // the texture as square as possible, with the
-  // minimal amount of wasted space.
-
-  var tiles = Math.ceil(shape[2] / 4) * shape[3],
-      cols = Math.max(1, Math.min(tiles, Math.round(Math.sqrt(shape[0] * shape[1] * tiles) / width)));
-
-  var texSize = [width * cols, shape[1] * Math.ceil(tiles / cols)];
-
+  var length = 4 * Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
+  var cols = Math.ceil(Math.sqrt(length) / 4) * 4;
+  var texSize = [cols, Math.ceil(length / cols)];
   return {
     texSize: texSize,
-    cols: cols,
     shape: shape
   };
 }
@@ -50,6 +42,92 @@ function unpack(info, arr) {
 }
 
 },{}],2:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.init = init;
+exports.pack = pack;
+exports.unpack = unpack;
+var readShader = exports.readShader = '#ifndef DECODE_FLOAT\n#define DECODE_FLOAT\n// https://github.com/spite/scotlandjs-2015/blob/master/demo/index.html\n\n// This implementation seems to be broken. Logan, you should fix this.\n// Look, I called you out by name, in the comments of the source code\n\nfloat decode_float( vec4 val ) {\n    float sign = ( val.a * 255. / pow( 2., 7. ) ) >= 1. ? -1. : 1.;\n    float s = val.a * 255.;\n    if( s > 128. ) s -= 128.;\n    float exponent = s * 2. + floor( val.b * 255. / pow( 2., 7. ) );\n    float mantissa = ( val.r * 255. + val.g * 255. * 256. \n            + clamp( val.b * 255. - 128., 0., 255. ) * 256. * 256. );\n    float t = val.b * 255.;\n    if( t > 128. ) t -= 128.;\n    mantissa = t * 256. * 256. + val.g * 255. * 256. + val.r * 255.;\n    return sign * pow( 2., exponent - 127. ) * ( 1. + mantissa / pow ( 2., 23. ) );\n}\n#endif\n////////////////////////////////\n\nuniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nfloat @readch(ivec4 pos, int ch){\n\t// int tile  = ch +\n\t// \t\t\tpos.x * 4 + \n\t// \t\t\tpos.y * @shape.x * 4 + \n\t// \t\t\tpos.z * @shape.x * 4 * @shape.y +\n\t// \t\t\tpos.w * @shape.x * 4 * @shape.y * ceildiv(@shape.z, 4);\n\tint tile  = 4*(pos.x + \n\t\t\t\tpos.y * @shape.x + \n\t\t\t\tpos.z * @shape.x * @shape.y +\n\t\t\t\tpos.w * @shape.x * @shape.y * ceildiv(@shape.z, 4)) + ch;\n\n\treturn decode_float(texture2D(@tex, (vec2(tile2vec(tile, @texSize.x)) + vec2(0.5, 0.5)) / vec2(@texSize)));\n}\n\nvec4 @read(ivec4 pos){\n    return vec4(@readch(pos, 0), @readch(pos, 1), @readch(pos, 2), @readch(pos, 3));\n}\n\n';
+var writeShader = exports.writeShader = '#ifndef ENCODE_FLOAT\n#define ENCODE_FLOAT\n// https://github.com/mikolalysenko/glsl-read-float/blob/master/index.glsl\n\n#define FLOAT_MAX  1.70141184e38\n#define FLOAT_MIN  1.17549435e-38\n\nvec4 encode_float(float v) {\n    highp float av = abs(v);\n\n    //Handle special cases\n    if(av < FLOAT_MIN) {\n        return vec4(0.0, 0.0, 0.0, 0.0);\n    } else if(v > FLOAT_MAX) {\n        return vec4(127.0, 128.0, 0.0, 0.0) / 255.0;\n    } else if(v < -FLOAT_MAX) {\n        return vec4(255.0, 128.0, 0.0, 0.0) / 255.0;\n    }\n\n    highp vec4 c = vec4(0,0,0,0);\n\n    //Compute exponent and mantissa\n    highp float e = floor(log2(av));\n    highp float m = av * pow(2.0, -e) - 1.0;\n    \n    //Unpack mantissa\n    c[1] = floor(128.0 * m);\n    m -= c[1] / 128.0;\n    c[2] = floor(32768.0 * m);\n    m -= c[2] / 32768.0;\n    c[3] = floor(8388608.0 * m);\n    \n    //Unpack exponent\n    highp float ebias = e + 127.0;\n    c[0] = floor(ebias / 2.0);\n    ebias -= c[0] * 2.0;\n    c[1] += floor(ebias) * 128.0; \n\n    //Unpack sign bit\n    c[0] += 128.0 * step(0.0, -v);\n\n    //Scale back to range\n    return c.abgr / 255.0;\n}\n#endif\n////////////////////////////////\n\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\n// uniform vec4 @decvec;\n\nvec4 process(ivec4 pos);\nvoid main(){\n\tint shapez = ceildiv(@shape.z, 4);\n\tint unscaled = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint tile = unscaled / 4;\n\tint chunks = @shape.x * @shape.y * shapez * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tvec4 value = activationFunc(process(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\timod(tile / @shape.x / @shape.y, shapez ),\n\t\ttile / @shape.x / @shape.y / shapez\n\t)));\n\n\tint ch = imod(unscaled, 4);\n    if(ch == 0){\n        gl_FragColor = encode_float(value.x);\n    }else if(ch == 1){\n        gl_FragColor = encode_float(value.y);\n    }else if(ch == 2){\n        gl_FragColor = encode_float(value.z);\n    }else if(ch == 3){\n        gl_FragColor = encode_float(value.w);\n    }\n}\n\n// void main(){\n// \tint shapez = ceildiv(@shape.z, 4);\n// \tint tile = vec2tile(ivec2(gl_FragCoord.x / 4, gl_FragCoord.y), @texSize.x / 4);\n// \tint chunks = @shape.x * @shape.y * shapez * @shape.w;\n// \tif(tile >= chunks){ checkerboard(); return; }\n\n// \tvec4 value = activationFunc(process(ivec4(\n// \t\timod(tile, @shape.x),\n// \t\timod(tile / @shape.x, @shape.y),\n// \t\timod(tile / @shape.x / @shape.y, shapez ),\n// \t\ttile / @shape.x / @shape.y / shapez\n// \t)));\n\n\n// }\n';
+
+function init(shape) {
+  var length = 4 * Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
+  var cols = Math.ceil(Math.sqrt(length) / 4) * 4;
+  var texSize = [cols, Math.ceil(length / cols)];
+  return {
+    texSize: texSize,
+    shape: shape
+  };
+}
+
+function pack(info, ndarray) {
+  // return Uint8Array or Float32Array
+
+
+  // uniform sampler2D @_tex;
+  // uniform ivec2 @_texSize;
+  // uniform ivec4 @_shape;
+  // uniform int @_cols;
+
+  // return {
+  // 	tex:
+  // 	texSize:
+  // 	shape:
+  // 	cols:
+  // }
+}
+
+function unpack(info, arr) {
+  // return ndarray
+}
+
+},{}],3:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.init = init;
+exports.pack = pack;
+exports.unpack = unpack;
+var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\n// uniform vec4 @decvec;\n\nvec4 @read(ivec4 pos){\n\tint tile  = pos.x + \n\t\t\t\tpos.y * @shape.x + \n\t\t\t\tpos.z * @shape.x * @shape.y +\n\t\t\t\tpos.w * @shape.x * @shape.y * ceildiv(@shape.z, 4);\n\n\t// int tile = int(dot(vec4(pos), vec4(1, @shape.x, @shape.x * @shape.y, @shape.x * @shape.y * ceildiv(@shape.z, 4))));\n\t// int tile = int(dot(vec4(pos), @decvec));\n\treturn texture2D(@tex, (vec2(tile2vec(tile, @texSize.x)) + vec2(0.5, 0.5)) / vec2(@texSize));\n}\n';
+var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\n// uniform vec4 @decvec;\n\nvec4 process(ivec4 pos);\nvoid main(){\n\tint shapez = ceildiv(@shape.z, 4);\n\tint tile = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint chunks = @shape.x * @shape.y * shapez * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tgl_FragColor = activationFunc(process(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\timod(tile / @shape.x / @shape.y, shapez ),\n\t\ttile / @shape.x / @shape.y / shapez\n\t)));\n}\n';
+
+function init(shape) {
+  var length = Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
+  var cols = Math.ceil(Math.sqrt(length));
+  var texSize = [cols, Math.ceil(length / cols)];
+  return {
+    texSize: texSize,
+    shape: shape
+  };
+}
+
+function pack(info, ndarray) {
+  // return Uint8Array or Float32Array
+
+
+  // uniform sampler2D @_tex;
+  // uniform ivec2 @_texSize;
+  // uniform ivec4 @_shape;
+  // uniform int @_cols;
+
+  // return {
+  // 	tex:
+  // 	texSize:
+  // 	shape:
+  // 	cols:
+  // }
+}
+
+function unpack(info, arr) {
+  // return ndarray
+}
+
+},{}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -100,7 +178,7 @@ function unpack(info, arr) {
   // return ndarray
 }
 
-},{}],3:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -152,7 +230,7 @@ Object.defineProperty(exports, 'createGL', {
   }
 });
 
-},{"./runtime/index.js":7,"./tensor/index.js":13,"./util.js":16}],4:[function(require,module,exports){
+},{"./runtime/index.js":9,"./tensor/index.js":15,"./util.js":18}],6:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -166,7 +244,7 @@ exports.default = {
     rgb: "\n        vec4 activationFunc(vec4 data){\n            return data / 255.0; \n        }\n    "
 };
 
-},{}],5:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -385,7 +463,7 @@ function annotateFiles(files, errors) {
     });
 }
 
-},{}],6:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -432,7 +510,7 @@ function assembleFragmentShader(shaderGen, output, uniforms) {
     return fragmentShader;
 }
 
-},{"../tensor/base.js":11,"./activations.js":4}],7:[function(require,module,exports){
+},{"../tensor/base.js":13,"./activations.js":6}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -546,7 +624,7 @@ function Run(shaderGen, output) {
     return output;
 }
 
-},{"../tensor/index.js":13,"./check.js":5,"./frag.js":6,"./program.js":8,"./timer.js":9,"./tnsl.js":10}],8:[function(require,module,exports){
+},{"../tensor/index.js":15,"./check.js":7,"./frag.js":8,"./program.js":10,"./timer.js":11,"./tnsl.js":12}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -654,7 +732,7 @@ function compileShader(gl, shaderSource, shaderType) {
     return shader;
 }
 
-},{"./check.js":5}],9:[function(require,module,exports){
+},{"./check.js":7}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -772,7 +850,7 @@ function createTimer(gl) {
 	};
 }
 
-},{}],10:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -834,13 +912,13 @@ function TNSL(str) {
                 return (obj.every(Number.isInteger) ? 'i' : '') + 'vec' + obj.length + '(' + obj.join(',') + ')';
             }
             throw new Error('Can not inline expression ' + body);
-        }).replace(/\#\s*(\w+)\s*\[(.*)\]/g, function (all, tensor, body) {
+        }).replace(/\#\s*(\w+)\s*\[(.*?)\]/g, function (all, tensor, body) {
             return tensor + '_read(ivec4(' + body + '))';
         });
     };
 }
 
-},{}],11:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -904,7 +982,7 @@ var BaseTensor = function () {
 		key: 'update',
 		value: function update(data) {
 			if (!data) return this._update(null);
-			// this._update(this._format.pack(this._info, data))
+			this._update(this._format.pack(this._info, data));
 		}
 	}, {
 		key: '_show',
@@ -924,7 +1002,7 @@ var BaseTensor = function () {
 
 exports.default = BaseTensor;
 
-},{"./helpers.js":12,"./show.js":14}],12:[function(require,module,exports){
+},{"./helpers.js":14,"./show.js":16}],14:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -951,7 +1029,7 @@ function makeTexture(gl) {
     return texture;
 }
 
-},{}],13:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -971,15 +1049,23 @@ var _testing = require('./testing.js');
 
 var _helpers = require('./helpers.js');
 
-var _index = require('../format/normal/index.js');
+var _index = require('../format/tile/index.js');
 
 var NormalFormat = _interopRequireWildcard(_index);
 
-var _index2 = require('../format/nofloat/index.js');
+var _index2 = require('../format/stride/index.js');
 
-var NofloatFormat = _interopRequireWildcard(_index2);
+var StrideFormat = _interopRequireWildcard(_index2);
 
-var _index3 = require('../runtime/index.js');
+var _index3 = require('../format/stride-nofloat/index.js');
+
+var NofloatFormat = _interopRequireWildcard(_index3);
+
+var _index4 = require('../format/stride-fixnum/index.js');
+
+var FixnumFormat = _interopRequireWildcard(_index4);
+
+var _index5 = require('../runtime/index.js');
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
@@ -990,6 +1076,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+// import * as NofloatFormat from '../format/tile-nofloat/index.js'
+// import * as FixnumFormat from '../format/tile-fixnum/index.js'
+
 
 var Tensor = exports.Tensor = function (_BaseTensor) {
     _inherits(Tensor, _BaseTensor);
@@ -1042,7 +1131,7 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
         options = options || {};
 
         var type;
-        if (data === null || data === 'nofloat' || data instanceof Float32Array || data === 'float32' || data instanceof Float64Array || Array.isArray(data)) {
+        if (data === null || data === 'nofloat' || data === 'stride' || data instanceof Float32Array || data === 'float32' || data instanceof Float64Array || Array.isArray(data)) {
             // null defaults to a float32 texture type
             type = 'float32';
         } else if (data instanceof Uint8Array || data === 'uint8' || data instanceof Uint8ClampedArray) {
@@ -1059,10 +1148,14 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
 
         var nofloat = type === 'float32' && (gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && options.output);
 
+        var stride = options.stride || data === 'stride';
+
         if (typeof data == 'string') data = null;
 
         if (nofloat) {
-            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, 'uint8', NofloatFormat, shape));
+            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, 'uint8', FixnumFormat, shape));
+        } else if (stride) {
+            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, type, StrideFormat, shape));
         } else {
             var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, type, NormalFormat, shape));
         }
@@ -1086,7 +1179,7 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
 
             var TENSOR_IDENTITY = '\n            uniform Tensor image;\n            vec4 process(ivec4 pos) { return #image[pos]; }\n        ';
             var out = new constructor(this.gl, this.shape, dtype);
-            (0, _index3.Run)(TENSOR_IDENTITY, out, { image: this });
+            (0, _index5.Run)(TENSOR_IDENTITY, out, { image: this });
             return out;
         }
     }, {
@@ -1165,7 +1258,7 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
     return InPlaceTensor;
 }(OutputTensor);
 
-},{"../format/nofloat/index.js":1,"../format/normal/index.js":2,"../runtime/index.js":7,"./base.js":11,"./helpers.js":12,"./testing.js":15}],14:[function(require,module,exports){
+},{"../format/stride-fixnum/index.js":1,"../format/stride-nofloat/index.js":2,"../format/stride/index.js":3,"../format/tile/index.js":4,"../runtime/index.js":9,"./base.js":13,"./helpers.js":14,"./testing.js":17}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1204,7 +1297,7 @@ function showTexture(gl, tex) {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-},{"../runtime/program.js":8}],15:[function(require,module,exports){
+},{"../runtime/program.js":10}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1245,7 +1338,7 @@ function testRenderFloat(gl) {
     return status == gl.FRAMEBUFFER_COMPLETE;
 }
 
-},{"../runtime/program.js":8,"./helpers.js":12}],16:[function(require,module,exports){
+},{"../runtime/program.js":10,"./helpers.js":14}],18:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1264,5 +1357,5 @@ function createGL(canvas) {
     return gl;
 }
 
-},{}]},{},[3])(3)
+},{}]},{},[5])(5)
 });

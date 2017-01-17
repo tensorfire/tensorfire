@@ -37,18 +37,31 @@ const Transpose = TP`
     }
 `;
 
+const Sum = TP`
+    uniform Tensor a;
+    uniform Tensor b;
 
-grad = new OutputTensor(gl, [512, 512, 4 * 15], 'nofloat')
+    vec4 process(ivec4 pos) {
+        return #a[pos] + #b[pos];
+    }
+`;
+
+
+grad = new OutputTensor(gl, [512, 512, 4 * 35])
 MakeGradient(grad)
 grad.show()
 
-gray = new OutputTensor(gl, grad.shape, 'nofloat');
+gray = new OutputTensor(gl, grad.shape);
 Grayscale(gray, { image: grad })
 gray.show()
 
-tr = new OutputTensor(gl, grad.shape);
+tr = new OutputTensor(gl, grad.shape, 'nofloat');
 Transpose(tr, { image: gray })
 tr.show()
+
+sum = new OutputTensor(gl, grad.shape);
+Sum(sum, { a: tr, b: gray })
+sum.show()
 
 
 

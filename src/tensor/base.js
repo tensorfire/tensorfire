@@ -43,7 +43,7 @@ export default class BaseTensor {
 	}
 	update(data){
 		if(!data) return this._update(null);
-		// this._update(this._format.pack(this._info, data))
+		this._update(this._format.pack(this._info, data))
 	}
 	
 	_show(opt = {}){ showTexture(this.gl, this.tex, opt) }
