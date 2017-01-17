@@ -1,22 +1,17 @@
 #ifndef DECODE_FLOAT
 #define DECODE_FLOAT
-// https://github.com/spite/scotlandjs-2015/blob/master/demo/index.html
 
-// This implementation seems to be broken. Logan, you should fix this.
-// Look, I called you out by name, in the comments of the source code
-
-float decode_float( vec4 val ) {
-    float sign = ( val.a * 255. / pow( 2., 7. ) ) >= 1. ? -1. : 1.;
-    float s = val.a * 255.;
-    if( s > 128. ) s -= 128.;
-    float exponent = s * 2. + floor( val.b * 255. / pow( 2., 7. ) );
-    float mantissa = ( val.r * 255. + val.g * 255. * 256. 
-            + clamp( val.b * 255. - 128., 0., 255. ) * 256. * 256. );
-    float t = val.b * 255.;
-    if( t > 128. ) t -= 128.;
-    mantissa = t * 256. * 256. + val.g * 255. * 256. + val.r * 255.;
-    return sign * pow( 2., exponent - 127. ) * ( 1. + mantissa / pow ( 2., 23. ) );
+float decode_float(vec4 val){
+    vec4 scl = floor(255.0 * val + 0.5);
+    float sgn = (scl.a < 128.0) ? 1.0 : -1.0;
+    float exn = float(imod(int(scl.a) * 2, 256)) + floor(scl.b / 128.0) - 127.0;
+    float man = 1.0 +
+        (scl.r / 8388608.0) + 
+        (scl.g / 32768.0) +
+        float(imod(int(scl.b), 128)) / 128.0;
+    return sgn * man * pow(2.0, exn);
 }
+
 #endif
 ////////////////////////////////
 
