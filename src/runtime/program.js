@@ -82,6 +82,10 @@ export function createShaderProgram(gl, vertexSource, fragmentSource) {
     var vertexShader = compileShader(gl, vertexSource, gl.VERTEX_SHADER);
     var fragmentShader = compileShader(gl, fragmentSource, gl.FRAGMENT_SHADER);
 
+    // var debug = gl.getExtension('WEBGL_debug_shaders')
+    // console.log(debug.getTranslatedShaderSource(vertexShader));
+    // console.log(debug.getTranslatedShaderSource(fragmentShader));
+
     var program = gl.createProgram();
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);

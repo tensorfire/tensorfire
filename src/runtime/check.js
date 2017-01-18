@@ -16,6 +16,9 @@ export function checkLinkError (gl, program, fragShader, vertShader, command) {
         } else {
             console.log(header + '\n' + errLog)
         }
+
+        console.log(fragShader);
+        
         throw new Error(header)
     }
 }

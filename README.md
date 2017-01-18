@@ -169,7 +169,21 @@ The texture is a low-level API. The "type" is "uint8" if the underlying texture 
 
 
 
+# Taxonomy of Formats
 
+- Vectorized: this is the typical encoding, where we have a floating point RGBA texture where each pixel encodes 4 floats
+	- Tile: the volume is sliced along depth and channel into tiles that are packed into the texture
+	- Stride: we treat the texture as a long array wrapped at a certain point and we address things by multiplying strides
+
+- Unvectorized: this is meant to run on uint8 textures and each pixel encodes a single floating point value.
+	- Fixnum: fixed-precision encoding
+	- Nofloat: ieee754
+
+
+
+# Chromebook Crash
+
+It seems that my chromebook doesn't like it when I try to use oes_disjoint_timer_ext or whatever. It ends up crashing the operating system entirely sometimes. 
 
 # Strange Bug:
 
@@ -210,6 +224,8 @@ The program needs to return for all possible conditional paths, so changing it t
 
 
 # This one is insane
+
+Here's a problem which seems to only happen on my LG Optimus Exceed 2. 
 
 
 So this code works fine:
