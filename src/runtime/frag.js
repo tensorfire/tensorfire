@@ -15,11 +15,11 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
             let tensor = uniforms[uniform];
 
             fragmentShader += tensor._format.codec.decodeShader.replace(/@/g, uniform + '_') + '\n'
-            fragmentShader += tensor._format.pack.readShader.replace(/@/g, uniform + '_') + '\n\n'
+            fragmentShader += tensor._format.pack.readShader.replace(/@/g, uniform + '_') + '\n'
 
             if((tensor.format.density == '1:4' && (new RegExp(uniform + '_read4\\b')).test(tensorShader)) || 
                 (tensor.format.density == '4:4' && (new RegExp(uniform + '_read\\b')).test(tensorShader))){
-                fragmentShader += tensor._format.read_shim.replace(/@/g, uniform + '_');
+                fragmentShader += tensor._format.read_shim.replace(/@/g, uniform + '_') + '\n';
             }
         }
     }
@@ -30,14 +30,14 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
     if(!(activation in output._format.activations))
         throw new Error('Unknown activation type ' + activation);
 
-    fragmentShader += output._format.activations[activation].replace(/@/g, 'out_');
-    fragmentShader += output._format.codec.encodeShader.replace(/@/g, 'out_');
-    fragmentShader += output._format.pack.writeShader.replace(/@/g, 'out_');
+    fragmentShader += output._format.activations[activation].replace(/@/g, 'out_') + '\n';
+    fragmentShader += output._format.codec.encodeShader.replace(/@/g, 'out_') + '\n';
+    fragmentShader += output._format.pack.writeShader.replace(/@/g, 'out_') + '\n';
 
 
     if((output.format.density == '1:4' && /process4\b/.test(tensorShader)) || 
         (output.format.density == '4:4' && /process\b/.test(tensorShader))){
-        fragmentShader += output._format.write_shim.replace(/@/g, 'out_');
+        fragmentShader += output._format.write_shim.replace(/@/g, 'out_') + '\n';
     }
 
     fragmentShader += tensorShader 

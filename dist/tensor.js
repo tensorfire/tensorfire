@@ -19,8 +19,8 @@ exports.default = {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var encodeShader = exports.encodeShader = '// http://aras-p.info/blog/2009/07/30/encoding-floats-to-rgba-the-final/\n\nvec4 @encode1(float v) {\n    vec4 enc = vec4(1.0, 255.0, 65025.0, 160581375.0) * (v / 2048.0 + 0.5);\n    enc = fract(enc);\n    enc -= enc.yzww * vec4(1.0/255.0,1.0/255.0,1.0/255.0,0.0);\n    return enc;\n}';
-var decodeShader = exports.decodeShader = '// http://aras-p.info/blog/2009/07/30/encoding-floats-to-rgba-the-final/\n\nfloat @decode1( vec4 rgba ) {\n\treturn (dot( rgba, vec4(1.0, 1.0/255.0, 1.0/65025.0, 1.0/160581375.0) ) - 0.5) * 2048.0;\n}\n';
+var encodeShader = exports.encodeShader = 'vec4 @encode1(float v) {\n\treturn fract(vec4(1.0, 255.0, 65025.0, 16581375.0) * clamp(v / 4096.0 + 0.5, 0.0, 1.0));\n}';
+var decodeShader = exports.decodeShader = 'float @decode1( vec4 rgba ) {\n    return (dot(rgba, 1.0/vec4(1.0, 255.0, 65025.0, 16581375.0)) - 0.5) * 4096.0;\n}';
 
 },{}],3:[function(require,module,exports){
 'use strict';
@@ -90,7 +90,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.init = init;
 exports.pack = pack;
 exports.unpack = unpack;
-var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nfloat @read(ivec4 pos){\n    return @decode1(texture2D(@tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw, @shape.z)\n        , @cols) * ivec2(@shape.xy)) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize)));\n}\n\nvec4 @read4(ivec4 pos){\n    int z = 4 * (pos.z / 4);\n    return vec4(\n        @read(ivec4(pos.xy, z    , pos.w)),\n        @read(ivec4(pos.xy, z + 1, pos.w)),\n        @read(ivec4(pos.xy, z + 2, pos.w)),\n        @read(ivec4(pos.xy, z + 3, pos.w))\n    );\n}';
+var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nfloat @read(ivec4 pos){\n    return @decode1(texture2D(@tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw, @shape.z)\n        , @cols) * ivec2(@shape.xy)) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize)));\n}\n';
 var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 clampify(vec4 v){\n    return vec4(ivec4(clamp(v, vec4(0), vec4(1)) * 255.0)) / 255.0;\n}\n\nfloat process(ivec4 pos);\nvoid main(){\n    int tile = vec2tile(ivec2(gl_FragCoord.xy) / @shape.xy, @cols);\n    if(tile >= @shape.z * @shape.w){ checkerboard(); return; }\n\n    gl_FragColor = clampify(@encode1(@activation1(process(ivec4(\n        mod(vec2(gl_FragCoord.xy), vec2(@shape.xy)), \n        tile2vec(tile, @shape.z))))));\n}';
 
 function init(shape) {
@@ -632,10 +632,10 @@ function assembleFragmentShader(shaderGen, output, uniforms) {
             var tensor = uniforms[uniform];
 
             fragmentShader += tensor._format.codec.decodeShader.replace(/@/g, uniform + '_') + '\n';
-            fragmentShader += tensor._format.pack.readShader.replace(/@/g, uniform + '_') + '\n\n';
+            fragmentShader += tensor._format.pack.readShader.replace(/@/g, uniform + '_') + '\n';
 
             if (tensor.format.density == '1:4' && new RegExp(uniform + '_read4\\b').test(tensorShader) || tensor.format.density == '4:4' && new RegExp(uniform + '_read\\b').test(tensorShader)) {
-                fragmentShader += tensor._format.read_shim.replace(/@/g, uniform + '_');
+                fragmentShader += tensor._format.read_shim.replace(/@/g, uniform + '_') + '\n';
             }
         }
     }
@@ -644,12 +644,12 @@ function assembleFragmentShader(shaderGen, output, uniforms) {
 
     if (!(activation in output._format.activations)) throw new Error('Unknown activation type ' + activation);
 
-    fragmentShader += output._format.activations[activation].replace(/@/g, 'out_');
-    fragmentShader += output._format.codec.encodeShader.replace(/@/g, 'out_');
-    fragmentShader += output._format.pack.writeShader.replace(/@/g, 'out_');
+    fragmentShader += output._format.activations[activation].replace(/@/g, 'out_') + '\n';
+    fragmentShader += output._format.codec.encodeShader.replace(/@/g, 'out_') + '\n';
+    fragmentShader += output._format.pack.writeShader.replace(/@/g, 'out_') + '\n';
 
     if (output.format.density == '1:4' && /process4\b/.test(tensorShader) || output.format.density == '4:4' && /process\b/.test(tensorShader)) {
-        fragmentShader += output._format.write_shim.replace(/@/g, 'out_');
+        fragmentShader += output._format.write_shim.replace(/@/g, 'out_') + '\n';
     }
 
     fragmentShader += tensorShader;
@@ -1313,16 +1313,14 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             throw new Error("Invalid format for data: must be Uint8Array or Float32Array or ndarray");
         }
 
-        var nofloat = type === 'float32' && (
-        // true || 
-        gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && options.output);
+        var nofloat = type === 'float32' && (true || gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && options.output);
 
         var stride = options.stride || data === 'stride';
 
         if (typeof data == 'string') data = null;
 
         if (nofloat) {
-            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: 'uint8', pack: 'tile', density: '1:4', codec: 'softfloat' }, shape));
+            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: 'uint8', pack: 'tile', density: '1:4', codec: 'fixnum' }, shape));
         } else {
             var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: type, pack: 'tile', density: '4:4', codec: 'raw' }, shape));
         }
