@@ -36,7 +36,7 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
         if(uniforms[uniform] instanceof BaseTensor){
             let tensor = uniforms[uniform];
 
-            fragmentShader += tensor._format.readShader.replace(/@/g, uniform + '_') + '\n\n';
+            fragmentShader += tensor._codec.readShader.replace(/@/g, uniform + '_') + '\n\n';
         }
     }
 
@@ -47,7 +47,7 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
         activation = ACTIVATIONS[uniforms._activation.toLowerCase()]
     }
     fragmentShader += activation;
-    fragmentShader += output._format.writeShader.replace(/@/g, 'out_');
+    fragmentShader += output._codec.writeShader.replace(/@/g, 'out_');
 
     if(/float processf/.test(tensorShader) && !/float processf/.test(fragmentShader)){
         fragmentShader += TENSOR_PROCESSF;

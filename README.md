@@ -181,6 +181,48 @@ The texture is a low-level API. The "type" is "uint8" if the underlying texture 
 
 
 
+# Taxonomy of Formats (V2)
+
+packings:
+- tile
+- stride
+
+1:4 codecs:
+- softfloat
+- fixnum
+
+4:4 codecs:
+- raw
+- linear quantization
+
+
+directory structure:
+- format/
+	- 4-4
+		- pack
+			- tile
+			- stride
+		- codec
+			- softfloat
+			- fixnum
+	- 1-4
+		- pack
+			- tile
+			- stride
+		- codec
+			- raw
+			- linquant
+
+
+
+ivec4 pos <-> vec2 texture position mapping functions
+
+- Tile
+- Stride
+
+float <-> vec4 color mapping functions for nofloat
+
+
 # Chromebook Crash
 
 It seems that my chromebook doesn't like it when I try to use oes_disjoint_timer_ext or whatever. It ends up crashing the operating system entirely sometimes. 

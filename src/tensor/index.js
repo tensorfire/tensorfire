@@ -1,14 +1,6 @@
 import BaseTensor from './base.js';
 import { testRenderFloat } from './testing.js'
 import { makeFrameBuffer } from './helpers.js'
-import * as NormalFormat from '../format/tile/index.js'
-// import * as NofloatFormat from '../format/tile-nofloat/index.js'
-// import * as AltFormat from '../format/alt-tile-nofloat/index.js'
-import * as AltFormat from '../format/alt-tile-fixnum/index.js'
-// import * as FixnumFormat from '../format/tile-fixnum/index.js'
-// import * as StrideFormat from '../format/stride/index.js'
-// import * as NofloatFormat from '../format/stride-nofloat/index.js'
-// import * as FixnumFormat from '../format/stride-fixnum/index.js'
 
 import { Run } from '../runtime/index.js'
 
@@ -83,11 +75,9 @@ export class Tensor extends BaseTensor {
         if(typeof data == 'string') data = null;
 
         if(nofloat){
-            super(gl, 'uint8', AltFormat, shape);
-        }else if(stride){
-        	super(gl, type, StrideFormat, shape);
+            super(gl, { type: 'uint8', pack: 'tile', codec: 'softfloat' }, shape);
         }else{
-        	super(gl, type, NormalFormat, shape);
+        	super(gl, { type, pack: 'tile', codec: 'raw' }, shape);
         }
 
         this.type = type;
