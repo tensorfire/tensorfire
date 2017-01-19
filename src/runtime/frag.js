@@ -31,32 +31,36 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
     var tensorShader = shaderGen(uniforms, output);
     
     var fragmentShader = TENSOR_FRAGMENT_HEADER;
-
     for(let uniform in uniforms){
         if(uniforms[uniform] instanceof BaseTensor){
             let tensor = uniforms[uniform];
 
-            fragmentShader += tensor._codec.readShader.replace(/@/g, uniform + '_') + '\n\n';
+            fragmentShader += tensor._format.codec.decodeShader.replace(/@/g, uniform + '_') + '\n'
+            fragmentShader += tensor._format.pack.readShader.replace(/@/g, uniform + '_') + '\n\n'
+
         }
     }
 
-    var activation = '\n#define activationFunc\n';
-    if(typeof uniforms._activation == 'string' && uniforms._activation != 'linear'){
-        if(!(uniforms._activation.toLowerCase() in ACTIVATIONS)) 
-            throw new Error('Unknown activation type ' + uniforms._activation.toLowerCase());
-        activation = ACTIVATIONS[uniforms._activation.toLowerCase()]
-    }
-    fragmentShader += activation;
-    fragmentShader += output._codec.writeShader.replace(/@/g, 'out_');
+    var activation = (typeof uniforms._activation == 'string' && uniforms._activation != 'linear') ?
+        uniforms._activation.toLowerCase() : 'linear';
 
-    if(/float processf/.test(tensorShader) && !/float processf/.test(fragmentShader)){
-        fragmentShader += TENSOR_PROCESSF;
-    }else if(/vec4 process\b/.test(tensorShader) && !/vec4 process\b/.test(fragmentShader)){
-        fragmentShader += TENSOR_UNPROCESSF;
-    }
+    if(!(activation in output._format.activations))
+        throw new Error('Unknown activation type ' + activation);
 
+    fragmentShader += output._format.activations[activation].replace(/@/g, 'out_');
+    fragmentShader += output._format.codec.encodeShader.replace(/@/g, 'out_');
+    fragmentShader += output._format.pack.writeShader.replace(/@/g, 'out_');
+
+
+    if((output.format.density == '1:4' && /process4\b/.test(tensorShader)) || 
+        (output.format.density == '4:4' && /process\b/.test(tensorShader))){
+
+        fragmentShader += output._format.write_shim;
+    }
 
     fragmentShader += tensorShader 
+
+    console.log(fragmentShader)
 
     return fragmentShader;
 }

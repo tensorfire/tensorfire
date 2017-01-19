@@ -3,7 +3,7 @@
 #define FLOAT_MAX  1.70141184e38
 #define FLOAT_MIN  1.17549435e-38
 
-vec4 @encode14(float v) {
+vec4 @encode1(float v) {
     highp float av = abs(v);
 
     //Handle special cases

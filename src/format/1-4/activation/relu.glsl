@@ -1,3 +1,3 @@
-vec4 @activation14(float data){
+vec4 @activation1(float data){
     return max(data, 0.0);
 }

@@ -4,7 +4,7 @@ uniform ivec4 @shape;
 uniform int @cols;
 
 float @readf(ivec4 pos){
-    return @decode14(texture2D(@tex, (
+    return @decode1(texture2D(@tex, (
         vec2(tile2vec(
             vec2tile(pos.zw, @shape.z)
         , @cols) * ivec2(@shape.xy)) +

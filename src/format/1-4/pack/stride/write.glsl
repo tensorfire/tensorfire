@@ -11,7 +11,7 @@ void main(){
 	int chunks = @shape.x * @shape.y * @shape.z * @shape.w;
 	if(tile >= chunks){ checkerboard(); return; }
 
-	gl_FragColor = @encode14(@activation44(processf(ivec4(
+	gl_FragColor = @encode1(@activation44(processf(ivec4(
 		imod(tile, @shape.x),
 		imod(tile / @shape.x, @shape.y),
 		imod(tile / @shape.x / @shape.y, @shape.z ),

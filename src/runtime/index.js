@@ -46,8 +46,8 @@ export function Run(shaderGen, output, uniforms = {}){
             if(tensor.gl !== output.gl) throw new Error('Uniforms must belong to same GL context as output');
             if(tensor === output) mustSwap = true;
 
-            for(let uniform in tensor._info){
-                setUniform(name + '_' + uniform, tensor._info[uniform])
+            for(let uniform in tensor.info){
+                setUniform(name + '_' + uniform, tensor.info[uniform])
             }
 
             gl.activeTexture(gl['TEXTURE' + texIndex]);
@@ -68,12 +68,12 @@ export function Run(shaderGen, output, uniforms = {}){
     // of a pair of textures which are swapped for these in-place operations. 
     if(mustSwap) output.swap();
 
-    for(let uniform in output._info){
-        setUniform('out_' + uniform, output._info[uniform])
+    for(let uniform in output.info){
+        setUniform('out_' + uniform, output.info[uniform])
     }
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, output.fbo);
-    gl.viewport(0, 0, output._info.texSize[0], output._info.texSize[1]);
+    gl.viewport(0, 0, output.info.texSize[0], output.info.texSize[1]);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); // draw to framebuffer
 
     checkFramebufferError(gl);

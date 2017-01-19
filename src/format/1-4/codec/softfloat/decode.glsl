@@ -1,4 +1,4 @@
-float @decode14(vec4 val){
+float @decode1(vec4 val){
     vec4 scl = floor(255.0 * val + 0.5);
     float sgn = (scl.a < 128.0) ? 1.0 : -1.0;
     float exn = mod(scl.a * 2.0, 256.0) + floor(scl.b / 128.0) - 127.0;

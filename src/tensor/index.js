@@ -5,12 +5,9 @@ import { makeFrameBuffer } from './helpers.js'
 import { Run } from '../runtime/index.js'
 
 export class Tensor extends BaseTensor {
-	// constructor(gl, shape = [], data = null, options = {})
 	constructor(gl, shape = [], data = null, ...stuff){
 		var options = Object.assign({}, ...stuff);
 
-		// constructor(gl, type, format, shape)
-		// less restrictive constructors
 		if(!gl.NO_FLOAT_TEXTURES){
             if(!gl.getExtension('OES_texture_float')){
                 console.info("This browser does not seem to support OES_texture_float. "
@@ -65,7 +62,7 @@ export class Tensor extends BaseTensor {
 
         
         var nofloat = (type === 'float32' && (
-            // true || 
+            true || 
             gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat
             || (gl.NO_RENDER_FLOAT && options.output) 
         ));
@@ -75,22 +72,19 @@ export class Tensor extends BaseTensor {
         if(typeof data == 'string') data = null;
 
         if(nofloat){
-            super(gl, { type: 'uint8', pack: 'tile', codec: 'softfloat' }, shape);
+            super(gl, { type: 'uint8', pack: 'tile', density: '1:4', codec: 'softfloat' }, shape);
         }else{
-        	super(gl, { type, pack: 'tile', codec: 'raw' }, shape);
+        	super(gl, { type, pack: 'tile', density: '4:4', codec: 'raw' }, shape);
         }
 
         this.type = type;
 	}
 
-	show(opt = {}){
-		this._show(opt)
-	}
 
 	copy(dtype = 'float32', constructor = OutputTensor){
         const TENSOR_IDENTITY = `
             uniform Tensor image;
-            vec4 process(ivec4 pos) { return #image[pos]; }
+            vec4 process4(ivec4 pos) { return image_read(pos); }
         `;
         var out = new constructor(this.gl, this.shape, dtype);
         Run(TENSOR_IDENTITY, out, { image: this })
@@ -98,11 +92,15 @@ export class Tensor extends BaseTensor {
     }
 
     show(opt = {}){
-        if(this._format !== NormalFormat){
+        if(this.format.pack == 'tile' 
+            && this.format.density == '4:4' 
+            && this.format.codec == 'raw'){
+            this._show(opt)   
+        }else{
             var out = this.copy('uint8')
             out._show(opt)
             out.destroy()
-        }else this._show(opt);
+        };
     }
 }
 

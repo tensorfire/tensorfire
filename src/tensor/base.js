@@ -1,16 +1,22 @@
 import showTexture from './show.js'
 import { makeTexture, makeFrameBuffer, checkRenderFloat } from './helpers.js'
+import Formats from '../format/index.js'
 
+// The tensor format is a JSON object that specifies how 
+// the tensor is represented as a texture
+// it consists of several keys:
 
-import * as AltFormat from '../format2/codec/softfloat/index.js'
-// import * as NormalFormat from '../format/tile/index.js'
-// import * as NofloatFormat from '../format/tile-nofloat/index.js'
-// import * as AltFormat from '../format/alt-tile-nofloat/index.js'
-// import * as AltFormat from '../format/alt-tile-fixnum/index.js'
-// import * as FixnumFormat from '../format/tile-fixnum/index.js'
-// import * as StrideFormat from '../format/stride/index.js'
-// import * as NofloatFormat from '../format/stride-nofloat/index.js'
-// import * as FixnumFormat from '../format/stride-fixnum/index.js'
+//     type: uint8 | float32
+//     density: 4:4 | 1:4
+//     pack: stride | tile
+//     codec: 
+//			softfloat | fixnum (1:4)
+//          raw | linquant (4:4)
+
+// Reading from a tensor
+
+// Writing to a tensor
+
 
 
 export default class BaseTensor {
@@ -30,13 +36,19 @@ export default class BaseTensor {
 			throw new Error('format.type must be uint8 or float32');
 		if(!['stride', 'tile'].includes(format.pack))
 			throw new Error('format.pack must be stride or tile');
-		if(!['raw', 'softfloat', 'fixnum'].includes(format.codec)) 
-			throw new Error('format.codec must be stride or tile');
-
+		if(format.density == '4:4'){
+			if(!['raw', 'linquant'].includes(format.codec))
+				throw new Error('format.codec must be raw or linquant');
+		}else if(format.density == '1:4'){
+			if(!['softfloat', 'fixnum'].includes(format.codec))
+				throw new Error('format.codec must be softfloat or fixnum');
+		}else throw new Error('format.density must be 4:4 or 1:4');
 		this.format = format;
 
+		console.log('initializing tensor', format)
+
 		// calculate texture size
-		this.info = this.format.init(shape)
+		this.info = this._format.pack.init(shape, format);
 		if(!this.info.texSize) throw new Error('Format did not yield texSize');
 
 		// initialize texture
@@ -60,34 +72,16 @@ export default class BaseTensor {
 		this._update(this.format.pack(this.info, data))
 	}
 
-	get _codec(){
-		if(this.format.codec == 'raw'){
-
-		}else if(this.format.codec == 'softfloat'){
-
-		}else if(this.format.codec == 'fixnum'){
-
+	get _format(){
+		return {
+			pack: Formats[this.format.density].pack[this.format.pack],
+			codec: Formats[this.format.density].codec[this.format.codec],
+			activations: Formats[this.format.density].activations,
+			read_shim: Formats[this.format.density].read_shim,
+			write_shim: Formats[this.format.density].write_shim
 		}
 	}
 
-	_pack(data){
-		var info = this.info;
-		if(this.format.pack == 'tile'){
-
-		}else{
-			throw new Error('not implemented: ' + this.format.pack)
-		}
-	}
-
-	_unpack(data){
-		var info = this.info;
-		if(this.format.pack == 'tile'){
-
-		}else{
-			throw new Error('not implemented: ' + this.format.pack)
-		}
-	}
-	
 	_show(opt = {}){ showTexture(this.gl, this.tex, opt) }
     destroy(){ this.gl.deleteTexture(this.tex) }
 }
