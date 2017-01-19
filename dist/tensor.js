@@ -19,7 +19,7 @@ exports.default = {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var encodeShader = exports.encodeShader = 'vec4 @encode1(float v) {\n\tfloat z = clamp(v / 4096.0 + 0.5, 0.0, 1.0) * 255.0 / 256.0;\n\treturn fract(vec4(1.0, 255.0, 255.0 * 255.0, 255.0 * 255.0 * 255.0) * z);\n}';
+var encodeShader = exports.encodeShader = '// https://www.gamedev.net/topic/486847-encoding-16-and-32-bit-floating-point-value-into-rgba-byte-texture/#entry4181050\n\nvec4 @encode1(float v) {\n\tfloat z = clamp(v / 4096.0 + 0.5, 0.0, 1.0) * 255.0 / 256.0;\n\treturn fract(vec4(1.0, 255.0, 255.0 * 255.0, 255.0 * 255.0 * 255.0) * z);\n}';
 var decodeShader = exports.decodeShader = '// https://www.gamedev.net/topic/486847-encoding-16-and-32-bit-floating-point-value-into-rgba-byte-texture/#entry4181050\n\nfloat @decode1(vec4 rgba) {\n    return (dot(rgba * (256.0/255.0), 1.0/vec4(1.0, 255.0, 255.0 * 255.0, 255.0 * 255.0 * 255.0)) - 0.5) * 4096.0;\n}';
 
 },{}],3:[function(require,module,exports){
@@ -79,7 +79,47 @@ exports.default = {
 };
 
 },{"./activation/index.js":1,"./codec/fixnum/index.js":2,"./codec/softfloat/index.js":3,"./pack/stride/index.js":5,"./pack/tile/index.js":6}],5:[function(require,module,exports){
-"use strict";
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.init = init;
+exports.pack = pack;
+exports.unpack = unpack;
+var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nfloat @read(ivec4 pos){\n    int tile  = pos.x + \n                pos.y * @shape.x + \n                pos.z * @shape.x * @shape.y +\n                pos.w * @shape.x * @shape.y * @shape.z;\n\n    return @decode1(texture2D(@tex, \n        (vec2(tile2vec(tile, @texSize.x)) + vec2(0.5, 0.5)) / vec2(@texSize)));\n}\n\n// vec4 @read4(ivec4 pos){\n//     int z = 4 * (pos.z / 4);\n//     return vec4(\n//         @readf(ivec4(pos.xy, z    , pos.w)),\n//         @readf(ivec4(pos.xy, z + 1, pos.w)),\n//         @readf(ivec4(pos.xy, z + 2, pos.w)),\n//         @readf(ivec4(pos.xy, z + 3, pos.w))\n//     );\n// }';
+var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nvec4 clampify(vec4 v){\n    return vec4(ivec4(clamp(v, vec4(0), vec4(1)) * 255.0)) / 255.0;\n}\n\nfloat process(ivec4 pos);\nvoid main(){\n\tint tile = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint chunks = @shape.x * @shape.y * @shape.z * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tgl_FragColor = @encode1(@activation1(process(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\timod(tile / @shape.x / @shape.y, @shape.z ),\n\t\ttile / @shape.x / @shape.y / @shape.z\n\t))));\n}';
+
+function init(shape) {
+    var length = 4 * Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
+    var cols = Math.ceil(Math.sqrt(length) / 4) * 4;
+    var texSize = [cols, Math.ceil(length / cols)];
+    return {
+        texSize: texSize,
+        shape: shape
+    };
+}
+
+function pack(info, ndarray) {
+    // return Uint8Array or Float32Array
+
+
+    // uniform sampler2D @_tex;
+    // uniform ivec2 @_texSize;
+    // uniform ivec4 @_shape;
+    // uniform int @_cols;
+
+    // return {
+    //  tex:
+    //  texSize:
+    //  shape:
+    //  cols:
+    // }
+}
+
+function unpack(info, arr) {
+    // return ndarray
+}
 
 },{}],6:[function(require,module,exports){
 'use strict';
@@ -214,7 +254,7 @@ exports.default = {
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+    value: true
 });
 exports.init = init;
 exports.pack = pack;
@@ -223,42 +263,34 @@ var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @t
 var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nvec4 process4(ivec4 pos);\nvoid main(){\n\tint shapez = ceildiv(@shape.z, 4);\n\tint tile = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint chunks = @shape.x * @shape.y * shapez * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tgl_FragColor = @encode4(@activation4(process4(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\timod(tile / @shape.x / @shape.y, shapez ),\n\t\ttile / @shape.x / @shape.y / shapez\n\t))));\n}\n';
 
 function init(shape) {
-  var width = shape[0];
-  // we pick the number of columns so we can keep
-  // the texture as square as possible, with the
-  // minimal amount of wasted space.
-
-  var tiles = shape[2] * shape[3],
-      cols = Math.max(1, Math.min(tiles, Math.ceil(Math.sqrt(shape[0] * shape[1] * tiles) / width)));
-
-  var texSize = [width * cols, shape[1] * Math.ceil(tiles / cols)];
-
-  return {
-    texSize: texSize,
-    cols: cols,
-    shape: shape
-  };
+    var length = Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
+    var cols = Math.ceil(Math.sqrt(length));
+    var texSize = [cols, Math.ceil(length / cols)];
+    return {
+        texSize: texSize,
+        shape: shape
+    };
 }
 
 function pack(info, ndarray) {
-  // return Uint8Array or Float32Array
+    // return Uint8Array or Float32Array
 
 
-  // uniform sampler2D @_tex;
-  // uniform ivec2 @_texSize;
-  // uniform ivec4 @_shape;
-  // uniform int @_cols;
+    // uniform sampler2D @_tex;
+    // uniform ivec2 @_texSize;
+    // uniform ivec4 @_shape;
+    // uniform int @_cols;
 
-  // return {
-  // 	tex:
-  // 	texSize:
-  // 	shape:
-  // 	cols:
-  // }
+    // return {
+    //  tex:
+    //  texSize:
+    //  shape:
+    //  cols:
+    // }
 }
 
 function unpack(info, arr) {
-  // return ndarray
+    // return ndarray
 }
 
 },{}],12:[function(require,module,exports){
@@ -1315,7 +1347,7 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
         if (typeof data == 'string') data = null;
 
         if (nofloat) {
-            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: 'uint8', pack: 'tile', density: '1:4', codec: 'fixnum' }, shape));
+            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: 'uint8', pack: 'stride', density: '1:4', codec: 'softfloat' }, shape));
         } else {
             var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: type, pack: 'tile', density: '4:4', codec: 'raw' }, shape));
         }

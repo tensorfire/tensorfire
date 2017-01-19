@@ -72,7 +72,7 @@ export class Tensor extends BaseTensor {
         if(typeof data == 'string') data = null;
 
         if(nofloat){
-            super(gl, { type: 'uint8', pack: 'tile', density: '1:4', codec: 'fixnum' }, shape);
+            super(gl, { type: 'uint8', pack: 'stride', density: '1:4', codec: 'softfloat' }, shape);
         }else{
         	super(gl, { type, pack: 'tile', density: '4:4', codec: 'raw' }, shape);
         }
