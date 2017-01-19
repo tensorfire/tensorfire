@@ -1,3 +1,5 @@
+// TODO: compare with http://stackoverflow.com/a/7237286
+
 float @decode1(vec4 val){
     vec4 scl = floor(255.0 * val + 0.5);
     float sgn = (scl.a < 128.0) ? 1.0 : -1.0;

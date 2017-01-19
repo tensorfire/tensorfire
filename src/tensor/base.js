@@ -13,12 +13,6 @@ import Formats from '../format/index.js'
 //			softfloat | fixnum (1:4)
 //          raw | linquant (4:4)
 
-// Reading from a tensor
-
-// Writing to a tensor
-
-
-
 export default class BaseTensor {
 	constructor(gl, format, shape, data){
 		// validate glcontext
@@ -65,7 +59,6 @@ export default class BaseTensor {
         	this.info.texSize[0], this.info.texSize[1], 0, gl.RGBA, 
         	this.format.type == 'uint8' ? gl.UNSIGNED_BYTE : gl.FLOAT, data);
 	}
-
 
 	update(data){
 		if(!data) return this._update(null);

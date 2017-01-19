@@ -40,3 +40,5 @@ vec4 @encode1(float v) {
     //Scale back to range
     return c.abgr / 255.0;
 }
+
+// TODO: compare with http://stackoverflow.com/a/7237286

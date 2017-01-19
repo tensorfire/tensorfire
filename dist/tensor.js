@@ -19,8 +19,8 @@ exports.default = {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var encodeShader = exports.encodeShader = 'vec4 @encode1(float v) {\n\treturn fract(vec4(1.0, 255.0, 65025.0, 16581375.0) * clamp(v / 4096.0 + 0.5, 0.0, 1.0));\n}';
-var decodeShader = exports.decodeShader = 'float @decode1( vec4 rgba ) {\n    return (dot(rgba, 1.0/vec4(1.0, 255.0, 65025.0, 16581375.0)) - 0.5) * 4096.0;\n}';
+var encodeShader = exports.encodeShader = 'vec4 @encode1(float v) {\n\tfloat z = clamp(v / 4096.0 + 0.5, 0.0, 1.0) * 255.0 / 256.0;\n\treturn fract(vec4(1.0, 255.0, 255.0 * 255.0, 255.0 * 255.0 * 255.0) * z);\n}';
+var decodeShader = exports.decodeShader = '// https://www.gamedev.net/topic/486847-encoding-16-and-32-bit-floating-point-value-into-rgba-byte-texture/#entry4181050\n\nfloat @decode1(vec4 rgba) {\n    return (dot(rgba * (256.0/255.0), 1.0/vec4(1.0, 255.0, 255.0 * 255.0, 255.0 * 255.0 * 255.0)) - 0.5) * 4096.0;\n}';
 
 },{}],3:[function(require,module,exports){
 'use strict';
@@ -28,8 +28,8 @@ var decodeShader = exports.decodeShader = 'float @decode1( vec4 rgba ) {\n    re
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var encodeShader = exports.encodeShader = '// https://github.com/mikolalysenko/glsl-read-float/blob/master/index.glsl\n\n#define FLOAT_MAX  1.70141184e38\n#define FLOAT_MIN  1.17549435e-38\n\nvec4 @encode1(float v) {\n    highp float av = abs(v);\n\n    //Handle special cases\n    if(av < FLOAT_MIN) {\n        return vec4(0.0, 0.0, 0.0, 0.0);\n    } else if(v > FLOAT_MAX) {\n        return vec4(127.0, 128.0, 0.0, 0.0) / 255.0;\n    } else if(v < -FLOAT_MAX) {\n        return vec4(255.0, 128.0, 0.0, 0.0) / 255.0;\n    }\n\n    highp vec4 c = vec4(0,0,0,0);\n\n    //Compute exponent and mantissa\n    highp float e = floor(log2(av));\n    highp float m = av * pow(2.0, -e) - 1.0;\n    \n    //Unpack mantissa\n    c[1] = floor(128.0 * m);\n    m -= c[1] / 128.0;\n    c[2] = floor(32768.0 * m);\n    m -= c[2] / 32768.0;\n    c[3] = floor(8388608.0 * m);\n    \n    //Unpack exponent\n    highp float ebias = e + 127.0;\n    c[0] = floor(ebias / 2.0);\n    ebias -= c[0] * 2.0;\n    c[1] += floor(ebias) * 128.0; \n\n    //Unpack sign bit\n    c[0] += 128.0 * step(0.0, -v);\n\n    //Scale back to range\n    return c.abgr / 255.0;\n}';
-var decodeShader = exports.decodeShader = 'float @decode1(vec4 val){\n    vec4 scl = floor(255.0 * val + 0.5);\n    float sgn = (scl.a < 128.0) ? 1.0 : -1.0;\n    float exn = mod(scl.a * 2.0, 256.0) + floor(scl.b / 128.0) - 127.0;\n    float man = 1.0 +\n        (scl.r / 8388608.0) + \n        (scl.g / 32768.0) +\n        mod(scl.b, 128.0) / 128.0;\n    return sgn * man * pow(2.0, exn);\n}\n';
+var encodeShader = exports.encodeShader = '// https://github.com/mikolalysenko/glsl-read-float/blob/master/index.glsl\n\n#define FLOAT_MAX  1.70141184e38\n#define FLOAT_MIN  1.17549435e-38\n\nvec4 @encode1(float v) {\n    highp float av = abs(v);\n\n    //Handle special cases\n    if(av < FLOAT_MIN) {\n        return vec4(0.0, 0.0, 0.0, 0.0);\n    } else if(v > FLOAT_MAX) {\n        return vec4(127.0, 128.0, 0.0, 0.0) / 255.0;\n    } else if(v < -FLOAT_MAX) {\n        return vec4(255.0, 128.0, 0.0, 0.0) / 255.0;\n    }\n\n    highp vec4 c = vec4(0,0,0,0);\n\n    //Compute exponent and mantissa\n    highp float e = floor(log2(av));\n    highp float m = av * pow(2.0, -e) - 1.0;\n    \n    //Unpack mantissa\n    c[1] = floor(128.0 * m);\n    m -= c[1] / 128.0;\n    c[2] = floor(32768.0 * m);\n    m -= c[2] / 32768.0;\n    c[3] = floor(8388608.0 * m);\n    \n    //Unpack exponent\n    highp float ebias = e + 127.0;\n    c[0] = floor(ebias / 2.0);\n    ebias -= c[0] * 2.0;\n    c[1] += floor(ebias) * 128.0; \n\n    //Unpack sign bit\n    c[0] += 128.0 * step(0.0, -v);\n\n    //Scale back to range\n    return c.abgr / 255.0;\n}\n\n// TODO: compare with http://stackoverflow.com/a/7237286';
+var decodeShader = exports.decodeShader = '// TODO: compare with http://stackoverflow.com/a/7237286\n\nfloat @decode1(vec4 val){\n    vec4 scl = floor(255.0 * val + 0.5);\n    float sgn = (scl.a < 128.0) ? 1.0 : -1.0;\n    float exn = mod(scl.a * 2.0, 256.0) + floor(scl.b / 128.0) - 127.0;\n    float man = 1.0 +\n        (scl.r / 8388608.0) + \n        (scl.g / 32768.0) +\n        mod(scl.b, 128.0) / 128.0;\n    return sgn * man * pow(2.0, exn);\n}\n';
 
 },{}],4:[function(require,module,exports){
 'use strict';
@@ -1107,11 +1107,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 //     codec: 
 //			softfloat | fixnum (1:4)
 //          raw | linquant (4:4)
-
-// Reading from a tensor
-
-// Writing to a tensor
-
 
 var BaseTensor = function () {
 	function BaseTensor(gl, format, shape, data) {
