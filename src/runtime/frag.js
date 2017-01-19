@@ -3,28 +3,7 @@ import BaseTensor from '../tensor/base.js'
 
 import { readFileSync } from 'fs';
 
-import ACTIVATIONS from './activations.js'
 const TENSOR_FRAGMENT_HEADER = readFileSync(__dirname + '/../format/util.glsl', 'utf8')
-const TENSOR_PROCESSF = `
-float processf(ivec4 pos);
-vec4 process(ivec4 pos){
-    return vec4(
-        processf(ivec4(pos.xy, pos.z + 0, pos.w)),
-        processf(ivec4(pos.xy, pos.z + 1, pos.w)),
-        processf(ivec4(pos.xy, pos.z + 2, pos.w)),
-        processf(ivec4(pos.xy, pos.z + 3, pos.w))
-    );
-}
-
-`
-
-const TENSOR_UNPROCESSF = `
-vec4 process(ivec4 pos);
-float processf(ivec4 pos){
-    return chsel(process(ivec4(pos.xy, 4 * (pos.z / 4), pos.w)), imod(pos.z, 4));
-}
-
-`;
 
 
 export default function assembleFragmentShader(shaderGen, output, uniforms){
@@ -38,6 +17,10 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
             fragmentShader += tensor._format.codec.decodeShader.replace(/@/g, uniform + '_') + '\n'
             fragmentShader += tensor._format.pack.readShader.replace(/@/g, uniform + '_') + '\n\n'
 
+            if((tensor.format.density == '1:4' && (new RegExp(uniform + '_read4\\b')).test(tensorShader)) || 
+                (tensor.format.density == '4:4' && (new RegExp(uniform + '_read\\b')).test(tensorShader))){
+                fragmentShader += tensor._format.read_shim.replace(/@/g, uniform + '_');
+            }
         }
     }
 
@@ -54,8 +37,7 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
 
     if((output.format.density == '1:4' && /process4\b/.test(tensorShader)) || 
         (output.format.density == '4:4' && /process\b/.test(tensorShader))){
-
-        fragmentShader += output._format.write_shim;
+        fragmentShader += output._format.write_shim.replace(/@/g, 'out_');
     }
 
     fragmentShader += tensorShader 

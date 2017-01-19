@@ -62,7 +62,7 @@ export class Tensor extends BaseTensor {
 
         
         var nofloat = (type === 'float32' && (
-            true || 
+            // true || 
             gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat
             || (gl.NO_RENDER_FLOAT && options.output) 
         ));
@@ -84,7 +84,7 @@ export class Tensor extends BaseTensor {
 	copy(dtype = 'float32', constructor = OutputTensor){
         const TENSOR_IDENTITY = `
             uniform Tensor image;
-            vec4 process4(ivec4 pos) { return image_read(pos); }
+            vec4 process4(ivec4 pos) { return image_read4(pos); }
         `;
         var out = new constructor(this.gl, this.shape, dtype);
         Run(TENSOR_IDENTITY, out, { image: this })

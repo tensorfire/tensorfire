@@ -90,7 +90,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.init = init;
 exports.pack = pack;
 exports.unpack = unpack;
-var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nfloat @readf(ivec4 pos){\n    return @decode1(texture2D(@tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw, @shape.z)\n        , @cols) * ivec2(@shape.xy)) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize)));\n}\n\nvec4 @read(ivec4 pos){\n    int z = 4 * (pos.z / 4);\n    return vec4(\n        @readf(ivec4(pos.xy, z    , pos.w)),\n        @readf(ivec4(pos.xy, z + 1, pos.w)),\n        @readf(ivec4(pos.xy, z + 2, pos.w)),\n        @readf(ivec4(pos.xy, z + 3, pos.w))\n    );\n}';
+var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nfloat @read(ivec4 pos){\n    return @decode1(texture2D(@tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw, @shape.z)\n        , @cols) * ivec2(@shape.xy)) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize)));\n}\n\nvec4 @read4(ivec4 pos){\n    int z = 4 * (pos.z / 4);\n    return vec4(\n        @read(ivec4(pos.xy, z    , pos.w)),\n        @read(ivec4(pos.xy, z + 1, pos.w)),\n        @read(ivec4(pos.xy, z + 2, pos.w)),\n        @read(ivec4(pos.xy, z + 3, pos.w))\n    );\n}';
 var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 clampify(vec4 v){\n    return vec4(ivec4(clamp(v, vec4(0), vec4(1)) * 255.0)) / 255.0;\n}\n\nfloat process(ivec4 pos);\nvoid main(){\n    int tile = vec2tile(ivec2(gl_FragCoord.xy) / @shape.xy, @cols);\n    if(tile >= @shape.z * @shape.w){ checkerboard(); return; }\n\n    gl_FragColor = clampify(@encode1(@activation1(process(ivec4(\n        mod(vec2(gl_FragCoord.xy), vec2(@shape.xy)), \n        tile2vec(tile, @shape.z))))));\n}';
 
 function init(shape) {
@@ -200,7 +200,7 @@ exports.default = {
 		tile: pack_tile
 	},
 
-	read_shim: 'vec4 @read4(ivec4 pos){\n    int z = 4 * (pos.z / 4);\n    return vec4(\n        @read(ivec4(pos.xy, z    , pos.w)),\n        @read(ivec4(pos.xy, z + 1, pos.w)),\n        @read(ivec4(pos.xy, z + 2, pos.w)),\n        @read(ivec4(pos.xy, z + 3, pos.w))\n    );\n}\n',
+	read_shim: 'float @read(ivec4 pos){\n    return chsel(@read4(pos), imod(pos.z, 4));\n}\n',
 	write_shim: 'float process(ivec4 pos);\nvec4 process4(ivec4 pos){\n    return vec4(\n        process(ivec4(pos.xy, pos.z    , pos.w)),\n        process(ivec4(pos.xy, pos.z + 1, pos.w)),\n        process(ivec4(pos.xy, pos.z + 2, pos.w)),\n        process(ivec4(pos.xy, pos.z + 3, pos.w))\n    );\n}',
 
 	codec: {
@@ -386,21 +386,7 @@ Object.defineProperty(exports, 'createGL', {
   }
 });
 
-},{"./runtime/index.js":18,"./tensor/index.js":24,"./util.js":27}],15:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.default = {
-    relu: "\n        vec4 activationFunc(vec4 data){\n            return max(data, vec4(0, 0, 0, 0));\n        }\n    ",
-    tanh: "\n        vec4 activationFunc(vec4 data){\n            vec4 e = exp(2.0 * clamp(data, vec4(-20,-20,-20,-20), vec4(20,20,20,20)) );\n            return (e-vec4(1, 1, 1, 1))/(e+vec4(1, 1, 1, 1));\n        }\n    ",
-    sigmoid: "\n        vec4 activationFunc(vec4 data){\n            return (vec4(1,1,1,1)/(vec4(1,1,1,1) + exp(-2.0 * \n                clamp(data,vec4(-20,-20,-20,-20), vec4(20,20,20,20)) )));\n        }\n    ",
-    hard_sigmoid: "\n        vec4 activationFunc(vec4 data){\n            return clamp(data * vec4(0.2,0.2,0.2,0.2) + \n                vec4(.5,.5,.5,.5), vec4(0,0,0,0), vec4(1,1,1,1));\n        }\n    ",
-    rgb: "\n        vec4 activationFunc(vec4 data){\n            return data / 255.0; \n        }\n    "
-};
-
-},{}],16:[function(require,module,exports){
+},{"./runtime/index.js":17,"./tensor/index.js":23,"./util.js":26}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -622,7 +608,7 @@ function annotateFiles(files, errors) {
     });
 }
 
-},{}],17:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -634,18 +620,9 @@ var _base = require('../tensor/base.js');
 
 var _base2 = _interopRequireDefault(_base);
 
-var _activations = require('./activations.js');
-
-var _activations2 = _interopRequireDefault(_activations);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-// import { Tensor, OutputTensor, InPlaceTensor } from '../tensor/index.js'
-var TENSOR_FRAGMENT_HEADER = 'precision highp int;\nprecision highp float;\n\nint   imod(int f, int p){ return f - p * (f / p); }\nint   vec2tile(ivec2 v, int rows){ return rows * v.y + v.x; }\nivec2 tile2vec(int f, int rows){ return ivec2(imod(f, rows), f / rows); }\nint   ceildiv(int a, int b){ return (a - 1) / b + 1; }\nvoid  checkerboard(){ gl_FragColor = vec4(mod(gl_FragCoord.x - gl_FragCoord.y, 2.0), 0.2, 0.1, 1); }\n\nfloat chsel(vec4 val, int ch){\n\tif(ch == 0) return val.r;\n\tif(ch == 1) return val.g;\n\tif(ch == 2) return val.b;\n\treturn val.a;\n}\n';
-var TENSOR_PROCESSF = '\nfloat processf(ivec4 pos);\nvec4 process(ivec4 pos){\n    return vec4(\n        processf(ivec4(pos.xy, pos.z + 0, pos.w)),\n        processf(ivec4(pos.xy, pos.z + 1, pos.w)),\n        processf(ivec4(pos.xy, pos.z + 2, pos.w)),\n        processf(ivec4(pos.xy, pos.z + 3, pos.w))\n    );\n}\n\n';
-
-var TENSOR_UNPROCESSF = '\nvec4 process(ivec4 pos);\nfloat processf(ivec4 pos){\n    return chsel(process(ivec4(pos.xy, 4 * (pos.z / 4), pos.w)), imod(pos.z, 4));\n}\n\n';
-
+var TENSOR_FRAGMENT_HEADER = 'precision highp int;\nprecision highp float;\n\nint   imod(int f, int p){ return f - p * (f / p); }\nint   vec2tile(ivec2 v, int rows){ return rows * v.y + v.x; }\nivec2 tile2vec(int f, int rows){ return ivec2(imod(f, rows), f / rows); }\nint   ceildiv(int a, int b){ return (a - 1) / b + 1; }\nvoid  checkerboard(){ gl_FragColor = vec4(mod(gl_FragCoord.x - gl_FragCoord.y, 2.0), 0.2, 0.1, 1); }\n\nfloat chsel(vec4 val, int ch){\n\tif(ch == 0) return val.r;\n\tif(ch == 1) return val.g;\n\tif(ch == 2) return val.b;\n\treturn val.a;\n}\n'; // import { Tensor, OutputTensor, InPlaceTensor } from '../tensor/index.js'
 function assembleFragmentShader(shaderGen, output, uniforms) {
     var tensorShader = shaderGen(uniforms, output);
 
@@ -656,6 +633,10 @@ function assembleFragmentShader(shaderGen, output, uniforms) {
 
             fragmentShader += tensor._format.codec.decodeShader.replace(/@/g, uniform + '_') + '\n';
             fragmentShader += tensor._format.pack.readShader.replace(/@/g, uniform + '_') + '\n\n';
+
+            if (tensor.format.density == '1:4' && new RegExp(uniform + '_read4\\b').test(tensorShader) || tensor.format.density == '4:4' && new RegExp(uniform + '_read\\b').test(tensorShader)) {
+                fragmentShader += tensor._format.read_shim.replace(/@/g, uniform + '_');
+            }
         }
     }
 
@@ -668,8 +649,7 @@ function assembleFragmentShader(shaderGen, output, uniforms) {
     fragmentShader += output._format.pack.writeShader.replace(/@/g, 'out_');
 
     if (output.format.density == '1:4' && /process4\b/.test(tensorShader) || output.format.density == '4:4' && /process\b/.test(tensorShader)) {
-
-        fragmentShader += output._format.write_shim;
+        fragmentShader += output._format.write_shim.replace(/@/g, 'out_');
     }
 
     fragmentShader += tensorShader;
@@ -679,7 +659,7 @@ function assembleFragmentShader(shaderGen, output, uniforms) {
     return fragmentShader;
 }
 
-},{"../tensor/base.js":22,"./activations.js":15}],18:[function(require,module,exports){
+},{"../tensor/base.js":21}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -793,7 +773,7 @@ function Run(shaderGen, output) {
     return output;
 }
 
-},{"../tensor/index.js":24,"./check.js":16,"./frag.js":17,"./program.js":19,"./timer.js":20,"./tnsl.js":21}],19:[function(require,module,exports){
+},{"../tensor/index.js":23,"./check.js":15,"./frag.js":16,"./program.js":18,"./timer.js":19,"./tnsl.js":20}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -905,7 +885,7 @@ function compileShader(gl, shaderSource, shaderType) {
     return shader;
 }
 
-},{"./check.js":16}],20:[function(require,module,exports){
+},{"./check.js":15}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1025,7 +1005,7 @@ function createTimer(gl) {
 	};
 }
 
-},{}],21:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1094,7 +1074,7 @@ function TNSL(str) {
     };
 }
 
-},{}],22:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1213,7 +1193,7 @@ var BaseTensor = function () {
 
 exports.default = BaseTensor;
 
-},{"../format/index.js":13,"./helpers.js":23,"./show.js":25}],23:[function(require,module,exports){
+},{"../format/index.js":13,"./helpers.js":22,"./show.js":24}],22:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1240,7 +1220,7 @@ function makeTexture(gl) {
     return texture;
 }
 
-},{}],24:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1333,7 +1313,9 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             throw new Error("Invalid format for data: must be Uint8Array or Float32Array or ndarray");
         }
 
-        var nofloat = type === 'float32' && (true || gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && options.output);
+        var nofloat = type === 'float32' && (
+        // true || 
+        gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && options.output);
 
         var stride = options.stride || data === 'stride';
 
@@ -1355,7 +1337,7 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             var dtype = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'float32';
             var constructor = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : OutputTensor;
 
-            var TENSOR_IDENTITY = '\n            uniform Tensor image;\n            vec4 process4(ivec4 pos) { return image_read(pos); }\n        ';
+            var TENSOR_IDENTITY = '\n            uniform Tensor image;\n            vec4 process4(ivec4 pos) { return image_read4(pos); }\n        ';
             var out = new constructor(this.gl, this.shape, dtype);
             (0, _index.Run)(TENSOR_IDENTITY, out, { image: this });
             return out;
@@ -1438,7 +1420,7 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
     return InPlaceTensor;
 }(OutputTensor);
 
-},{"../runtime/index.js":18,"./base.js":22,"./helpers.js":23,"./testing.js":26}],25:[function(require,module,exports){
+},{"../runtime/index.js":17,"./base.js":21,"./helpers.js":22,"./testing.js":25}],24:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1477,7 +1459,7 @@ function showTexture(gl, tex) {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-},{"../runtime/program.js":19}],26:[function(require,module,exports){
+},{"../runtime/program.js":18}],25:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1518,7 +1500,7 @@ function testRenderFloat(gl) {
     return status == gl.FRAMEBUFFER_COMPLETE;
 }
 
-},{"../runtime/program.js":19,"./helpers.js":23}],27:[function(require,module,exports){
+},{"../runtime/program.js":18,"./helpers.js":22}],26:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {

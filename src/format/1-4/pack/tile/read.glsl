@@ -3,7 +3,7 @@ uniform ivec2 @texSize;
 uniform ivec4 @shape;
 uniform int @cols;
 
-float @readf(ivec4 pos){
+float @read(ivec4 pos){
     return @decode1(texture2D(@tex, (
         vec2(tile2vec(
             vec2tile(pos.zw, @shape.z)
@@ -12,12 +12,12 @@ float @readf(ivec4 pos){
     ) / vec2(@texSize)));
 }
 
-vec4 @read(ivec4 pos){
+vec4 @read4(ivec4 pos){
     int z = 4 * (pos.z / 4);
     return vec4(
-        @readf(ivec4(pos.xy, z    , pos.w)),
-        @readf(ivec4(pos.xy, z + 1, pos.w)),
-        @readf(ivec4(pos.xy, z + 2, pos.w)),
-        @readf(ivec4(pos.xy, z + 3, pos.w))
+        @read(ivec4(pos.xy, z    , pos.w)),
+        @read(ivec4(pos.xy, z + 1, pos.w)),
+        @read(ivec4(pos.xy, z + 2, pos.w)),
+        @read(ivec4(pos.xy, z + 3, pos.w))
     );
 }
