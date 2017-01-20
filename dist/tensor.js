@@ -19,8 +19,8 @@ exports.default = {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var encodeShader = exports.encodeShader = '// https://www.gamedev.net/topic/486847-encoding-16-and-32-bit-floating-point-value-into-rgba-byte-texture/#entry4181050\n\nvec4 @encode1(float v) {\n\tfloat z = clamp(v / 4096.0 + 0.5, 0.0, 1.0) * 255.0 / 256.0;\n\treturn fract(vec4(1.0, 255.0, 255.0 * 255.0, 255.0 * 255.0 * 255.0) * z);\n}';
-var decodeShader = exports.decodeShader = '// https://www.gamedev.net/topic/486847-encoding-16-and-32-bit-floating-point-value-into-rgba-byte-texture/#entry4181050\n\nfloat @decode1(vec4 rgba) {\n    return (dot(rgba * (256.0/255.0), 1.0/vec4(1.0, 255.0, 255.0 * 255.0, 255.0 * 255.0 * 255.0)) - 0.5) * 4096.0;\n}';
+var encodeShader = exports.encodeShader = '// https://www.gamedev.net/topic/486847-encoding-16-and-32-bit-floating-point-value-into-rgba-byte-texture/#entry4181050\n\n\nvec4 @encode_float(float v){\n\treturn vec4(\n\t\tmod(v * 256.0 * 256.0 * 256.0 * 256.0, 256.0),\n\t\tmod(v * 256.0 * 256.0 * 256.0, 256.0),\n\t\tmod(v * 256.0 * 256.0 , 256.0),\n\t\tmod(v * 256.0, 256.0)\n\t) / 255.0;\n}\n\n\n\nvec4 @encode1(float v) {\n\tfloat z = clamp(v / 4096.0 + 0.5, 0.0, 1.0);\n\treturn @encode_float(z);\n}';
+var decodeShader = exports.decodeShader = '// https://www.gamedev.net/topic/486847-encoding-16-and-32-bit-floating-point-value-into-rgba-byte-texture/#entry4181050\n\n\n\nfloat @decode_float(vec4 v){\n\treturn v.r * 255.0 / 256.0 / 256.0 / 256.0 / 256.0\n\t\t+ v.g * 255.0 / 256.0 / 256.0 / 256.0\n\t\t+ v.b * 255.0 / 256.0 / 256.0\n\t\t+ v.a * 255.0 / 256.0;\n}\n\n\nfloat @decode1(vec4 rgba) {\n\t// float f = @decode_float(rgba);\n\tfloat f = dot(rgba, vec4(\n\t\t255.0 / 256.0 / 256.0 / 256.0 / 256.0,\n\t\t255.0 / 256.0 / 256.0 / 256.0,\n\t\t255.0 / 256.0 / 256.0,\n\t\t255.0 / 256.0\n\t));\n\treturn (f - 0.5) * 4096.0;\n}';
 
 },{}],3:[function(require,module,exports){
 'use strict';
@@ -87,7 +87,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.init = init;
 exports.pack = pack;
 exports.unpack = unpack;
-var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nfloat @read(ivec4 pos){\n    int tile  = pos.x + \n                pos.y * @shape.x + \n                pos.z * @shape.x * @shape.y +\n                pos.w * @shape.x * @shape.y * @shape.z;\n\n    return @decode1(texture2D(@tex, \n        (vec2(tile2vec(tile, @texSize.x)) + vec2(0.5, 0.5)) / vec2(@texSize)));\n}\n\n// vec4 @read4(ivec4 pos){\n//     int z = 4 * (pos.z / 4);\n//     return vec4(\n//         @readf(ivec4(pos.xy, z    , pos.w)),\n//         @readf(ivec4(pos.xy, z + 1, pos.w)),\n//         @readf(ivec4(pos.xy, z + 2, pos.w)),\n//         @readf(ivec4(pos.xy, z + 3, pos.w))\n//     );\n// }';
+var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nfloat @read(ivec4 pos){\n    int tile  = pos.x + \n                pos.y * @shape.x + \n                pos.z * @shape.x * @shape.y +\n                pos.w * @shape.x * @shape.y * @shape.z;\n\n    return @decode1(texture2D(@tex, \n        (vec2(tile2vec(tile, @texSize.x)) + vec2(0.5, 0.5)) / vec2(@texSize)));\n}\n';
 var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nvec4 clampify(vec4 v){\n    return vec4(ivec4(clamp(v, vec4(0), vec4(1)) * 255.0)) / 255.0;\n}\n\nfloat process(ivec4 pos);\nvoid main(){\n\tint tile = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint chunks = @shape.x * @shape.y * @shape.z * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tgl_FragColor = @encode1(@activation1(process(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\timod(tile / @shape.x / @shape.y, @shape.z ),\n\t\ttile / @shape.x / @shape.y / @shape.z\n\t))));\n}';
 
 function init(shape) {
@@ -241,7 +241,7 @@ exports.default = {
 	},
 
 	read_shim: 'float @read(ivec4 pos){\n    return chsel(@read4(pos), imod(pos.z, 4));\n}\n',
-	write_shim: 'float process(ivec4 pos);\nvec4 process4(ivec4 pos){\n    return vec4(\n        process(ivec4(pos.xy, pos.z    , pos.w)),\n        process(ivec4(pos.xy, pos.z + 1, pos.w)),\n        process(ivec4(pos.xy, pos.z + 2, pos.w)),\n        process(ivec4(pos.xy, pos.z + 3, pos.w))\n    );\n}',
+	write_shim: 'float process(ivec4 pos);\nvec4 process4(ivec4 pos){\n\tint z = 4 * (pos.z / 4);\n    return vec4(\n        process(ivec4(pos.xy, z    , pos.w)),\n        process(ivec4(pos.xy, z + 1, pos.w)),\n        process(ivec4(pos.xy, z + 2, pos.w)),\n        process(ivec4(pos.xy, z + 3, pos.w))\n    );\n}',
 
 	codec: {
 		raw: codec_raw,
@@ -1347,7 +1347,7 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
         if (typeof data == 'string') data = null;
 
         if (nofloat) {
-            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: 'uint8', pack: 'stride', density: '1:4', codec: 'softfloat' }, shape));
+            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: 'uint8', pack: 'tile', density: '1:4', codec: 'fixnum' }, shape));
         } else {
             var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: type, pack: 'tile', density: '4:4', codec: 'raw' }, shape));
         }

@@ -11,13 +11,3 @@ float @read(ivec4 pos){
     return @decode1(texture2D(@tex, 
         (vec2(tile2vec(tile, @texSize.x)) + vec2(0.5, 0.5)) / vec2(@texSize)));
 }
-
-// vec4 @read4(ivec4 pos){
-//     int z = 4 * (pos.z / 4);
-//     return vec4(
-//         @readf(ivec4(pos.xy, z    , pos.w)),
-//         @readf(ivec4(pos.xy, z + 1, pos.w)),
-//         @readf(ivec4(pos.xy, z + 2, pos.w)),
-//         @readf(ivec4(pos.xy, z + 3, pos.w))
-//     );
-// }
