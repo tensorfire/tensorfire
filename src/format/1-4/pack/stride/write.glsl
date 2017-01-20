@@ -11,10 +11,10 @@ void main(){
 	int chunks = @shape.x * @shape.y * @shape.z * @shape.w;
 	if(tile >= chunks){ checkerboard(); return; }
 
-	gl_FragColor = @encode1(@activation1(process(ivec4(
+	gl_FragColor = clampify(@encode1(@activation1(process(ivec4(
 		imod(tile, @shape.x),
 		imod(tile / @shape.x, @shape.y),
 		imod(tile / @shape.x / @shape.y, @shape.z ),
 		tile / @shape.x / @shape.y / @shape.z
-	))));
+	)))));
 }

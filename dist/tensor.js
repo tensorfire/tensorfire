@@ -17,19 +17,31 @@ exports.default = {
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+	value: true
 });
-var encodeShader = exports.encodeShader = '// https://www.gamedev.net/topic/486847-encoding-16-and-32-bit-floating-point-value-into-rgba-byte-texture/#entry4181050\n\n\nvec4 @encode_float(float v){\n\treturn vec4(\n\t\tmod(v * 256.0 * 256.0 * 256.0 * 256.0, 256.0),\n\t\tmod(v * 256.0 * 256.0 * 256.0, 256.0),\n\t\tmod(v * 256.0 * 256.0 , 256.0),\n\t\tmod(v * 256.0, 256.0)\n\t) / 255.0;\n}\n\n\n\nvec4 @encode1(float v) {\n\tfloat z = clamp(v / 4096.0 + 0.5, 0.0, 1.0);\n\treturn @encode_float(z);\n}';
-var decodeShader = exports.decodeShader = '// https://www.gamedev.net/topic/486847-encoding-16-and-32-bit-floating-point-value-into-rgba-byte-texture/#entry4181050\n\n\n\nfloat @decode_float(vec4 v){\n\treturn v.r * 255.0 / 256.0 / 256.0 / 256.0 / 256.0\n\t\t+ v.g * 255.0 / 256.0 / 256.0 / 256.0\n\t\t+ v.b * 255.0 / 256.0 / 256.0\n\t\t+ v.a * 255.0 / 256.0;\n}\n\n\nfloat @decode1(vec4 rgba) {\n\t// float f = @decode_float(rgba);\n\tfloat f = dot(rgba, vec4(\n\t\t255.0 / 256.0 / 256.0 / 256.0 / 256.0,\n\t\t255.0 / 256.0 / 256.0 / 256.0,\n\t\t255.0 / 256.0 / 256.0,\n\t\t255.0 / 256.0\n\t));\n\treturn (f - 0.5) * 4096.0;\n}';
+exports.init = init;
+var encodeShader = exports.encodeShader = 'uniform float @range;\n\nvec4 @encode1(float v) {\n\tfloat z = clamp(v / @range + 0.5, 0.0, 1.0);\n\n\treturn mod(z * vec4(\n\t\t256.0 * 256.0 * 256.0 * 256.0,\n\t\t256.0 * 256.0 * 256.0,\n\t\t256.0 * 256.0,\n\t\t256.0\n\t), vec4(256.0)) / 255.0;\n}';
+var decodeShader = exports.decodeShader = 'uniform float @range;\n\nfloat @decode1(vec4 rgba) {\n\tfloat f = dot(rgba, vec4(\n\t\t255.0 / 256.0 / 256.0 / 256.0 / 256.0,\n\t\t255.0 / 256.0 / 256.0 / 256.0,\n\t\t255.0 / 256.0 / 256.0,\n\t\t255.0 / 256.0\n\t));\n\treturn (f - 0.5) * @range;\n}';
+
+function init(shape, format) {
+	return {
+		range: format.range || 4096
+	};
+}
 
 },{}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+	value: true
 });
+exports.init = init;
 var encodeShader = exports.encodeShader = '// https://github.com/mikolalysenko/glsl-read-float/blob/master/index.glsl\n\n#define FLOAT_MAX  1.70141184e38\n#define FLOAT_MIN  1.17549435e-38\n\nvec4 @encode1(float v) {\n    highp float av = abs(v);\n\n    //Handle special cases\n    if(av < FLOAT_MIN) {\n        return vec4(0.0, 0.0, 0.0, 0.0);\n    } else if(v > FLOAT_MAX) {\n        return vec4(127.0, 128.0, 0.0, 0.0) / 255.0;\n    } else if(v < -FLOAT_MAX) {\n        return vec4(255.0, 128.0, 0.0, 0.0) / 255.0;\n    }\n\n    highp vec4 c = vec4(0,0,0,0);\n\n    //Compute exponent and mantissa\n    highp float e = floor(log2(av));\n    highp float m = av * pow(2.0, -e) - 1.0;\n    \n    //Unpack mantissa\n    c[1] = floor(128.0 * m);\n    m -= c[1] / 128.0;\n    c[2] = floor(32768.0 * m);\n    m -= c[2] / 32768.0;\n    c[3] = floor(8388608.0 * m);\n    \n    //Unpack exponent\n    highp float ebias = e + 127.0;\n    c[0] = floor(ebias / 2.0);\n    ebias -= c[0] * 2.0;\n    c[1] += floor(ebias) * 128.0; \n\n    //Unpack sign bit\n    c[0] += 128.0 * step(0.0, -v);\n\n    //Scale back to range\n    return c.abgr / 255.0;\n}\n\n// TODO: compare with http://stackoverflow.com/a/7237286';
 var decodeShader = exports.decodeShader = '// TODO: compare with http://stackoverflow.com/a/7237286\n\nfloat @decode1(vec4 val){\n    vec4 scl = floor(255.0 * val + 0.5);\n    float sgn = (scl.a < 128.0) ? 1.0 : -1.0;\n    float exn = mod(scl.a * 2.0, 256.0) + floor(scl.b / 128.0) - 127.0;\n    float man = 1.0 +\n        (scl.r / 8388608.0) + \n        (scl.g / 32768.0) +\n        mod(scl.b, 128.0) / 128.0;\n    return sgn * man * pow(2.0, exn);\n}\n';
+
+function init(shape, format) {
+	return {};
+}
 
 },{}],4:[function(require,module,exports){
 'use strict';
@@ -68,7 +80,7 @@ exports.default = {
 		tile: pack_tile
 	},
 
-	read_shim: 'vec4 @read4(ivec4 pos){\n    int z = 4 * (pos.z / 4);\n    return vec4(\n        @read(ivec4(pos.xy, z    , pos.w)),\n        @read(ivec4(pos.xy, z + 1, pos.w)),\n        @read(ivec4(pos.xy, z + 2, pos.w)),\n        @read(ivec4(pos.xy, z + 3, pos.w))\n    );\n}',
+	read_shim: 'vec4 @read4(ivec4 pos){\n    int z = 4 * (pos.z / 4);\n    if(@shape.z < 4){\n        if(@shape.z == 1){\n            return vec4(\n                @read(ivec4(pos.xy, z    , pos.w)), \n                0,\n                0,\n                0\n            );\n        }else if(@shape.z == 2){\n            return vec4(\n                @read(ivec4(pos.xy, z    , pos.w)), \n                @read(ivec4(pos.xy, z + 1, pos.w)),\n                0,\n                0\n            );\n        }else if(@shape.z == 3){\n            return vec4(\n                @read(ivec4(pos.xy, z    , pos.w)), \n                @read(ivec4(pos.xy, z + 1, pos.w)),\n                @read(ivec4(pos.xy, z + 2, pos.w)),\n                0\n            );\n        }   \n    }\n    \n    return vec4(\n        @read(ivec4(pos.xy, z    , pos.w)),\n        @read(ivec4(pos.xy, z + 1, pos.w)),\n        @read(ivec4(pos.xy, z + 2, pos.w)),\n        @read(ivec4(pos.xy, z + 3, pos.w))\n    );\n}',
 	write_shim: 'vec4 process4(ivec4 pos);\nfloat process(ivec4 pos){\n    return chsel(process4(ivec4(pos.xy, 4 * (pos.z / 4), pos.w)), imod(pos.z, 4));\n}',
 
 	codec: {
@@ -87,12 +99,15 @@ Object.defineProperty(exports, "__esModule", {
 exports.init = init;
 exports.pack = pack;
 exports.unpack = unpack;
-var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nfloat @read(ivec4 pos){\n    int tile  = pos.x + \n                pos.y * @shape.x + \n                pos.z * @shape.x * @shape.y +\n                pos.w * @shape.x * @shape.y * @shape.z;\n\n    return @decode1(texture2D(@tex, \n        (vec2(tile2vec(tile, @texSize.x)) + vec2(0.5, 0.5)) / vec2(@texSize)));\n}\n';
-var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nvec4 clampify(vec4 v){\n    return vec4(ivec4(clamp(v, vec4(0), vec4(1)) * 255.0)) / 255.0;\n}\n\nfloat process(ivec4 pos);\nvoid main(){\n\tint tile = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint chunks = @shape.x * @shape.y * @shape.z * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tgl_FragColor = @encode1(@activation1(process(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\timod(tile / @shape.x / @shape.y, @shape.z ),\n\t\ttile / @shape.x / @shape.y / @shape.z\n\t))));\n}';
+var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nfloat @read(ivec4 pos){\n\tfloat tile = dot(vec4(pos), vec4(1, @shape.x, @shape.x * @shape.y, @shape.x * @shape.y * @shape.z));\n\treturn @decode1(texture2D(@tex, \n\t\tvec2(mod(tile, float(@texSize.x)) + 0.5, floor(tile / float(@texSize.x)) + 0.5) / vec2(@texSize)));\n}\n';
+var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nvec4 clampify(vec4 v){\n    return vec4(ivec4(clamp(v, vec4(0), vec4(1)) * 255.0)) / 255.0;\n}\n\nfloat process(ivec4 pos);\nvoid main(){\n\tint tile = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint chunks = @shape.x * @shape.y * @shape.z * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tgl_FragColor = clampify(@encode1(@activation1(process(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\timod(tile / @shape.x / @shape.y, @shape.z ),\n\t\ttile / @shape.x / @shape.y / @shape.z\n\t)))));\n}';
 
 function init(shape) {
-    var length = 4 * Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
-    var cols = Math.ceil(Math.sqrt(length) / 4) * 4;
+    // var length = 4 * Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
+    // var cols = Math.ceil(Math.sqrt(length) / 4) * 4;
+
+    var length = shape[2] * shape[3] * shape[1] * shape[0];
+    var cols = Math.ceil(Math.sqrt(length));
     var texSize = [cols, Math.ceil(length / cols)];
     return {
         texSize: texSize,
@@ -188,20 +203,34 @@ exports.default = {
 };
 
 },{}],8:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+exports.init = init;
 // import { readFileSync } from 'fs';
 
 // export const encodeShader = readFileSync(__dirname + '/encode.glsl', 'utf8');
 // export const decodeShader = readFileSync(__dirname + '/decode.glsl', 'utf8');
-"use strict";
+
+function init(shape, format) {
+	return {};
+}
 
 },{}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+	value: true
 });
+exports.init = init;
 var encodeShader = exports.encodeShader = '#define @encode4 \n ';
 var decodeShader = exports.decodeShader = '#define @decode4 \n';
+
+function init(shape, format) {
+	return {};
+}
 
 },{}],10:[function(require,module,exports){
 'use strict';
@@ -241,7 +270,7 @@ exports.default = {
 	},
 
 	read_shim: 'float @read(ivec4 pos){\n    return chsel(@read4(pos), imod(pos.z, 4));\n}\n',
-	write_shim: 'float process(ivec4 pos);\nvec4 process4(ivec4 pos){\n\tint z = 4 * (pos.z / 4);\n    return vec4(\n        process(ivec4(pos.xy, z    , pos.w)),\n        process(ivec4(pos.xy, z + 1, pos.w)),\n        process(ivec4(pos.xy, z + 2, pos.w)),\n        process(ivec4(pos.xy, z + 3, pos.w))\n    );\n}',
+	write_shim: 'float process(ivec4 pos);\nvec4 process4(ivec4 pos){\n\tint z = 4 * (pos.z / 4);\n\n\tif(@shape.z < 4){\n        if(@shape.z == 1){\n            return vec4(\n                process(ivec4(pos.xy, z    , pos.w)), \n                0,\n                0,\n                0\n            );\n        }else if(@shape.z == 2){\n            return vec4(\n                process(ivec4(pos.xy, z    , pos.w)), \n                process(ivec4(pos.xy, z + 1, pos.w)),\n                0,\n                0\n            );\n        }else if(@shape.z == 3){\n            return vec4(\n                process(ivec4(pos.xy, z    , pos.w)), \n                process(ivec4(pos.xy, z + 1, pos.w)),\n                process(ivec4(pos.xy, z + 2, pos.w)),\n                0\n            );\n        }   \n    }\n    \n    return vec4(\n        process(ivec4(pos.xy, z    , pos.w)),\n        process(ivec4(pos.xy, z + 1, pos.w)),\n        process(ivec4(pos.xy, z + 2, pos.w)),\n        process(ivec4(pos.xy, z + 3, pos.w))\n    );\n}',
 
 	codec: {
 		raw: codec_raw,
@@ -1168,7 +1197,7 @@ var BaseTensor = function () {
 		console.log('initializing tensor', format);
 
 		// calculate texture size
-		this.info = this._format.pack.init(shape, format);
+		this.info = Object.assign({}, this._format.pack.init(shape, format), this._format.codec.init(shape, format));
 		if (!this.info.texSize) throw new Error('Format did not yield texSize');
 
 		// initialize texture
@@ -1340,14 +1369,16 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             throw new Error("Invalid format for data: must be Uint8Array or Float32Array or ndarray");
         }
 
-        var nofloat = type === 'float32' && (true || gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && options.output);
+        var nofloat = type === 'float32' && (
+        // true || 
+        gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && options.output);
 
         var stride = options.stride || data === 'stride';
 
         if (typeof data == 'string') data = null;
 
         if (nofloat) {
-            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: 'uint8', pack: 'tile', density: '1:4', codec: 'fixnum' }, shape));
+            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: 'uint8', pack: 'stride', density: '1:4', codec: 'fixnum' }, shape));
         } else {
             var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: type, pack: 'tile', density: '4:4', codec: 'raw' }, shape));
         }

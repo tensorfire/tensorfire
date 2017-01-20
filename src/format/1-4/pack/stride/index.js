@@ -4,8 +4,11 @@ export const readShader = readFileSync(__dirname + '/read.glsl', 'utf8');
 export const writeShader = readFileSync(__dirname + '/write.glsl', 'utf8');
 
 export function init(shape){
-    var length = 4 * Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
-    var cols = Math.ceil(Math.sqrt(length) / 4) * 4;
+    // var length = 4 * Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
+    // var cols = Math.ceil(Math.sqrt(length) / 4) * 4;
+
+    var length = shape[2] * shape[3] * shape[1] * shape[0];
+    var cols = Math.ceil(Math.sqrt(length));
     var texSize = [cols, Math.ceil(length / cols)]
     return {
         texSize: texSize,

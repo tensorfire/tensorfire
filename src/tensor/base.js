@@ -42,7 +42,10 @@ export default class BaseTensor {
 		console.log('initializing tensor', format)
 
 		// calculate texture size
-		this.info = this._format.pack.init(shape, format);
+		this.info = Object.assign({},
+			this._format.pack.init(shape, format),
+			this._format.codec.init(shape, format)
+		);
 		if(!this.info.texSize) throw new Error('Format did not yield texSize');
 
 		// initialize texture
