@@ -31,7 +31,7 @@ export function endTimer(gl, callback){
 function createTimer(gl){
 	var extTimer = gl.getExtension('ext_disjoint_timer_query');
 
-	return null;
+	// return null;
 
 	var queryPool = []
     function allocQuery () {
@@ -94,7 +94,8 @@ function createTimer(gl){
     	},
 
     	end(fn){
-    		currentInfo.cpuEndTime = now()
+    		currentInfo.cpuTime = now() - currentInfo.cpuStartTime
+    		delete currentInfo.cpuStartTime;
     		currentInfo.callback = fn;
     		currentInfo = null;
     		endQuery()

@@ -80,7 +80,7 @@ exports.default = {
 		tile: pack_tile
 	},
 
-	read_shim: 'vec4 @read4(ivec4 pos){\n    int z = 4 * (pos.z / 4);\n    if(@shape.z < 4){\n        if(@shape.z == 1){\n            return vec4(\n                @read(ivec4(pos.xy, z    , pos.w)), \n                0,\n                0,\n                0\n            );\n        }else if(@shape.z == 2){\n            return vec4(\n                @read(ivec4(pos.xy, z    , pos.w)), \n                @read(ivec4(pos.xy, z + 1, pos.w)),\n                0,\n                0\n            );\n        }else if(@shape.z == 3){\n            return vec4(\n                @read(ivec4(pos.xy, z    , pos.w)), \n                @read(ivec4(pos.xy, z + 1, pos.w)),\n                @read(ivec4(pos.xy, z + 2, pos.w)),\n                0\n            );\n        }   \n    }\n    \n    return vec4(\n        @read(ivec4(pos.xy, z    , pos.w)),\n        @read(ivec4(pos.xy, z + 1, pos.w)),\n        @read(ivec4(pos.xy, z + 2, pos.w)),\n        @read(ivec4(pos.xy, z + 3, pos.w))\n    );\n}',
+	read_shim: 'vec4 @read4(ivec4 pos){\n    int z = 4 * (pos.z / 4);\n    \n    if(@shape.z - z == 1){\n        return vec4(\n            @read(ivec4(pos.xy, z    , pos.w)), \n            0,\n            0,\n            0\n        );\n    }else if(@shape.z - z == 2){\n        return vec4(\n            @read(ivec4(pos.xy, z    , pos.w)), \n            @read(ivec4(pos.xy, z + 1, pos.w)),\n            0,\n            0\n        );\n    }else if(@shape.z - z == 3){\n        return vec4(\n            @read(ivec4(pos.xy, z    , pos.w)), \n            @read(ivec4(pos.xy, z + 1, pos.w)),\n            @read(ivec4(pos.xy, z + 2, pos.w)),\n            0\n        );\n    }\n    \n    return vec4(\n        @read(ivec4(pos.xy, z    , pos.w)),\n        @read(ivec4(pos.xy, z + 1, pos.w)),\n        @read(ivec4(pos.xy, z + 2, pos.w)),\n        @read(ivec4(pos.xy, z + 3, pos.w))\n    );\n}',
 	write_shim: 'vec4 process4(ivec4 pos);\nfloat process(ivec4 pos){\n    return chsel(process4(ivec4(pos.xy, 4 * (pos.z / 4), pos.w)), imod(pos.z, 4));\n}',
 
 	codec: {
@@ -270,7 +270,7 @@ exports.default = {
 	},
 
 	read_shim: 'float @read(ivec4 pos){\n    return chsel(@read4(pos), imod(pos.z, 4));\n}\n',
-	write_shim: 'float process(ivec4 pos);\nvec4 process4(ivec4 pos){\n\tint z = 4 * (pos.z / 4);\n\n\tif(@shape.z < 4){\n        if(@shape.z == 1){\n            return vec4(\n                process(ivec4(pos.xy, z    , pos.w)), \n                0,\n                0,\n                0\n            );\n        }else if(@shape.z == 2){\n            return vec4(\n                process(ivec4(pos.xy, z    , pos.w)), \n                process(ivec4(pos.xy, z + 1, pos.w)),\n                0,\n                0\n            );\n        }else if(@shape.z == 3){\n            return vec4(\n                process(ivec4(pos.xy, z    , pos.w)), \n                process(ivec4(pos.xy, z + 1, pos.w)),\n                process(ivec4(pos.xy, z + 2, pos.w)),\n                0\n            );\n        }   \n    }\n    \n    return vec4(\n        process(ivec4(pos.xy, z    , pos.w)),\n        process(ivec4(pos.xy, z + 1, pos.w)),\n        process(ivec4(pos.xy, z + 2, pos.w)),\n        process(ivec4(pos.xy, z + 3, pos.w))\n    );\n}',
+	write_shim: 'float process(ivec4 pos);\nvec4 process4(ivec4 pos){\n    int z = 4 * (pos.z / 4);\n\n    if(@shape.z - z == 1){\n        return vec4(\n            process(ivec4(pos.xy, z    , pos.w)), \n            0,\n            0,\n            0\n        );\n    }else if(@shape.z - z == 2){\n        return vec4(\n            process(ivec4(pos.xy, z    , pos.w)), \n            process(ivec4(pos.xy, z + 1, pos.w)),\n            0,\n            0\n        );\n    }else if(@shape.z - z == 3){\n        return vec4(\n            process(ivec4(pos.xy, z    , pos.w)), \n            process(ivec4(pos.xy, z + 1, pos.w)),\n            process(ivec4(pos.xy, z + 2, pos.w)),\n            0\n        );\n    }\n    \n    return vec4(\n        process(ivec4(pos.xy, z    , pos.w)),\n        process(ivec4(pos.xy, z + 1, pos.w)),\n        process(ivec4(pos.xy, z + 2, pos.w)),\n        process(ivec4(pos.xy, z + 3, pos.w))\n    );\n}',
 
 	codec: {
 		raw: codec_raw,
@@ -715,7 +715,7 @@ function assembleFragmentShader(shaderGen, output, uniforms) {
 
     fragmentShader += tensorShader;
 
-    console.log(fragmentShader);
+    // console.log(fragmentShader)
 
     return fragmentShader;
 }
@@ -990,7 +990,7 @@ function endTimer(gl, callback) {
 function createTimer(gl) {
 	var extTimer = gl.getExtension('ext_disjoint_timer_query');
 
-	return null;
+	// return null;
 
 	var queryPool = [];
 	function allocQuery() {
@@ -1053,7 +1053,8 @@ function createTimer(gl) {
 			beginQuery(currentInfo);
 		},
 		end: function end(fn) {
-			currentInfo.cpuEndTime = now();
+			currentInfo.cpuTime = now() - currentInfo.cpuStartTime;
+			delete currentInfo.cpuStartTime;
 			currentInfo.callback = fn;
 			currentInfo = null;
 			endQuery();
@@ -1193,8 +1194,6 @@ var BaseTensor = function () {
 			if (!['softfloat', 'fixnum'].includes(format.codec)) throw new Error('format.codec must be softfloat or fixnum');
 		} else throw new Error('format.density must be 4:4 or 1:4');
 		this.format = format;
-
-		console.log('initializing tensor', format);
 
 		// calculate texture size
 		this.info = Object.assign({}, this._format.pack.init(shape, format), this._format.codec.init(shape, format));

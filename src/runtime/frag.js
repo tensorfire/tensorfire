@@ -42,7 +42,7 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
 
     fragmentShader += tensorShader 
 
-    console.log(fragmentShader)
+    // console.log(fragmentShader)
 
     return fragmentShader;
 }

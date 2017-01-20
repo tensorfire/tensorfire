@@ -39,8 +39,6 @@ export default class BaseTensor {
 		}else throw new Error('format.density must be 4:4 or 1:4');
 		this.format = format;
 
-		console.log('initializing tensor', format)
-
 		// calculate texture size
 		this.info = Object.assign({},
 			this._format.pack.init(shape, format),
