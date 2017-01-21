@@ -203,19 +203,21 @@ exports.default = {
 };
 
 },{}],8:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
 	value: true
 });
 exports.init = init;
-// import { readFileSync } from 'fs';
-
-// export const encodeShader = readFileSync(__dirname + '/encode.glsl', 'utf8');
-// export const decodeShader = readFileSync(__dirname + '/decode.glsl', 'utf8');
+var encodeShader = exports.encodeShader = 'uniform vec2 @range;\n\nvec4 @encode4(vec4 v){\n\treturn (v - vec4(@range.x)) / vec4(@range.y - @range.x);\n}';
+var decodeShader = exports.decodeShader = 'uniform vec2 @range;\n\nvec4 @decode4(vec4 v){\n\treturn v * vec4(@range.y - @range.x) + vec4(@range.x);\n}';
 
 function init(shape, format) {
-	return {};
+	return {
+		range: [isFinite(format.min) ? format.min : 0, isFinite(format.max) ? format.max : 1]
+		// max: ,
+		// min: ,
+	};
 }
 
 },{}],9:[function(require,module,exports){
@@ -713,7 +715,7 @@ function assembleFragmentShader(shaderGen, output, uniforms) {
         fragmentShader += output._format.write_shim.replace(/@/g, 'out_') + '\n';
     }
 
-    fragmentShader += tensorShader;
+    fragmentShader += tensorShader.replace(/@/g, 'out_');
 
     // console.log(fragmentShader)
 
@@ -1368,16 +1370,14 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             throw new Error("Invalid format for data: must be Uint8Array or Float32Array or ndarray");
         }
 
-        var nofloat = type === 'float32' && (
-        // true || 
-        gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && options.output);
+        var nofloat = type === 'float32' && (true || gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && options.output);
 
         var stride = options.stride || data === 'stride';
 
         if (typeof data == 'string') data = null;
 
         if (nofloat) {
-            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: 'uint8', pack: 'stride', density: '1:4', codec: 'fixnum' }, shape));
+            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: 'uint8', pack: 'tile', density: '1:4', codec: 'softfloat' }, shape));
         } else {
             var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: type, pack: 'tile', density: '4:4', codec: 'raw' }, shape));
         }

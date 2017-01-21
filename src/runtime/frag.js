@@ -40,7 +40,7 @@ export default function assembleFragmentShader(shaderGen, output, uniforms){
         fragmentShader += output._format.write_shim.replace(/@/g, 'out_') + '\n';
     }
 
-    fragmentShader += tensorShader 
+    fragmentShader += tensorShader.replace(/@/g, 'out_')
 
     // console.log(fragmentShader)
 
