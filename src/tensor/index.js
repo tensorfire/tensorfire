@@ -21,6 +21,7 @@ export class Tensor extends BaseTensor {
 
         var xdata = data;
         if(shape.shape){ // ndarrays
+            format = data;
             xdata = shape.data;
             data = shape;
             shape = shape.shape;
@@ -54,7 +55,7 @@ export class Tensor extends BaseTensor {
             (gl.NO_FLOAT_TEXTURES || 
             (gl.NO_RENDER_FLOAT && this instanceof OutputTensor)))
             || format === 'softfloat'){
-            format = { type: 'uint8', pack: 'tile', density: '1:4', codec: 'softfloat' }
+            format = { type: 'uint8', pack: 'stride', density: '1:4', codec: 'softfloat' }
             type = 'float32'
         }else if(format === 'uint8' || format === 'float32'){
             format = { type: format, pack: 'stride', density: '4:4', codec: 'raw' }
