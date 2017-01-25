@@ -1399,8 +1399,6 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             shape = [shape.width, shape.height];
         }
 
-        options = options || {};
-
         var type;
         if (data === null || data === 'nofloat' || data === 'stride' || data instanceof Float32Array || data === 'float32' || data instanceof Float64Array || Array.isArray(data)) {
             // null defaults to a float32 texture type
@@ -1493,6 +1491,11 @@ var OutputTensor = exports.OutputTensor = function (_Tensor) {
         key: '_read',
         value: function _read() {
             // this.gl.readPixels(...)
+        }
+    }, {
+        key: 'run',
+        value: function run(shader, params) {
+            return (0, _index.Run)(this, shader, params);
         }
     }, {
         key: 'read',

@@ -21,8 +21,6 @@ export class Tensor extends BaseTensor {
             shape = [shape.width, shape.height]
         }
 
-        options = options || {};
-
         var type;
         if(data === null || data === 'nofloat' || data === 'stride' || data instanceof Float32Array 
             || data === 'float32' || data instanceof Float64Array || Array.isArray(data)){
@@ -96,6 +94,10 @@ export class OutputTensor extends Tensor {
 	_read(){
 		// this.gl.readPixels(...)
 	}
+
+    run(shader, params){
+        return Run(this, shader, params);
+    }
 	
 	read(){
 		return this._format.unpack(this._info, this._read())
