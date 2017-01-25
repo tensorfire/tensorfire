@@ -13,3 +13,11 @@ export function encode(data, r, g, b, a){
 	data[2] = b;
 	data[3] = a;
 }
+
+
+export function decode(data, r, g, b, a){
+	data[0] = r;
+	data[1] = g;
+	data[2] = b;
+	data[3] = a;
+}

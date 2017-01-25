@@ -608,6 +608,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.init = init;
 exports.encode = encode;
+exports.decode = decode;
 var encodeShader = exports.encodeShader = '#define @encode4 \n ';
 var decodeShader = exports.decodeShader = '#define @decode4 \n';
 
@@ -616,6 +617,13 @@ function init(shape, format) {
 }
 
 function encode(data, r, g, b, a) {
+	data[0] = r;
+	data[1] = g;
+	data[2] = b;
+	data[3] = a;
+}
+
+function decode(data, r, g, b, a) {
 	data[0] = r;
 	data[1] = g;
 	data[2] = b;
@@ -732,8 +740,44 @@ function pack(info, array, encode4, format) {
     return data;
 }
 
-function unpack(info, arr) {
-    // return ndarray
+function unpack(info, data, decode4, type) {
+    if (type != 'float32') throw new Error('not impl');
+
+    var shape = info.shape;
+    var length = shape.reduce(function (a, b) {
+        return a * b;
+    });
+    var array = ndarray(new Float32Array(length), shape);
+
+    var _info$texSize2 = _slicedToArray(info.texSize, 2),
+        width = _info$texSize2[0],
+        height = _info$texSize2[1],
+        length = width * height * 4;
+
+    var shape = info.shape;
+    var chans = Math.ceil(info.shape[2] / 4);
+
+    var buf = new Float32Array(4);
+
+    for (var i = 0; i < info.shape[0]; i++) {
+        for (var j = 0; j < info.shape[1]; j++) {
+            for (var k = 0; k < chans; k++) {
+                var b = Math.min(k * 4 + 4, shape[2]) - k * 4;
+                for (var w = 0; w < info.shape[3]; w++) {
+
+                    var tile = i + j * shape[0] + k * shape[0] * shape[1] + w * shape[0] * shape[1] * chans;
+
+                    decode4(buf, data[4 * tile + 0], data[4 * tile + 1], data[4 * tile + 2], data[4 * tile + 3]);
+
+                    for (var x = 0; x < b; x++) {
+                        array.set(i, j, 4 * k + x, w, buf[x]);
+                    }
+                }
+            }
+        }
+    }
+
+    return array;
 }
 
 },{}],15:[function(require,module,exports){
@@ -2101,7 +2145,19 @@ var OutputTensor = exports.OutputTensor = function (_Tensor) {
     }, {
         key: '_read',
         value: function _read() {
-            // this.gl.readPixels(...)
+            var gl = this.gl,
+                size = this.info.texSize;
+
+            if (this.format.type == 'uint8') {
+                var glType = gl.UNSIGNED_BYTE,
+                    pixels = new Uint8Array(size[0] * size[1] * 4);
+            } else if (this.format.type === 'float32') {
+                var glType = gl.FLOAT,
+                    pixels = new Float32Array(size[0] * size[1] * 4);
+            }
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+            gl.readPixels(0, 0, size[0], size[1], gl.RGBA, glType, pixels);
+            return pixels;
         }
     }, {
         key: 'run',
@@ -2111,7 +2167,7 @@ var OutputTensor = exports.OutputTensor = function (_Tensor) {
     }, {
         key: 'read',
         value: function read() {
-            return this._format.unpack(this._info, this._read());
+            return this._format.pack.unpack(this.info, this._read(), this._format.codec.decode, this.type);
         }
     }]);
 

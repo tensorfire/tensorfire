@@ -106,16 +106,30 @@ export class OutputTensor extends Tensor {
         this.gl.deleteFramebuffer(this.fbo)
     }
 
-	_read(){
-		// this.gl.readPixels(...)
-	}
+
+    _read(){
+        var gl = this.gl,
+            size = this.info.texSize;
+
+        if(this.format.type == 'uint8'){
+            var glType = gl.UNSIGNED_BYTE,
+                pixels = new Uint8Array(size[0] * size[1] * 4)
+        }else if(this.format.type === 'float32'){
+            var glType = gl.FLOAT,
+                pixels = new Float32Array(size[0] * size[1] * 4)
+        }
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+        gl.readPixels(0, 0, size[0], size[1], gl.RGBA, glType, pixels);
+        return pixels;
+    }
+
 
     run(shader, params){
         return Run(shader, this, params);
     }
 	
 	read(){
-		return this._format.unpack(this._info, this._read())
+		return this._format.pack.unpack(this.info, this._read(), this._format.codec.decode, this.type)
 	}
 }
 

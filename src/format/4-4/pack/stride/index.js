@@ -62,6 +62,47 @@ export function pack(info, array, encode4, format){
 }
 
 
-export function unpack(info, arr){
-    // return ndarray
+export function unpack(info, data, decode4, type){
+    if(type != 'float32') throw new Error('not impl');
+
+    var shape = info.shape;
+    var length = shape.reduce((a, b) => a * b);
+    var array = ndarray(new Float32Array(length), shape)
+
+
+    var [width, height] = info.texSize,
+        length = width * height * 4;
+    var shape = info.shape;
+    var chans = Math.ceil(info.shape[2] / 4);
+
+    var buf = new Float32Array(4);
+
+    for(var i = 0; i < info.shape[0]; i++){
+        for(var j = 0; j < info.shape[1]; j++){
+            for(var k = 0; k < chans; k++){
+                var b = Math.min(k*4+4, shape[2])-k*4;
+                for(var w = 0; w < info.shape[3]; w++){
+
+                    var tile  = i + 
+                        j * shape[0] + 
+                        k * shape[0] * shape[1] +
+                        w * shape[0] * shape[1] * chans;
+
+                    decode4(buf, 
+                        data[4 * tile + 0],
+                        data[4 * tile + 1],
+                        data[4 * tile + 2],
+                        data[4 * tile + 3])
+
+
+                    for(var x = 0; x < b; x++){
+                        array.set(i, j, 4*k+x, w, buf[x])
+                    }
+                }
+            }
+        }
+    }
+
+    return array;
+
 }
