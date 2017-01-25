@@ -14,7 +14,10 @@ import Formats from '../format/index.js'
 //          raw | linquant (4:4)
 
 export default class BaseTensor {
-	constructor(gl, format, shape, data){
+	// we arent using a constructor because we want to be able to run
+	// this instanceof OutputTensor from within the Tensor constructor
+	
+	_init(gl, format, shape, data){
 		// validate glcontext
 		if(!gl.createTexture) throw new Error('Invalid WebGLRenderingContext');
 		this.gl = gl;
@@ -28,15 +31,14 @@ export default class BaseTensor {
 		// validate format
 		if(!['float32', 'uint8'].includes(format.type))
 			throw new Error('format.type must be uint8 or float32');
-		if(!['stride', 'tile'].includes(format.pack))
-			throw new Error('format.pack must be stride or tile');
-		if(format.density == '4:4'){
-			if(!['raw', 'linquant'].includes(format.codec))
-				throw new Error('format.codec must be raw or linquant');
-		}else if(format.density == '1:4'){
-			if(!['softfloat', 'fixnum'].includes(format.codec))
-				throw new Error('format.codec must be softfloat or fixnum');
-		}else throw new Error('format.density must be 4:4 or 1:4');
+		if(format.density in Formats){
+			let fd = Formats[format.density];
+			if(!(format.pack in fd.pack)) 
+				throw new Error('format.pack must be ' + Object.keys(fd.pack).join(' or '));
+			if(!(format.codec in fd.codec)) 
+				throw new Error('format.codec must be ' + Object.keys(fd.codec).join(' or '));
+		}else throw new Error('format.density must be ' + Object.keys(Formats).join(' or '));
+
 		this.format = format;
 
 		// calculate texture size
@@ -51,9 +53,21 @@ export default class BaseTensor {
 		this.update(data)
 	}
 	_update(data){
-		if(!(this.format.type === 'uint8' || this.format.type === 'float32')) 
-			throw new Error('Type must be uint8 or float32');
-
+		if(data !== null){
+			if(this.format.type === 'uint8'){
+				if(Array.isArray(data) || data instanceof Uint8ClampedArray)
+					data = new Uint8Array(data);
+				if(!(data instanceof Uint8Array))
+					throw new Error('data must be Uint8Array');
+			}else if(this.format.type === 'float32'){
+				if(Array.isArray(data) || data instanceof Float64Array)
+					data = new Float32Array(data);
+				if(!(data instanceof Float32Array))
+					throw new Error('data must be Float32Array');
+			}else throw new Error('Type must be uint8 or float32');
+			if(data.length !== this.info.texSize[0] * this.info.texSize[1] * 4)
+				throw new Error('data is the wrong length');
+		}
 		var gl = this.gl;
         gl.bindTexture(gl.TEXTURE_2D, this.tex);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 
@@ -63,7 +77,9 @@ export default class BaseTensor {
 
 	update(data){
 		if(!data) return this._update(null);
-		this._update(this.format.pack(this.info, data))
+		if(data.shape) return this._update(
+			this._format.pack.pack(this.info, data, this._format.codec.encode, this.format));
+		return this._update(data);
 	}
 
 	get _format(){

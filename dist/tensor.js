@@ -1,4 +1,384 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.KV = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+"use strict"
+
+function iota(n) {
+  var result = new Array(n)
+  for(var i=0; i<n; ++i) {
+    result[i] = i
+  }
+  return result
+}
+
+module.exports = iota
+},{}],2:[function(require,module,exports){
+/*!
+ * Determine if an object is a Buffer
+ *
+ * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+ * @license  MIT
+ */
+
+// The _isBuffer check is for Safari 5-7 support, because it's missing
+// Object.prototype.constructor. Remove this eventually
+module.exports = function (obj) {
+  return obj != null && (isBuffer(obj) || isSlowBuffer(obj) || !!obj._isBuffer)
+}
+
+function isBuffer (obj) {
+  return !!obj.constructor && typeof obj.constructor.isBuffer === 'function' && obj.constructor.isBuffer(obj)
+}
+
+// For Node v0.10 support. Remove this eventually.
+function isSlowBuffer (obj) {
+  return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
+}
+
+},{}],3:[function(require,module,exports){
+var iota = require("iota-array")
+var isBuffer = require("is-buffer")
+
+var hasTypedArrays  = ((typeof Float64Array) !== "undefined")
+
+function compare1st(a, b) {
+  return a[0] - b[0]
+}
+
+function order() {
+  var stride = this.stride
+  var terms = new Array(stride.length)
+  var i
+  for(i=0; i<terms.length; ++i) {
+    terms[i] = [Math.abs(stride[i]), i]
+  }
+  terms.sort(compare1st)
+  var result = new Array(terms.length)
+  for(i=0; i<result.length; ++i) {
+    result[i] = terms[i][1]
+  }
+  return result
+}
+
+function compileConstructor(dtype, dimension) {
+  var className = ["View", dimension, "d", dtype].join("")
+  if(dimension < 0) {
+    className = "View_Nil" + dtype
+  }
+  var useGetters = (dtype === "generic")
+
+  if(dimension === -1) {
+    //Special case for trivial arrays
+    var code =
+      "function "+className+"(a){this.data=a;};\
+var proto="+className+".prototype;\
+proto.dtype='"+dtype+"';\
+proto.index=function(){return -1};\
+proto.size=0;\
+proto.dimension=-1;\
+proto.shape=proto.stride=proto.order=[];\
+proto.lo=proto.hi=proto.transpose=proto.step=\
+function(){return new "+className+"(this.data);};\
+proto.get=proto.set=function(){};\
+proto.pick=function(){return null};\
+return function construct_"+className+"(a){return new "+className+"(a);}"
+    var procedure = new Function(code)
+    return procedure()
+  } else if(dimension === 0) {
+    //Special case for 0d arrays
+    var code =
+      "function "+className+"(a,d) {\
+this.data = a;\
+this.offset = d\
+};\
+var proto="+className+".prototype;\
+proto.dtype='"+dtype+"';\
+proto.index=function(){return this.offset};\
+proto.dimension=0;\
+proto.size=1;\
+proto.shape=\
+proto.stride=\
+proto.order=[];\
+proto.lo=\
+proto.hi=\
+proto.transpose=\
+proto.step=function "+className+"_copy() {\
+return new "+className+"(this.data,this.offset)\
+};\
+proto.pick=function "+className+"_pick(){\
+return TrivialArray(this.data);\
+};\
+proto.valueOf=proto.get=function "+className+"_get(){\
+return "+(useGetters ? "this.data.get(this.offset)" : "this.data[this.offset]")+
+"};\
+proto.set=function "+className+"_set(v){\
+return "+(useGetters ? "this.data.set(this.offset,v)" : "this.data[this.offset]=v")+"\
+};\
+return function construct_"+className+"(a,b,c,d){return new "+className+"(a,d)}"
+    var procedure = new Function("TrivialArray", code)
+    return procedure(CACHED_CONSTRUCTORS[dtype][0])
+  }
+
+  var code = ["'use strict'"]
+
+  //Create constructor for view
+  var indices = iota(dimension)
+  var args = indices.map(function(i) { return "i"+i })
+  var index_str = "this.offset+" + indices.map(function(i) {
+        return "this.stride[" + i + "]*i" + i
+      }).join("+")
+  var shapeArg = indices.map(function(i) {
+      return "b"+i
+    }).join(",")
+  var strideArg = indices.map(function(i) {
+      return "c"+i
+    }).join(",")
+  code.push(
+    "function "+className+"(a," + shapeArg + "," + strideArg + ",d){this.data=a",
+      "this.shape=[" + shapeArg + "]",
+      "this.stride=[" + strideArg + "]",
+      "this.offset=d|0}",
+    "var proto="+className+".prototype",
+    "proto.dtype='"+dtype+"'",
+    "proto.dimension="+dimension)
+
+  //view.size:
+  code.push("Object.defineProperty(proto,'size',{get:function "+className+"_size(){\
+return "+indices.map(function(i) { return "this.shape["+i+"]" }).join("*"),
+"}})")
+
+  //view.order:
+  if(dimension === 1) {
+    code.push("proto.order=[0]")
+  } else {
+    code.push("Object.defineProperty(proto,'order',{get:")
+    if(dimension < 4) {
+      code.push("function "+className+"_order(){")
+      if(dimension === 2) {
+        code.push("return (Math.abs(this.stride[0])>Math.abs(this.stride[1]))?[1,0]:[0,1]}})")
+      } else if(dimension === 3) {
+        code.push(
+"var s0=Math.abs(this.stride[0]),s1=Math.abs(this.stride[1]),s2=Math.abs(this.stride[2]);\
+if(s0>s1){\
+if(s1>s2){\
+return [2,1,0];\
+}else if(s0>s2){\
+return [1,2,0];\
+}else{\
+return [1,0,2];\
+}\
+}else if(s0>s2){\
+return [2,0,1];\
+}else if(s2>s1){\
+return [0,1,2];\
+}else{\
+return [0,2,1];\
+}}})")
+      }
+    } else {
+      code.push("ORDER})")
+    }
+  }
+
+  //view.set(i0, ..., v):
+  code.push(
+"proto.set=function "+className+"_set("+args.join(",")+",v){")
+  if(useGetters) {
+    code.push("return this.data.set("+index_str+",v)}")
+  } else {
+    code.push("return this.data["+index_str+"]=v}")
+  }
+
+  //view.get(i0, ...):
+  code.push("proto.get=function "+className+"_get("+args.join(",")+"){")
+  if(useGetters) {
+    code.push("return this.data.get("+index_str+")}")
+  } else {
+    code.push("return this.data["+index_str+"]}")
+  }
+
+  //view.index:
+  code.push(
+    "proto.index=function "+className+"_index(", args.join(), "){return "+index_str+"}")
+
+  //view.hi():
+  code.push("proto.hi=function "+className+"_hi("+args.join(",")+"){return new "+className+"(this.data,"+
+    indices.map(function(i) {
+      return ["(typeof i",i,"!=='number'||i",i,"<0)?this.shape[", i, "]:i", i,"|0"].join("")
+    }).join(",")+","+
+    indices.map(function(i) {
+      return "this.stride["+i + "]"
+    }).join(",")+",this.offset)}")
+
+  //view.lo():
+  var a_vars = indices.map(function(i) { return "a"+i+"=this.shape["+i+"]" })
+  var c_vars = indices.map(function(i) { return "c"+i+"=this.stride["+i+"]" })
+  code.push("proto.lo=function "+className+"_lo("+args.join(",")+"){var b=this.offset,d=0,"+a_vars.join(",")+","+c_vars.join(","))
+  for(var i=0; i<dimension; ++i) {
+    code.push(
+"if(typeof i"+i+"==='number'&&i"+i+">=0){\
+d=i"+i+"|0;\
+b+=c"+i+"*d;\
+a"+i+"-=d}")
+  }
+  code.push("return new "+className+"(this.data,"+
+    indices.map(function(i) {
+      return "a"+i
+    }).join(",")+","+
+    indices.map(function(i) {
+      return "c"+i
+    }).join(",")+",b)}")
+
+  //view.step():
+  code.push("proto.step=function "+className+"_step("+args.join(",")+"){var "+
+    indices.map(function(i) {
+      return "a"+i+"=this.shape["+i+"]"
+    }).join(",")+","+
+    indices.map(function(i) {
+      return "b"+i+"=this.stride["+i+"]"
+    }).join(",")+",c=this.offset,d=0,ceil=Math.ceil")
+  for(var i=0; i<dimension; ++i) {
+    code.push(
+"if(typeof i"+i+"==='number'){\
+d=i"+i+"|0;\
+if(d<0){\
+c+=b"+i+"*(a"+i+"-1);\
+a"+i+"=ceil(-a"+i+"/d)\
+}else{\
+a"+i+"=ceil(a"+i+"/d)\
+}\
+b"+i+"*=d\
+}")
+  }
+  code.push("return new "+className+"(this.data,"+
+    indices.map(function(i) {
+      return "a" + i
+    }).join(",")+","+
+    indices.map(function(i) {
+      return "b" + i
+    }).join(",")+",c)}")
+
+  //view.transpose():
+  var tShape = new Array(dimension)
+  var tStride = new Array(dimension)
+  for(var i=0; i<dimension; ++i) {
+    tShape[i] = "a[i"+i+"]"
+    tStride[i] = "b[i"+i+"]"
+  }
+  code.push("proto.transpose=function "+className+"_transpose("+args+"){"+
+    args.map(function(n,idx) { return n + "=(" + n + "===undefined?" + idx + ":" + n + "|0)"}).join(";"),
+    "var a=this.shape,b=this.stride;return new "+className+"(this.data,"+tShape.join(",")+","+tStride.join(",")+",this.offset)}")
+
+  //view.pick():
+  code.push("proto.pick=function "+className+"_pick("+args+"){var a=[],b=[],c=this.offset")
+  for(var i=0; i<dimension; ++i) {
+    code.push("if(typeof i"+i+"==='number'&&i"+i+">=0){c=(c+this.stride["+i+"]*i"+i+")|0}else{a.push(this.shape["+i+"]);b.push(this.stride["+i+"])}")
+  }
+  code.push("var ctor=CTOR_LIST[a.length+1];return ctor(this.data,a,b,c)}")
+
+  //Add return statement
+  code.push("return function construct_"+className+"(data,shape,stride,offset){return new "+className+"(data,"+
+    indices.map(function(i) {
+      return "shape["+i+"]"
+    }).join(",")+","+
+    indices.map(function(i) {
+      return "stride["+i+"]"
+    }).join(",")+",offset)}")
+
+  //Compile procedure
+  var procedure = new Function("CTOR_LIST", "ORDER", code.join("\n"))
+  return procedure(CACHED_CONSTRUCTORS[dtype], order)
+}
+
+function arrayDType(data) {
+  if(isBuffer(data)) {
+    return "buffer"
+  }
+  if(hasTypedArrays) {
+    switch(Object.prototype.toString.call(data)) {
+      case "[object Float64Array]":
+        return "float64"
+      case "[object Float32Array]":
+        return "float32"
+      case "[object Int8Array]":
+        return "int8"
+      case "[object Int16Array]":
+        return "int16"
+      case "[object Int32Array]":
+        return "int32"
+      case "[object Uint8Array]":
+        return "uint8"
+      case "[object Uint16Array]":
+        return "uint16"
+      case "[object Uint32Array]":
+        return "uint32"
+      case "[object Uint8ClampedArray]":
+        return "uint8_clamped"
+    }
+  }
+  if(Array.isArray(data)) {
+    return "array"
+  }
+  return "generic"
+}
+
+var CACHED_CONSTRUCTORS = {
+  "float32":[],
+  "float64":[],
+  "int8":[],
+  "int16":[],
+  "int32":[],
+  "uint8":[],
+  "uint16":[],
+  "uint32":[],
+  "array":[],
+  "uint8_clamped":[],
+  "buffer":[],
+  "generic":[]
+}
+
+;(function() {
+  for(var id in CACHED_CONSTRUCTORS) {
+    CACHED_CONSTRUCTORS[id].push(compileConstructor(id, -1))
+  }
+});
+
+function wrappedNDArrayCtor(data, shape, stride, offset) {
+  if(data === undefined) {
+    var ctor = CACHED_CONSTRUCTORS.array[0]
+    return ctor([])
+  } else if(typeof data === "number") {
+    data = [data]
+  }
+  if(shape === undefined) {
+    shape = [ data.length ]
+  }
+  var d = shape.length
+  if(stride === undefined) {
+    stride = new Array(d)
+    for(var i=d-1, sz=1; i>=0; --i) {
+      stride[i] = sz
+      sz *= shape[i]
+    }
+  }
+  if(offset === undefined) {
+    offset = 0
+    for(var i=0; i<d; ++i) {
+      if(stride[i] < 0) {
+        offset -= (shape[i]-1)*stride[i]
+      }
+    }
+  }
+  var dtype = arrayDType(data)
+  var ctor_list = CACHED_CONSTRUCTORS[dtype]
+  while(ctor_list.length <= d+1) {
+    ctor_list.push(compileConstructor(dtype, ctor_list.length-1))
+  }
+  var ctor = ctor_list[d+1]
+  return ctor(data, shape, stride, offset)
+}
+
+module.exports = wrappedNDArrayCtor
+
+},{"iota-array":1,"is-buffer":2}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -13,7 +393,7 @@ exports.default = {
 	tanh: 'vec4 @activation1(float data){\n    vec4 e = exp(2.0 * clamp(data, -20.0, 20.0) );\n    return (e-1.0)/(e+1.0);\n}'
 };
 
-},{}],2:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -29,7 +409,7 @@ function init(shape, format) {
 	};
 }
 
-},{}],3:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -43,7 +423,7 @@ function init(shape, format) {
 	return {};
 }
 
-},{}],4:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -90,7 +470,7 @@ exports.default = {
 	activations: _index6.default
 };
 
-},{"./activation/index.js":1,"./codec/fixnum/index.js":2,"./codec/softfloat/index.js":3,"./pack/stride/index.js":5,"./pack/tile/index.js":6}],5:[function(require,module,exports){
+},{"./activation/index.js":4,"./codec/fixnum/index.js":5,"./codec/softfloat/index.js":6,"./pack/stride/index.js":8,"./pack/tile/index.js":9}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -136,7 +516,7 @@ function unpack(info, arr) {
     // return ndarray
 }
 
-},{}],6:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -187,7 +567,7 @@ function unpack(info, arr) {
     // return ndarray
 }
 
-},{}],7:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -202,7 +582,7 @@ exports.default = {
 	tanh: 'vec4 @activation4(vec4 data){\n    vec4 e = exp(2.0 * clamp(data, vec4(-20,-20,-20,-20), vec4(20,20,20,20)) );\n    return (e-vec4(1, 1, 1, 1))/(e+vec4(1, 1, 1, 1));\n}'
 };
 
-},{}],8:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -220,13 +600,14 @@ function init(shape, format) {
 	};
 }
 
-},{}],9:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
 	value: true
 });
 exports.init = init;
+exports.encode = encode;
 var encodeShader = exports.encodeShader = '#define @encode4 \n ';
 var decodeShader = exports.decodeShader = '#define @decode4 \n';
 
@@ -234,7 +615,14 @@ function init(shape, format) {
 	return {};
 }
 
-},{}],10:[function(require,module,exports){
+function encode(data, r, g, b, a) {
+	data[0] = r;
+	data[1] = g;
+	data[2] = b;
+	data[3] = a;
+}
+
+},{}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -281,12 +669,15 @@ exports.default = {
 	activations: _index6.default
 };
 
-},{"./activation/index.js":7,"./codec/linquant/index.js":8,"./codec/raw/index.js":9,"./pack/stride/index.js":11,"./pack/tile/index.js":12}],11:[function(require,module,exports){
+},{"./activation/index.js":10,"./codec/linquant/index.js":11,"./codec/raw/index.js":12,"./pack/stride/index.js":14,"./pack/tile/index.js":15}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
 exports.init = init;
 exports.pack = pack;
 exports.unpack = unpack;
@@ -303,79 +694,268 @@ function init(shape) {
     };
 }
 
-function pack(info, ndarray) {
+function pack(info, array, encode4, format) {
     // return Uint8Array or Float32Array
+    array = ndarray(array.data, array.shape.concat([1, 1, 1, 1]).slice(0, 4), array.stride.concat([1, 1, 1, 1]).slice(0, 4), array.offset);
 
+    var _info$texSize = _slicedToArray(info.texSize, 2),
+        width = _info$texSize[0],
+        height = _info$texSize[1],
+        length = width * height * 4;
 
-    // uniform sampler2D @_tex;
-    // uniform ivec2 @_texSize;
-    // uniform ivec4 @_shape;
-    // uniform int @_cols;
+    var shape = info.shape;
 
-    // return {
-    //  tex:
-    //  texSize:
-    //  shape:
-    //  cols:
-    // }
+    if (format.type === 'float32') {
+        var data = new Float32Array(length);
+    } else if (format.type === 'uint8') {
+        var data = new Uint8Array(length);
+    }
+
+    var chans = Math.ceil(info.shape[2] / 4);
+
+    for (var i = 0; i < info.shape[0]; i++) {
+        for (var j = 0; j < info.shape[1]; j++) {
+            for (var k = 0; k < chans; k++) {
+                var b = Math.min(k * 4 + 4, shape[2]) - k * 4;
+                for (var w = 0; w < info.shape[3]; w++) {
+
+                    var tile = i + j * shape[0] + k * shape[0] * shape[1] + w * shape[0] * shape[1] * chans;
+
+                    var pos = 4 * tile;
+                    encode4(data.subarray(pos, pos + 4), b < 1 ? 0 : array.get(i, j, 4 * k + 0, w), b < 2 ? 0 : array.get(i, j, 4 * k + 1, w), b < 3 ? 0 : array.get(i, j, 4 * k + 2, w), b < 4 ? 0 : array.get(i, j, 4 * k + 3, w));
+                }
+            }
+        }
+    }
+
+    console.log(data);
+    return data;
 }
 
 function unpack(info, arr) {
     // return ndarray
 }
 
-},{}],12:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+    value: true
 });
+exports.writeShader = exports.readShader = undefined;
+
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
 exports.init = init;
 exports.pack = pack;
-exports.unpack = unpack;
+
+var _ndarray = require('ndarray');
+
+var _ndarray2 = _interopRequireDefault(_ndarray);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 @read4(ivec4 pos){\n    return @decode4(texture2D(@tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw / ivec2(4, 1), ceildiv(@shape.z, 4))\n        , @cols) * @shape.xy) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize)));\n}\n';
 var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 process4(ivec4 pos);\nvoid main(){\n    int tile = vec2tile(ivec2(gl_FragCoord.xy) / @shape.xy, @cols);\n    int chunks = ceildiv(@shape.z, 4);\n    if(tile * 4 >= @shape.z * @shape.w){ checkerboard(); return; }\n    gl_FragColor = @encode4(@activation4(process4(ivec4(\n        mod(gl_FragCoord.xy, vec2(@shape.xy)), \n        tile2vec(tile, chunks) * ivec2(4, 1)))));\n}\n\n';
 
 function init(shape) {
-  var width = shape[0]; // var width = shape[0] * 4;    
-  // we pick the number of columns so we can keep
-  // the texture as square as possible, with the
-  // minimal amount of wasted space.
+    var width = shape[0]; // var width = shape[0] * 4;    
+    // we pick the number of columns so we can keep
+    // the texture as square as possible, with the
+    // minimal amount of wasted space.
 
-  var tiles = Math.ceil(shape[2] / 4) * shape[3],
-      cols = Math.max(1, Math.min(tiles, Math.round(Math.sqrt(shape[0] * shape[1] * tiles) / width)));
+    var tiles = Math.ceil(shape[2] / 4) * shape[3],
+        cols = Math.max(1, Math.min(tiles, Math.round(Math.sqrt(shape[0] * shape[1] * tiles) / width)));
 
-  var texSize = [width * cols, shape[1] * Math.ceil(tiles / cols)];
+    var texSize = [width * cols, shape[1] * Math.ceil(tiles / cols)];
 
-  return {
-    texSize: texSize,
-    cols: cols,
-    shape: shape
-  };
+    return {
+        texSize: texSize,
+        cols: cols,
+        shape: shape
+    };
 }
 
-function pack(info, ndarray) {
-  // return Uint8Array or Float32Array
+function pack(info, array, encode4, format) {
+    array = (0, _ndarray2.default)(array.data, array.shape.concat([1, 1, 1, 1]).slice(0, 4), array.stride.concat([1, 1, 1, 1]).slice(0, 4), array.offset);
+
+    var shape = array.shape,
+        tiles = Math.ceil(shape[2] / 4) * shape[3],
+        tw = shape[0],
+        th = shape[1],
+        cols = info.cols,
+        _info$texSize = _slicedToArray(info.texSize, 2),
+        width = _info$texSize[0],
+        height = _info$texSize[1],
+        chunks = Math.ceil(shape[2] / 4),
+        length = width * height * 4;
 
 
-  // uniform sampler2D @_tex;
-  // uniform ivec2 @_texSize;
-  // uniform ivec4 @_shape;
-  // uniform int @_cols;
+    if (format.type === 'float32') {
+        var data = new Float32Array(length);
+    } else if (format.type === 'uint8') {
+        var data = new Uint8Array(length);
+    }
+    var out = (0, _ndarray2.default)(data, [height, width, 4]);
+    for (var z = 0; z < chunks; z++) {
+        for (var w = 0; w < shape[3]; w++) {
+            var tile = w * chunks + z;
+            var b = Math.min(z * 4 + 4, shape[2]) - z * 4;
 
-  // return {
-  // 	tex:
-  // 	texSize:
-  // 	shape:
-  // 	cols:
-  // }
+            var ih = th * Math.floor(tile / cols);
+            var jw = tw * (tile % cols);
+
+            for (var i = 0; i < th; i++) {
+                for (var j = 0; j < tw; j++) {
+
+                    var pos = 4 * ((ih + i) * width + jw + j);
+                    encode4(data.subarray(pos, pos + 4), b < 1 ? 0 : array.get(i, j, 4 * z + 0, w), b < 2 ? 0 : array.get(i, j, 4 * z + 1, w), b < 3 ? 0 : array.get(i, j, 4 * z + 2, w), b < 4 ? 0 : array.get(i, j, 4 * z + 3, w));
+                    // data[4 * ((ih+i) * width + jw + j)] = vec4[0]
+
+                    // for(var k = 0; k < b; k++){
+                    //     data[
+                    //         4 * ((ih+i) * width
+                    //         + jw + j) + k
+                    //     ] = array.get(i, j, 4*z+k, w)
+                    // }
+                }
+            }
+        }
+    }
+    console.log(data);
+    return data;
 }
 
-function unpack(info, arr) {
-  // return ndarray
-}
+// import ndops from "ndarray-ops"
 
-},{}],13:[function(require,module,exports){
+
+// export function pack_old(info, array, codec, format){
+// 	// return Uint8Array or Float32Array
+//     array = ndarray(array.data, 
+//         array.shape.concat([1, 1, 1, 1]).slice(0, 4),
+//         array.stride.concat([1, 1, 1, 1]).slice(0, 4),
+//         array.offset)
+
+//     var shape = array.shape,
+//         tiles = Math.ceil(shape[2] / 4) * shape[3],
+//         tw = shape[0],
+//         th = shape[1],
+//         cols = info.cols,
+//         [width, height] = info.texSize,
+//         chunks = Math.ceil(shape[2] / 4),
+//         length = width * height * 4;
+
+//     if(format.type === 'float32'){
+//         var data = new Float32Array(length);    
+//     }else if(format.type === 'uint8'){
+//         var data = new Uint8Array(length);    
+//     }    
+//     var out = ndarray(data, [height, width, 4])
+
+//     for(var z = 0; z < chunks; z++){
+//         for(var w = 0; w < shape[3]; w++){
+//             var tile = w * chunks + z;
+//             var b = Math.min(z*4+4, shape[2])-z*4;
+//             var lhs = out
+//                 .hi(th * Math.floor(tile / cols) + th, tw * (tile % cols) + tw,  b)
+//                 .lo(th * Math.floor(tile / cols)     , tw * (tile % cols)     ,  0)
+//             var rhs = array
+//                 .hi(null, null, 4*z+b, null)
+//                 .lo(null, null, 4*z, null)
+//                 .pick(null, null, null, w)
+//                 .transpose(1, 0, 2)
+//             ndops.assign(lhs, rhs)
+//         }
+//     }
+
+//     console.log(data)
+//     return data;
+// }
+
+
+// export function unpack(info, arr){
+// 	// return ndarray
+
+
+// }
+
+
+// function packTensor(array, cols, type = 'float32'){
+//     array = ndarray(array.data, 
+//         array.shape.concat([1, 1, 1, 1]).slice(0, 4),
+//         array.stride.concat([1, 1, 1, 1]).slice(0, 4),
+//         array.offset)
+
+//     var shape = array.shape,
+//         tiles = Math.ceil(shape[2] / 4) * shape[3],
+//         tw = shape[0],
+//         th = shape[1],
+//         width = tw * cols, 
+//         height = th * Math.ceil(tiles / cols),
+//         chunks = Math.ceil(shape[2] / 4),
+//         length = width * height * 4;
+
+//     if(type === 'float32'){
+//         var data = new Float32Array(length);    
+//     }else if(type === 'uint8'){
+//         var data = new Uint8Array(length);    
+//     }
+
+//     var out = ndarray(data, [height, width, 4])
+
+//     for(var z = 0; z < chunks; z++){
+//         for(var w = 0; w < shape[3]; w++){
+//             var tile = w * chunks + z;
+//             var b = Math.min(z*4+4, shape[2])-z*4;
+//             var lhs = out
+//                 .hi(th * Math.floor(tile / cols) + th, tw * (tile % cols) + tw,  b)
+//                 .lo(th * Math.floor(tile / cols)     , tw * (tile % cols)     ,  0)
+//             var rhs = array
+//                 .hi(null, null, 4*z+b, null)
+//                 .lo(null, null, 4*z, null)
+//                 .pick(null, null, null, w)
+//                 .transpose(1, 0, 2)
+//             ndops.assign(lhs, rhs)
+//         }
+//     }
+//     return data;
+// }
+
+
+// function unpackTensor(data, shape, cols){
+//     var length = shape.reduce((a, b) => a * b)
+//     var array = ndarray(new Float32Array(length), shape)
+
+//     var shape = array.shape,
+//         tiles = Math.ceil(shape[2] / 4) * shape[3],
+//         tw = shape[0],
+//         th = shape[1],
+//         width = tw * cols, 
+//         height = th * Math.ceil(tiles / cols),
+//         chunks = Math.ceil(shape[2] / 4);
+
+//     var out = ndarray(data, [height, width, 4])
+
+//     for(var z = 0; z < chunks; z++){
+//         for(var w = 0; w < shape[3]; w++){
+//             var tile = w * chunks + z;
+//             var b = Math.min(z*4+4, shape[2])-z*4;
+//             var lhs = out
+//                 .hi(th * Math.floor(tile / cols) + th, tw * (tile % cols) + tw,  b)
+//                 .lo(th * Math.floor(tile / cols)     , tw * (tile % cols)     ,  0)
+//             var rhs = array
+//                 .hi(null, null, 4*z+b, null)
+//                 .lo(null, null, 4*z, null)
+//                 .pick(null, null, null, w)
+//                 .transpose(1, 0, 2)
+//             ndops.assign(rhs, lhs)
+//         }
+//     }
+
+//     return array
+// }
+
+},{"ndarray":3}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -397,7 +977,7 @@ exports.default = {
 	'1:4': _index4.default
 };
 
-},{"./1-4/index.js":4,"./4-4/index.js":10}],14:[function(require,module,exports){
+},{"./1-4/index.js":7,"./4-4/index.js":13}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -449,7 +1029,7 @@ Object.defineProperty(exports, 'createGL', {
   }
 });
 
-},{"./runtime/index.js":17,"./tensor/index.js":24,"./util.js":26}],15:[function(require,module,exports){
+},{"./runtime/index.js":20,"./tensor/index.js":27,"./util.js":29}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -671,7 +1251,7 @@ function annotateFiles(files, errors) {
     });
 }
 
-},{}],16:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -722,7 +1302,7 @@ function assembleFragmentShader(shaderGen, output, uniforms) {
     return fragmentShader;
 }
 
-},{"../tensor/base.js":21}],17:[function(require,module,exports){
+},{"../tensor/base.js":24}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -836,7 +1416,7 @@ function Run(shaderGen, output) {
     return output;
 }
 
-},{"../tensor/index.js":24,"./check.js":15,"./frag.js":16,"./program.js":18,"./timer.js":19,"./tnsl.js":20}],18:[function(require,module,exports){
+},{"../tensor/index.js":27,"./check.js":18,"./frag.js":19,"./program.js":21,"./timer.js":22,"./tnsl.js":23}],21:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -948,7 +1528,7 @@ function compileShader(gl, shaderSource, shaderType) {
     return shader;
 }
 
-},{"./check.js":15}],19:[function(require,module,exports){
+},{"./check.js":18}],22:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1069,7 +1649,7 @@ function createTimer(gl) {
 	};
 }
 
-},{}],20:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1138,7 +1718,7 @@ function TNSL(str) {
     };
 }
 
-},{}],21:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1173,44 +1753,59 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 //          raw | linquant (4:4)
 
 var BaseTensor = function () {
-	function BaseTensor(gl, format, shape, data) {
+	function BaseTensor() {
 		_classCallCheck(this, BaseTensor);
-
-		// validate glcontext
-		if (!gl.createTexture) throw new Error('Invalid WebGLRenderingContext');
-		this.gl = gl;
-
-		// validate shape
-		if (shape.some(function (k) {
-			return !isFinite(k) || k < 1 || !Number.isInteger(k);
-		}) || shape.length > 4) throw new Error('Invalid shape: ' + shape);
-		shape = shape.concat([1, 1, 1, 1]).slice(0, 4);
-		this.shape = shape;
-
-		// validate format
-		if (!['float32', 'uint8'].includes(format.type)) throw new Error('format.type must be uint8 or float32');
-		if (!['stride', 'tile'].includes(format.pack)) throw new Error('format.pack must be stride or tile');
-		if (format.density == '4:4') {
-			if (!['raw', 'linquant'].includes(format.codec)) throw new Error('format.codec must be raw or linquant');
-		} else if (format.density == '1:4') {
-			if (!['softfloat', 'fixnum'].includes(format.codec)) throw new Error('format.codec must be softfloat or fixnum');
-		} else throw new Error('format.density must be 4:4 or 1:4');
-		this.format = format;
-
-		// calculate texture size
-		this.info = Object.assign({}, this._format.pack.init(shape, format), this._format.codec.init(shape, format));
-		if (!this.info.texSize) throw new Error('Format did not yield texSize');
-
-		// initialize texture
-		this.tex = (0, _helpers.makeTexture)(gl);
-		this.update(data);
 	}
 
 	_createClass(BaseTensor, [{
+		key: '_init',
+
+		// we arent using a constructor because we want to be able to run
+		// this instanceof OutputTensor from within the Tensor constructor
+
+		value: function _init(gl, format, shape, data) {
+			// validate glcontext
+			if (!gl.createTexture) throw new Error('Invalid WebGLRenderingContext');
+			this.gl = gl;
+
+			// validate shape
+			if (shape.some(function (k) {
+				return !isFinite(k) || k < 1 || !Number.isInteger(k);
+			}) || shape.length > 4) throw new Error('Invalid shape: ' + shape);
+			shape = shape.concat([1, 1, 1, 1]).slice(0, 4);
+			this.shape = shape;
+
+			// validate format
+			if (!['float32', 'uint8'].includes(format.type)) throw new Error('format.type must be uint8 or float32');
+			if (format.density in _index2.default) {
+				var fd = _index2.default[format.density];
+				if (!(format.pack in fd.pack)) throw new Error('format.pack must be ' + Object.keys(fd.pack).join(' or '));
+				if (!(format.codec in fd.codec)) throw new Error('format.codec must be ' + Object.keys(fd.codec).join(' or '));
+			} else throw new Error('format.density must be ' + Object.keys(_index2.default).join(' or '));
+
+			this.format = format;
+
+			// calculate texture size
+			this.info = Object.assign({}, this._format.pack.init(shape, format), this._format.codec.init(shape, format));
+			if (!this.info.texSize) throw new Error('Format did not yield texSize');
+
+			// initialize texture
+			this.tex = (0, _helpers.makeTexture)(gl);
+			this.update(data);
+		}
+	}, {
 		key: '_update',
 		value: function _update(data) {
-			if (!(this.format.type === 'uint8' || this.format.type === 'float32')) throw new Error('Type must be uint8 or float32');
-
+			if (data !== null) {
+				if (this.format.type === 'uint8') {
+					if (Array.isArray(data) || data instanceof Uint8ClampedArray) data = new Uint8Array(data);
+					if (!(data instanceof Uint8Array)) throw new Error('data must be Uint8Array');
+				} else if (this.format.type === 'float32') {
+					if (Array.isArray(data) || data instanceof Float64Array) data = new Float32Array(data);
+					if (!(data instanceof Float32Array)) throw new Error('data must be Float32Array');
+				} else throw new Error('Type must be uint8 or float32');
+				if (data.length !== this.info.texSize[0] * this.info.texSize[1] * 4) throw new Error('data is the wrong length');
+			}
 			var gl = this.gl;
 			gl.bindTexture(gl.TEXTURE_2D, this.tex);
 			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.info.texSize[0], this.info.texSize[1], 0, gl.RGBA, this.format.type == 'uint8' ? gl.UNSIGNED_BYTE : gl.FLOAT, data);
@@ -1219,7 +1814,8 @@ var BaseTensor = function () {
 		key: 'update',
 		value: function update(data) {
 			if (!data) return this._update(null);
-			this._update(this.format.pack(this.info, data));
+			if (data.shape) return this._update(this._format.pack.pack(this.info, data, this._format.codec.encode, this.format));
+			return this._update(data);
 		}
 	}, {
 		key: '_show',
@@ -1250,7 +1846,7 @@ var BaseTensor = function () {
 
 exports.default = BaseTensor;
 
-},{"../format/index.js":13,"./helpers.js":23,"./show.js":25}],22:[function(require,module,exports){
+},{"../format/index.js":16,"./helpers.js":26,"./show.js":28}],25:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1311,7 +1907,7 @@ function testRenderFloat(gl) {
     return status == gl.FRAMEBUFFER_COMPLETE;
 }
 
-},{"../runtime/program.js":18,"./helpers.js":23}],23:[function(require,module,exports){
+},{"../runtime/program.js":21,"./helpers.js":26}],26:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1338,7 +1934,7 @@ function makeTexture(gl) {
     return texture;
 }
 
-},{}],24:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1373,72 +1969,84 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 var Tensor = exports.Tensor = function (_BaseTensor) {
     _inherits(Tensor, _BaseTensor);
 
+    // new Tensor(gl)
+    // new Tensor(gl, [1, 1])
+    // new Tensor(gl, [1, 1], null)
+    // new Tensor(gl, [1, 1], data)
+    // new Tensor(gl, [1, 1], data, { type, pack, codec, density })
+    // new Tensor(gl, [1, 1], 'float32')
+    // new Tensor(gl, [1, 1], 'uint8')
+    // new Tensor(gl, { shape, data })
+    // new Tensor(gl, { width, height, data })
+    // pix = new Tensor(gl, [1, 1, 4], [1, 0.4, 3, 4], 'uint8')
+
     function Tensor(gl) {
         var shape = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
         var data = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+        var format = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
         _classCallCheck(this, Tensor);
 
-        for (var _len = arguments.length, stuff = Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
-            stuff[_key - 3] = arguments[_key];
-        }
+        var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this));
 
-        var options = Object.assign.apply(Object, [{}].concat(stuff));
         (0, _feature2.default)(gl);
 
+        var xdata = data;
         if (shape.shape) {
-            // ndarrays can be passed instead of raw data
-            options = data;
+            // ndarrays
+            xdata = shape.data;
             data = shape;
             shape = shape.shape;
         }
+
         if (shape.width && shape.height && shape.data) {
-            // imagedata objects can be passed
-            options = data;
+            // imagedata
             data = shape.data;
             shape = [shape.width, shape.height];
         }
 
-        var type;
-        if (data === null || data === 'nofloat' || data === 'stride' || data instanceof Float32Array || data === 'float32' || data instanceof Float64Array || Array.isArray(data)) {
-            // null defaults to a float32 texture type
+        if (typeof data === 'string') {
+            // data = uint8 | float32
+            if (format !== null) throw new Error('Format must not be specified if data is a string.');
+            format = data;
+            data = null;
+        }
+
+        if (format === null) {
+            // auto-infer format based on data
+            if (data === null) {
+                format = 'float32';
+            } else if (xdata instanceof Uint8Array || xdata instanceof Uint8ClampedArray) {
+                format = 'uint8';
+            } else if (xdata instanceof Float32Array || xdata instanceof Float64Array || Array.isArray(xdata)) {
+                format = 'float32';
+            } else throw new Error("Invalid format for data: must be Uint8Array or Float32Array or ndarray");
+        }
+
+        var type = null;
+
+        if (format === 'float32' && (gl.NO_FLOAT_TEXTURES || gl.NO_RENDER_FLOAT && _this instanceof OutputTensor) || format === 'softfloat') {
+            format = { type: 'uint8', pack: 'tile', density: '1:4', codec: 'softfloat' };
             type = 'float32';
-        } else if (data instanceof Uint8Array || data === 'uint8' || data instanceof Uint8ClampedArray) {
-            type = 'uint8';
-        } else if (data.shape) {
-            if (data.data instanceof Uint8Array) {
-                type = 'uint8';
-            } else {
-                type = 'float32';
-            }
-        } else {
-            throw new Error("Invalid format for data: must be Uint8Array or Float32Array or ndarray");
+        } else if (format === 'uint8' || format === 'float32') {
+            format = { type: format, pack: 'stride', density: '4:4', codec: 'raw' };
         }
 
-        var nofloat = type === 'float32' && (gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && options.output);
+        _this.type = type || format.type;
 
-        var stride = options.stride || data === 'stride';
+        _this._init(gl, format, shape, data);
 
-        if (typeof data == 'string') data = null;
-
-        if (nofloat) {
-            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: 'uint8', pack: 'tile', density: '1:4', codec: 'softfloat' }, shape));
-        } else {
-            var _this = _possibleConstructorReturn(this, (Tensor.__proto__ || Object.getPrototypeOf(Tensor)).call(this, gl, { type: type, pack: 'tile', density: '4:4', codec: 'raw' }, shape));
-        }
-
-        _this.type = type;
-        return _possibleConstructorReturn(_this);
+        return _this;
     }
 
     _createClass(Tensor, [{
         key: 'copy',
         value: function copy() {
-            var dtype = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'float32';
+            var format = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.type;
             var T = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : OutputTensor;
 
             var TENSOR_IDENTITY = '\n            uniform Tensor image;\n            vec4 process4(ivec4 pos) { return image_read4(pos); }\n        ';
-            var out = new T(this.gl, this.shape, dtype);
+            var out = new T(this.gl, this.shape, format);
             (0, _index.Run)(TENSOR_IDENTITY, out, { image: this });
             return out;
         }
@@ -1455,6 +2063,12 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
                 out.destroy();
             };
         }
+    }, {
+        key: 'read',
+        value: function read() {
+            console.warn('Copying to OutputTensor for reading...');
+            return this.copy().read();
+        }
     }]);
 
     return Tensor;
@@ -1463,19 +2077,16 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
 var OutputTensor = exports.OutputTensor = function (_Tensor) {
     _inherits(OutputTensor, _Tensor);
 
-    function OutputTensor(gl) {
+    function OutputTensor() {
         var _ref;
-
-        var shape = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-        var data = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
         _classCallCheck(this, OutputTensor);
 
-        for (var _len2 = arguments.length, stuff = Array(_len2 > 3 ? _len2 - 3 : 0), _key2 = 3; _key2 < _len2; _key2++) {
-            stuff[_key2 - 3] = arguments[_key2];
+        for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
         }
 
-        var _this2 = _possibleConstructorReturn(this, (_ref = OutputTensor.__proto__ || Object.getPrototypeOf(OutputTensor)).call.apply(_ref, [this, gl, shape, data].concat(stuff, [{ output: true }])));
+        var _this2 = _possibleConstructorReturn(this, (_ref = OutputTensor.__proto__ || Object.getPrototypeOf(OutputTensor)).call.apply(_ref, [this].concat(args)));
 
         _this2.fbo = (0, _helpers.makeFrameBuffer)(_this2.gl, _this2.tex);
         return _this2;
@@ -1495,7 +2106,7 @@ var OutputTensor = exports.OutputTensor = function (_Tensor) {
     }, {
         key: 'run',
         value: function run(shader, params) {
-            return (0, _index.Run)(this, shader, params);
+            return (0, _index.Run)(shader, this, params);
         }
     }, {
         key: 'read',
@@ -1515,8 +2126,8 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
 
         _classCallCheck(this, InPlaceTensor);
 
-        for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-            args[_key3] = arguments[_key3];
+        for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+            args[_key2] = arguments[_key2];
         }
 
         return _possibleConstructorReturn(this, (_ref2 = InPlaceTensor.__proto__ || Object.getPrototypeOf(InPlaceTensor)).call.apply(_ref2, [this].concat(args)));
@@ -1525,7 +2136,7 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
     return InPlaceTensor;
 }(OutputTensor);
 
-},{"../runtime/index.js":17,"./base.js":21,"./feature.js":22,"./helpers.js":23}],25:[function(require,module,exports){
+},{"../runtime/index.js":20,"./base.js":24,"./feature.js":25,"./helpers.js":26}],28:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1564,7 +2175,7 @@ function showTexture(gl, tex) {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-},{"../runtime/program.js":18}],26:[function(require,module,exports){
+},{"../runtime/program.js":21}],29:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1583,5 +2194,5 @@ function createGL(canvas) {
     return gl;
 }
 
-},{}]},{},[14])(14)
+},{}]},{},[17])(17)
 });
