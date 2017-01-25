@@ -449,7 +449,7 @@ Object.defineProperty(exports, 'createGL', {
   }
 });
 
-},{"./runtime/index.js":17,"./tensor/index.js":23,"./util.js":26}],15:[function(require,module,exports){
+},{"./runtime/index.js":17,"./tensor/index.js":24,"./util.js":26}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -836,7 +836,7 @@ function Run(shaderGen, output) {
     return output;
 }
 
-},{"../tensor/index.js":23,"./check.js":15,"./frag.js":16,"./program.js":18,"./timer.js":19,"./tnsl.js":20}],18:[function(require,module,exports){
+},{"../tensor/index.js":24,"./check.js":15,"./frag.js":16,"./program.js":18,"./timer.js":19,"./tnsl.js":20}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1250,7 +1250,68 @@ var BaseTensor = function () {
 
 exports.default = BaseTensor;
 
-},{"../format/index.js":13,"./helpers.js":22,"./show.js":24}],22:[function(require,module,exports){
+},{"../format/index.js":13,"./helpers.js":23,"./show.js":25}],22:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.default = runFeatureTests;
+exports.testRenderFloat = testRenderFloat;
+
+var _program = require('../runtime/program.js');
+
+var _helpers = require('./helpers.js');
+
+function runFeatureTests(gl) {
+    if (!gl.NO_FLOAT_TEXTURES) {
+        if (!gl.getExtension('OES_texture_float')) {
+            console.info("This browser does not seem to support OES_texture_float. " + "Using float codec workaround from now on.");
+            gl.NO_FLOAT_TEXTURES = true;
+        }
+    }
+
+    if (!gl.NO_FLOAT_TEXTURES) {
+        if (!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT) {
+            if (!testRenderFloat(gl)) {
+                console.info("This browser supports OES_texture_float, " + "but can not render to floating textures. " + "Using float codec workaround for output tensors from now on.");
+                gl.NO_RENDER_FLOAT = true;
+            }
+            gl.RENDER_FLOAT_TESTED = true;
+        }
+    }
+}
+
+var CHECK_FLOAT_VERTEX = '\n    attribute vec2 a_position;\n    void main() {\n        gl_Position = vec4(a_position, 0, 1);\n    }\n';
+var CHECK_FLOAT_FRAGMENT = '\n    void main() {\n        gl_FragColor = vec4(3.14159, -2.71828, 1.61828, 42);\n    }\n';
+
+// some browsers (e.g. mobile safari) are capable of initializing floating 
+// point textures but unable to write to them. The only way of finding this
+// out is by trying to render to a floating point texture and noticing
+// the invalid framebuffer status.
+
+function testRenderFloat(gl) {
+    var tex = (0, _helpers.makeTexture)(gl);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 10, 10, 0, gl.RGBA, gl.FLOAT, null);
+    var fbo = (0, _helpers.makeFrameBuffer)(gl, tex);
+
+    var program = (0, _program.createShaderProgram)(gl, CHECK_FLOAT_VERTEX, CHECK_FLOAT_FRAGMENT);
+    gl.useProgram(program);
+    (0, _program.bindAttributeBuffer)(gl, program);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.viewport(0, 0, 10, 10);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    gl.deleteTexture(tex);
+    gl.deleteFramebuffer(fbo);
+    gl.deleteProgram(program);
+
+    return status == gl.FRAMEBUFFER_COMPLETE;
+}
+
+},{"../runtime/program.js":18,"./helpers.js":23}],23:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1277,7 +1338,7 @@ function makeTexture(gl) {
     return texture;
 }
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1293,7 +1354,9 @@ var _base = require('./base.js');
 
 var _base2 = _interopRequireDefault(_base);
 
-var _testing = require('./testing.js');
+var _feature = require('./feature.js');
+
+var _feature2 = _interopRequireDefault(_feature);
 
 var _helpers = require('./helpers.js');
 
@@ -1321,23 +1384,7 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
         }
 
         var options = Object.assign.apply(Object, [{}].concat(stuff));
-
-        if (!gl.NO_FLOAT_TEXTURES) {
-            if (!gl.getExtension('OES_texture_float')) {
-                console.info("This browser does not seem to support OES_texture_float. " + "Using float codec workaround from now on.");
-                gl.NO_FLOAT_TEXTURES = true;
-            }
-        }
-
-        if (!gl.NO_FLOAT_TEXTURES) {
-            if (!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT) {
-                if (!(0, _testing.testRenderFloat)(gl)) {
-                    console.info("This browser supports OES_texture_float, " + "but can not render to floating textures. " + "Using float codec workaround for output tensors from now on.");
-                    gl.NO_RENDER_FLOAT = true;
-                }
-                gl.RENDER_FLOAT_TESTED = true;
-            }
-        }
+        (0, _feature2.default)(gl);
 
         if (shape.shape) {
             // ndarrays can be passed instead of raw data
@@ -1370,7 +1417,7 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             throw new Error("Invalid format for data: must be Uint8Array or Float32Array or ndarray");
         }
 
-        var nofloat = type === 'float32' && (true || gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && options.output);
+        var nofloat = type === 'float32' && (gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat || gl.NO_RENDER_FLOAT && options.output);
 
         var stride = options.stride || data === 'stride';
 
@@ -1390,10 +1437,10 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
         key: 'copy',
         value: function copy() {
             var dtype = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'float32';
-            var constructor = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : OutputTensor;
+            var T = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : OutputTensor;
 
             var TENSOR_IDENTITY = '\n            uniform Tensor image;\n            vec4 process4(ivec4 pos) { return image_read4(pos); }\n        ';
-            var out = new constructor(this.gl, this.shape, dtype);
+            var out = new T(this.gl, this.shape, dtype);
             (0, _index.Run)(TENSOR_IDENTITY, out, { image: this });
             return out;
         }
@@ -1475,7 +1522,7 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
     return InPlaceTensor;
 }(OutputTensor);
 
-},{"../runtime/index.js":17,"./base.js":21,"./helpers.js":22,"./testing.js":25}],24:[function(require,module,exports){
+},{"../runtime/index.js":17,"./base.js":21,"./feature.js":22,"./helpers.js":23}],25:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1514,48 +1561,7 @@ function showTexture(gl, tex) {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-},{"../runtime/program.js":18}],25:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.testRenderFloat = testRenderFloat;
-
-var _program = require('../runtime/program.js');
-
-var _helpers = require('./helpers.js');
-
-var CHECK_FLOAT_VERTEX = '\n    attribute vec2 a_position;\n    void main() {\n        gl_Position = vec4(a_position, 0, 1);\n    }\n';
-var CHECK_FLOAT_FRAGMENT = '\n    void main() {\n        gl_FragColor = vec4(3.14159, -2.71828, 1.61828, 42);\n    }\n';
-
-// some browsers (e.g. mobile safari) are capable of initializing floating 
-// point textures but unable to write to them. The only way of finding this
-// out is by trying to render to a floating point texture and noticing
-// the invalid framebuffer status.
-
-function testRenderFloat(gl) {
-    var tex = (0, _helpers.makeTexture)(gl);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 10, 10, 0, gl.RGBA, gl.FLOAT, null);
-    var fbo = (0, _helpers.makeFrameBuffer)(gl, tex);
-
-    var program = (0, _program.createShaderProgram)(gl, CHECK_FLOAT_VERTEX, CHECK_FLOAT_FRAGMENT);
-    gl.useProgram(program);
-    (0, _program.bindAttributeBuffer)(gl, program);
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-    gl.viewport(0, 0, 10, 10);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-    var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-    gl.deleteTexture(tex);
-    gl.deleteFramebuffer(fbo);
-    gl.deleteProgram(program);
-
-    return status == gl.FRAMEBUFFER_COMPLETE;
-}
-
-},{"../runtime/program.js":18,"./helpers.js":22}],26:[function(require,module,exports){
+},{"../runtime/program.js":18}],26:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {

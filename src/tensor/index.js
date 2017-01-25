@@ -1,32 +1,12 @@
 import BaseTensor from './base.js';
-import { testRenderFloat } from './testing.js'
+import runFeatureTests from './feature.js'
 import { makeFrameBuffer } from './helpers.js'
-
 import { Run } from '../runtime/index.js'
 
 export class Tensor extends BaseTensor {
 	constructor(gl, shape = [], data = null, ...stuff){
 		var options = Object.assign({}, ...stuff);
-
-		if(!gl.NO_FLOAT_TEXTURES){
-            if(!gl.getExtension('OES_texture_float')){
-                console.info("This browser does not seem to support OES_texture_float. "
-                    + "Using float codec workaround from now on.")
-                gl.NO_FLOAT_TEXTURES = true;
-            }
-        }
-
-        if(!gl.NO_FLOAT_TEXTURES){
-            if(!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT){
-                if(!testRenderFloat(gl)){
-                    console.info("This browser supports OES_texture_float, " + 
-                        "but can not render to floating textures. " + 
-                        "Using float codec workaround for output tensors from now on.")
-                    gl.NO_RENDER_FLOAT = true;
-                }
-                gl.RENDER_FLOAT_TESTED = true;
-            }
-        }
+        runFeatureTests(gl);
 
         if(shape.shape){
             // ndarrays can be passed instead of raw data
@@ -60,9 +40,7 @@ export class Tensor extends BaseTensor {
             throw new Error("Invalid format for data: must be Uint8Array or Float32Array or ndarray");
         }
 
-        
         var nofloat = (type === 'float32' && (
-            true || 
             gl.NO_FLOAT_TEXTURES || data === 'nofloat' || options.nofloat
             || (gl.NO_RENDER_FLOAT && options.output) 
         ));
@@ -81,12 +59,12 @@ export class Tensor extends BaseTensor {
 	}
 
 
-	copy(dtype = 'float32', constructor = OutputTensor){
+	copy(dtype = 'float32', T = OutputTensor){
         const TENSOR_IDENTITY = `
             uniform Tensor image;
             vec4 process4(ivec4 pos) { return image_read4(pos); }
         `;
-        var out = new constructor(this.gl, this.shape, dtype);
+        var out = new T(this.gl, this.shape, dtype);
         Run(TENSOR_IDENTITY, out, { image: this })
         return out
     }

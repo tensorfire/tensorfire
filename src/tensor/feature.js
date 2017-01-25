@@ -1,6 +1,29 @@
 import { bindAttributeBuffer, createShaderProgram } from '../runtime/program.js'
 import { makeFrameBuffer, makeTexture } from './helpers.js'
 
+export default function runFeatureTests(gl){
+    if(!gl.NO_FLOAT_TEXTURES){
+        if(!gl.getExtension('OES_texture_float')){
+            console.info("This browser does not seem to support OES_texture_float. "
+                + "Using float codec workaround from now on.")
+            gl.NO_FLOAT_TEXTURES = true;
+        }
+    }
+
+    if(!gl.NO_FLOAT_TEXTURES){
+        if(!gl.RENDER_FLOAT_TESTED && !gl.NO_RENDER_FLOAT){
+            if(!testRenderFloat(gl)){
+                console.info("This browser supports OES_texture_float, " + 
+                    "but can not render to floating textures. " + 
+                    "Using float codec workaround for output tensors from now on.")
+                gl.NO_RENDER_FLOAT = true;
+            }
+            gl.RENDER_FLOAT_TESTED = true;
+        }
+    }
+}
+
+
 const CHECK_FLOAT_VERTEX = `
     attribute vec2 a_position;
     void main() {
