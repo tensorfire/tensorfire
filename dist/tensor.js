@@ -417,6 +417,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.init = init;
 exports.encode = encode;
+exports.decode = decode;
 var encodeShader = exports.encodeShader = '// https://github.com/mikolalysenko/glsl-read-float/blob/master/index.glsl\n\n#define FLOAT_MAX  1.70141184e38\n#define FLOAT_MIN  1.17549435e-38\n\nvec4 @encode1(float v) {\n    highp float av = abs(v);\n\n    //Handle special cases\n    if(av < FLOAT_MIN) {\n        return vec4(0.0, 0.0, 0.0, 0.0);\n    } else if(v > FLOAT_MAX) {\n        return vec4(127.0, 128.0, 0.0, 0.0) / 255.0;\n    } else if(v < -FLOAT_MAX) {\n        return vec4(255.0, 128.0, 0.0, 0.0) / 255.0;\n    }\n\n    highp vec4 c = vec4(0,0,0,0);\n\n    //Compute exponent and mantissa\n    highp float e = floor(log2(av));\n    highp float m = av * pow(2.0, -e) - 1.0;\n    \n    //Unpack mantissa\n    c[1] = floor(128.0 * m);\n    m -= c[1] / 128.0;\n    c[2] = floor(32768.0 * m);\n    m -= c[2] / 32768.0;\n    c[3] = floor(8388608.0 * m);\n    \n    //Unpack exponent\n    highp float ebias = e + 127.0;\n    c[0] = floor(ebias / 2.0);\n    ebias -= c[0] * 2.0;\n    c[1] += floor(ebias) * 128.0; \n\n    //Unpack sign bit\n    c[0] += 128.0 * step(0.0, -v);\n\n    //Scale back to range\n    return c.abgr / 255.0;\n}\n\n// TODO: compare with http://stackoverflow.com/a/7237286';
 var decodeShader = exports.decodeShader = '// TODO: compare with http://stackoverflow.com/a/7237286\n\nfloat @decode1(vec4 val){\n    vec4 scl = floor(255.0 * val + 0.5);\n    float sgn = (scl.a < 128.0) ? 1.0 : -1.0;\n    float exn = mod(scl.a * 2.0, 256.0) + floor(scl.b / 128.0) - 127.0;\n    float man = 1.0 +\n        (scl.r / 8388608.0) + \n        (scl.g / 32768.0) +\n        mod(scl.b, 128.0) / 128.0;\n    return sgn * man * pow(2.0, exn);\n}\n';
 
@@ -430,6 +431,11 @@ var tmp_float = new Float32Array(1),
 function encode(buf, value) {
 	tmp_float[0] = value;
 	buf.set(tmp_int, 0);
+}
+
+function decode(buf) {
+	tmp_int.set(buf);
+	return tmp_float[0];
 }
 
 },{}],7:[function(require,module,exports){
@@ -485,9 +491,6 @@ exports.default = {
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-
-var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
-
 exports.init = init;
 exports.pack = pack;
 exports.unpack = unpack;
@@ -539,43 +542,27 @@ function pack(info, array, encode1, format) {
     return data;
 }
 
-function unpack(info, data, decode4, type) {
+function unpack(info, data, decode1, type) {
     if (type != 'float32') throw new Error('not impl');
 
     var shape = info.shape;
     var length = shape.reduce(function (a, b) {
         return a * b;
     });
-    var array = ndarray(new Float32Array(length), shape);
 
-    var _info$texSize = _slicedToArray(info.texSize, 2),
-        width = _info$texSize[0],
-        height = _info$texSize[1],
-        length = width * height * 4;
+    var array = ndarray(new Float32Array(length), shape.concat([1, 1, 1, 1]).slice(0, 4));
 
-    var shape = info.shape;
-    var chans = Math.ceil(info.shape[2] / 4);
+    for (var x = 0; x < shape[0]; x++) {
+        for (var y = 0; y < shape[1]; y++) {
+            for (var z = 0; z < shape[2]; z++) {
+                for (var w = 0; w < shape[3]; w++) {
+                    var tile = x + y * shape[0] + z * shape[0] * shape[1] + w * shape[0] * shape[1] * shape[2];
 
-    var buf = new Float32Array(4);
-
-    for (var i = 0; i < info.shape[0]; i++) {
-        for (var j = 0; j < info.shape[1]; j++) {
-            for (var k = 0; k < chans; k++) {
-                var b = Math.min(k * 4 + 4, shape[2]) - k * 4;
-                for (var w = 0; w < info.shape[3]; w++) {
-
-                    var tile = i + j * shape[0] + k * shape[0] * shape[1] + w * shape[0] * shape[1] * chans;
-
-                    decode1(data[4 * tile + 0], data[4 * tile + 1], data[4 * tile + 2], data[4 * tile + 3]);
-
-                    for (var x = 0; x < b; x++) {
-                        array.set(i, j, 4 * k + x, w, buf[x]);
-                    }
+                    array.set(x, y, z, w, decode1(data.subarray(4 * tile, 4 * tile + 4)));
                 }
             }
         }
     }
-
     return array;
 }
 

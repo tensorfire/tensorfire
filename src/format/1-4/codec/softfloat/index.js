@@ -14,3 +14,8 @@ export function encode(buf, value){
 	tmp_float[0] = value;
 	buf.set(tmp_int, 0)
 }
+
+export function decode(buf){
+	tmp_int.set(buf)
+	return tmp_float[0]
+}
