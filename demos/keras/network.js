@@ -67,6 +67,7 @@ async function run(gl, compiled, options){
                 // }
                 await new Promise(resolve => setTimeout(resolve, 1000))
 
+                // if(layer.name == 'batchnormalization_1_mean') return;
                 if(layer.name == 'convolution2d_1') return;
                 
             }
