@@ -43,8 +43,9 @@ export function pack(info, array, encode4, format){
         var data = new Float32Array(length);    
     }else if(format.type === 'uint8'){
         var data = new Uint8Array(length);    
-    }    
-    var out = ndarray(data, [height, width, 4])
+    }
+    
+
     for(var z = 0; z < chunks; z++){
         for(var w = 0; w < shape[3]; w++){
             var tile = w * chunks + z;
@@ -53,11 +54,10 @@ export function pack(info, array, encode4, format){
             var ih = th * Math.floor(tile / cols);
             var jw = tw * (tile % cols);
 
-            for(var i = 0; i < th; i++){
-                for(var j = 0; j < tw; j++){
+            for(var i = 0; i < tw; i++){
+                for(var j = 0; j < th; j++){
 
-                    var pos = 4 * ((ih+i) * width
-                            + jw + j);
+                    var pos = 4 * ((ih+j) * width + jw + i);
                     encode4(
                         data.subarray(pos, pos + 4),
                         b < 1 ? 0 : array.get(i, j, 4*z+0, w), 

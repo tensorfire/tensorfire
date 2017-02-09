@@ -850,7 +850,7 @@ var _ndarray2 = _interopRequireDefault(_ndarray);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 @read4(ivec4 pos){\n    return @decode4(texture2D(@tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw / ivec2(4, 1), ceildiv(@shape.z, 4))\n        , @cols) * @shape.xy) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize)));\n}\n';
+var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 @read4(ivec4 pos){\n    return @decode4(texture2D(@tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw / ivec2(1, 4), ceildiv(@shape.z, 4))\n        , @cols) * @shape.xy) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize)));\n}\n';
 var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 process4(ivec4 pos);\nvoid main(){\n    int tile = vec2tile(ivec2(gl_FragCoord.xy) / @shape.xy, @cols);\n    int chunks = ceildiv(@shape.z, 4);\n    if(tile * 4 >= @shape.z * @shape.w){ checkerboard(); return; }\n    gl_FragColor = @encode4(@activation4(process4(ivec4(\n        mod(gl_FragCoord.xy, vec2(@shape.xy)), \n        tile2vec(tile, chunks) * ivec2(1, 4)))));\n}\n\n';
 
 function init(shape) {
@@ -891,7 +891,7 @@ function pack(info, array, encode4, format) {
     } else if (format.type === 'uint8') {
         var data = new Uint8Array(length);
     }
-    var out = (0, _ndarray2.default)(data, [height, width, 4]);
+
     for (var z = 0; z < chunks; z++) {
         for (var w = 0; w < shape[3]; w++) {
             var tile = w * chunks + z;
@@ -900,10 +900,10 @@ function pack(info, array, encode4, format) {
             var ih = th * Math.floor(tile / cols);
             var jw = tw * (tile % cols);
 
-            for (var i = 0; i < th; i++) {
-                for (var j = 0; j < tw; j++) {
+            for (var i = 0; i < tw; i++) {
+                for (var j = 0; j < th; j++) {
 
-                    var pos = 4 * ((ih + i) * width + jw + j);
+                    var pos = 4 * ((ih + j) * width + jw + i);
                     encode4(data.subarray(pos, pos + 4), b < 1 ? 0 : array.get(i, j, 4 * z + 0, w), b < 2 ? 0 : array.get(i, j, 4 * z + 1, w), b < 3 ? 0 : array.get(i, j, 4 * z + 2, w), b < 4 ? 0 : array.get(i, j, 4 * z + 3, w));
                     // data[4 * ((ih+i) * width + jw + j)] = vec4[0]
 
