@@ -791,23 +791,25 @@ function pack(info, array, encode4, format) {
 }
 
 function unpack(info, data, decode4, type) {
-    if (type != 'float32') throw new Error('not impl');
-
     var shape = info.shape;
     var length = shape.reduce(function (a, b) {
         return a * b;
     });
-    var array = ndarray(new Float32Array(length), shape);
 
     var _info$texSize2 = _slicedToArray(info.texSize, 2),
         width = _info$texSize2[0],
         height = _info$texSize2[1],
         length = width * height * 4;
 
-    var shape = info.shape;
     var chans = Math.ceil(info.shape[2] / 4);
 
-    var buf = new Float32Array(4);
+    if (type === 'float32') {
+        var array = ndarray(new Float32Array(length), shape);
+        var buf = new Float32Array(4);
+    } else if (type == 'uint8') {
+        var array = ndarray(new Uint8Array(length), shape);
+        var buf = new Uint8Array(4);
+    } else throw new Error('unimplemented type');
 
     for (var i = 0; i < info.shape[0]; i++) {
         for (var j = 0; j < info.shape[1]; j++) {
