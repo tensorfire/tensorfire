@@ -10,6 +10,8 @@ export class Tensor extends BaseTensor {
     // new Tensor(gl, [1, 1], null)
     // new Tensor(gl, [1, 1], data)
     // new Tensor(gl, [1, 1], data, { type, pack, codec, density })
+    // new Tensor(gl, [1, 1], { type, pack, codec, density })
+    // new Tensor(gl, [1, 1], 'softfloat')
     // new Tensor(gl, [1, 1], 'float32')
     // new Tensor(gl, [1, 1], 'uint8')
     // new Tensor(gl, { shape, data })
@@ -157,5 +159,24 @@ export class OutputTensor extends Tensor {
 export class InPlaceTensor extends OutputTensor {
 	constructor(...args){
 		super(...args)
+
+        this.tex2 = this.tex;
+        this.tex = makeTexture(gl);
+		this.update(null);
 	}
+    destroy(){
+        super.destroy()
+        this.gl.deleteTexture(this.tex2)
+    }
+    swap(){
+        var tmp = this.tex;
+        this.tex = this.tex2;
+        this.tex2 = tmp;
+
+        // TODO: investigate performance of using multiple FBOs instead
+        // of rebinding the framebuffer
+        var gl = this.gl;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.tex, 0);
+    }
 }

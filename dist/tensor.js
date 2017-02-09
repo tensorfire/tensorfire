@@ -2067,6 +2067,8 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
     // new Tensor(gl, [1, 1], null)
     // new Tensor(gl, [1, 1], data)
     // new Tensor(gl, [1, 1], data, { type, pack, codec, density })
+    // new Tensor(gl, [1, 1], { type, pack, codec, density })
+    // new Tensor(gl, [1, 1], 'softfloat')
     // new Tensor(gl, [1, 1], 'float32')
     // new Tensor(gl, [1, 1], 'uint8')
     // new Tensor(gl, { shape, data })
@@ -2271,8 +2273,34 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
             args[_key3] = arguments[_key3];
         }
 
-        return _possibleConstructorReturn(this, (_ref2 = InPlaceTensor.__proto__ || Object.getPrototypeOf(InPlaceTensor)).call.apply(_ref2, [this].concat(args)));
+        var _this3 = _possibleConstructorReturn(this, (_ref2 = InPlaceTensor.__proto__ || Object.getPrototypeOf(InPlaceTensor)).call.apply(_ref2, [this].concat(args)));
+
+        _this3.tex2 = _this3.tex;
+        _this3.tex = makeTexture(gl);
+        _this3.update(null);
+        return _this3;
     }
+
+    _createClass(InPlaceTensor, [{
+        key: 'destroy',
+        value: function destroy() {
+            _get(InPlaceTensor.prototype.__proto__ || Object.getPrototypeOf(InPlaceTensor.prototype), 'destroy', this).call(this);
+            this.gl.deleteTexture(this.tex2);
+        }
+    }, {
+        key: 'swap',
+        value: function swap() {
+            var tmp = this.tex;
+            this.tex = this.tex2;
+            this.tex2 = tmp;
+
+            // TODO: investigate performance of using multiple FBOs instead
+            // of rebinding the framebuffer
+            var gl = this.gl;
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.tex, 0);
+        }
+    }]);
 
     return InPlaceTensor;
 }(OutputTensor);
