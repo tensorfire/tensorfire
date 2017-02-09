@@ -34,8 +34,9 @@ async function stylize(){
     var image = (await loadArrayFromURL('data/input-382x508x3')).transpose(1, 0, 2)
     
     var compiled = await compile(gl, network, { main_input: image })
+    C = compiled
     await run(gl, compiled, { main_input: image, layerPause: true })
-    await destroy(gl, compiled)
+    // await destroy(gl, compiled)
 
 }
 

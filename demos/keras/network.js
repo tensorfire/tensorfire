@@ -59,9 +59,16 @@ async function run(gl, compiled, options){
             if(options.layerPause){
                 var size = info[layer.name].output.texSize;
                 // if(size[0] * size[1] > 1000){ 
+                
+                info[layer.name].output.show({ scale: 1/255, offset: 0, flipY: true });
+
                     info[layer.name].output.show({ scale: 150/255, offset: 0.5, flipY: true });
                     await new Promise(resolve => requestAnimationFrame(resolve))
                 // }
+                await new Promise(resolve => setTimeout(resolve, 1000))
+
+                if(layer.name == 'convolution2d_1') return;
+                
             }
 
             // info[layer.name].output.show({ scale: 150/255, offset: 0.5, flipY: true });

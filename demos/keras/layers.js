@@ -1,9 +1,9 @@
 function TensorProgram(shader, out, uniforms){
-    KV.Compile(shader, out, uniforms)
+    out.compile(shader, uniforms)
     return {
         output: out,
         run(){
-            KV.Run(shader, out, uniforms)
+            out.run(shader, uniforms)
         },
         destroy(){
             out.destroy()
@@ -39,11 +39,11 @@ function ComputeMean(gl, layer, deps){
         uniform Tensor image;
         const ivec2 tileSize = #(image.shape).xy;
 
-        vec4 process(ivec4 pos) {
+        vec4 process4(ivec4 pos) {
             vec4 sum = vec4(0, 0, 0, 0);
             for(int x = 0; x < tileSize.x; x++){
                 for(int y = 0; y < tileSize.y; y++){
-                    sum += readTensor(image, x, y, pos.z);
+                    sum += image.read4(ivec4(x, y, pos.z, 0));
                 }
             }
             return sum / float(tileSize.x * tileSize.y);
@@ -61,12 +61,12 @@ function ComputeMean(gl, layer, deps){
 //         uniform Tensor image;
 //         const channels = (#(image.shape).z - 1) / 4 + 1;
 
-//         vec4 process(ivec4 pos) {
+//         vec4 process4(ivec4 pos) {
 //             float maxVal = vec4(-10000);
 //             float sumVal = vec4(0);
 
 //             for(int i = 0; i < channels; i++){
-//                 vec4 pix = readTensor(image, 0, 0, i);
+//                 vec4 pix = image.read4(0, 0, i);
 //                 maxVal = max(maxVal, pix);
 //                 sumVal += pix;
 //             }
@@ -89,10 +89,10 @@ function ExpSum(gl, layer, deps){
         uniform Tensor image;
         const int channels = (#(image.shape).z - 1) / 4 + 1;
 
-        vec4 process(ivec4 pos) {
+        vec4 process4(ivec4 pos) {
             vec4 sumVal = vec4(0);
             for(int i = 0; i < channels; i++){
-                sumVal += exp(readTensor(image, 0, 0, i));
+                sumVal += exp(image.read4(ivec4(0, 0, i, 0)));
             }
             return vec4(dot(sumVal, vec4(1)));
         }
@@ -112,8 +112,8 @@ function Softmax(gl, layer, deps){
         uniform Tensor image;
         uniform Tensor helper;
 
-        vec4 process(ivec4 pos) {
-            return exp(readTensor(image, pos)) / readTensor(helper, 0);
+        vec4 process4(ivec4 pos) {
+            return exp(image.read4(pos)) / helper_read4(ivec4(0));
         }
     `
     console.assert(deps.helper.shape[0] == 1)
@@ -135,8 +135,8 @@ function Sum(gl, layer, deps){
         uniform Tensor a;
         uniform Tensor b;
 
-        vec4 process(ivec4 pos) {
-            return readTensor(a, pos) + readTensor(b, pos);
+        vec4 process4(ivec4 pos) {
+            return a_read4(pos) + b_read4(pos);
         }
     `
     if(deps.a.shape.some((k, i) => k != deps.b.shape[i]))
@@ -155,14 +155,14 @@ function ZeroPadding2D(gl, layer, deps){
         uniform Tensor image;
         uniform ivec2 padding;
 
-        vec4 process(ivec4 pos) {
+        vec4 process4(ivec4 pos) {
             if(pos.x < padding.x || pos.y < padding.y){
                 return vec4(0, 0, 0, 0);
             }else if(pos.x >= image.shape.x + padding.x 
                 || pos.y >= image.shape.x + padding.y){
                 return vec4(0, 0, 0, 0);
             }else{
-                return readTensor(image, ivec4(pos.xy - padding.xy, pos.zw));    
+                return image.read4(ivec4(pos.xy - padding.xy, pos.zw));    
             }
         }
     `
@@ -192,8 +192,8 @@ function Activation(gl, layer, deps){
     const SHADER = `
         uniform Tensor image;
 
-        vec4 process(ivec4 pos) {
-            return readTensor(image, pos);
+        vec4 process4(ivec4 pos) {
+            return image.read4(pos);
         }
     `
     console.assert(['tanh', 'relu'].includes(layer.activation))
@@ -228,16 +228,16 @@ function ChannelFullyConnected(gl, layer, deps){
         uniform Tensor bias;
 
         const int imageTileCount = (#(image.shape).z - 1) / 4 + 1;
-        vec4 process(ivec4 pos) {
-            vec4 sum = readTensor(bias, 0, 0, pos.z, 0);
+        vec4 process4(ivec4 pos) {
+            vec4 sum = bias_read4(ivec4(0, 0, pos.z, 0));
 
             for(int f = 0; f < imageTileCount; f++){
-                vec4 inputPix = readTensor(image, 0, 0, f);
+                vec4 inputPix = image.read4(ivec4(0, 0, f, 0));
 
-                sum += inputPix.r * readTensor(weights, 0, 0, pos.z, 4 * f + 0)
-                     + inputPix.g * readTensor(weights, 0, 0, pos.z, 4 * f + 1)
-                     + inputPix.b * readTensor(weights, 0, 0, pos.z, 4 * f + 2)
-                     + inputPix.a * readTensor(weights, 0, 0, pos.z, 4 * f + 3);
+                sum += inputPix.r * weights_read4(ivec4(0, 0, pos.z, 4 * f + 0))
+                     + inputPix.g * weights_read4(ivec4(0, 0, pos.z, 4 * f + 1))
+                     + inputPix.b * weights_read4(ivec4(0, 0, pos.z, 4 * f + 2))
+                     + inputPix.a * weights_read4(ivec4(0, 0, pos.z, 4 * f + 3));
             }
             return sum;
         }
@@ -287,13 +287,12 @@ function Deconvolve2D(gl, layer, deps){
         uniform ivec2 imagePadding;
         uniform ivec2 imageSubsample;
 
-        const int imageTileCount = (#(image.shape).z - 1) / 4 + 1;
         const ivec2 kernelTileSize = #(kernel.shape).xy;
 
-        vec4 process(ivec4 pos){
+        vec4 process4(ivec4 pos){
             vec4 sum = vec4(0, 0, 0, 0);
 
-            for(int f = 0; f < imageTileCount; f++){
+            for(int f = 0; f < #(image.shape).z; f += 4){
                 for(int kx = 0; kx < kernelTileSize.x; kx++){
                     int inputX = pos.x + kx - imagePadding.x;
                     if(imod(inputX, 2) != 0 || inputX < 0 || inputX >= int(image.shape.x) * 2) continue;
@@ -302,12 +301,12 @@ function Deconvolve2D(gl, layer, deps){
                         int inputY = pos.y + ky - imagePadding.y;
                         if(imod(inputY, 2) != 0 || inputY < 0 || inputY >= int(image.shape.y) * 2) continue;
 
-                        vec4 inputPix = readTensor(image, inputX / 2, inputY / 2, f);
+                        vec4 inputPix = image.read4(ivec4(inputX / 2, inputY / 2, f, 0));
 
-                        sum += inputPix.r * readTensor(kernel, kx, ky, pos.z, 4 * f + 0)
-                             + inputPix.g * readTensor(kernel, kx, ky, pos.z, 4 * f + 1)
-                             + inputPix.b * readTensor(kernel, kx, ky, pos.z, 4 * f + 2)
-                             + inputPix.a * readTensor(kernel, kx, ky, pos.z, 4 * f + 3);
+                        sum += inputPix.r * kernel.read4(ivec4(kx, ky, pos.z, f + 0))
+                             + inputPix.g * kernel.read4(ivec4(kx, ky, pos.z, f + 1))
+                             + inputPix.b * kernel.read4(ivec4(kx, ky, pos.z, f + 2))
+                             + inputPix.a * kernel.read4(ivec4(kx, ky, pos.z, f + 3));
                     }
                 }
             }
@@ -337,9 +336,9 @@ function SquaredResidual(gl, layer, deps){
         uniform Tensor image;
         uniform Tensor mean;
 
-        vec4 process(ivec4 pos){
-            vec4 tileMean = readTensor(mean, 0, 0, pos.z);
-            vec4 pix = readTensor(image, pos);
+        vec4 process4(ivec4 pos){
+            vec4 tileMean = mean.read4(ivec4(0, 0, pos.z, 0));
+            vec4 pix = image.read4(pos);
             return pow(pix - tileMean, vec4(2, 2, 2, 2));
         }
     `
@@ -366,14 +365,12 @@ function InstanceNormalize(gl, layer, deps){
 
         const float eps = 0.00001;
 
-        vec4 process(ivec4 pos) {
-            vec4 tileMean = readTensor(mean, 0, 0, pos.z);
-            vec4 tileStd = vec4(eps, eps, eps, eps) + sqrt(readTensor(variance, 0, 0, pos.z));
-            
-            vec4 tileBeta = readTensor(beta, 0, 0, pos.z);
-            vec4 tileGamma = readTensor(gamma, 0, 0, pos.z);
-
-            vec4 pix = readTensor(image, pos.xyz);
+        vec4 process4(ivec4 pos) {
+            vec4 tileMean = mean.read4(ivec4(0, 0, pos.z, 0));
+            vec4 tileStd = vec4(eps, eps, eps, eps) + sqrt(variance_read4(ivec4(0, 0, pos.z, 0)));
+            vec4 tileBeta = beta_read4(ivec4(0, 0, pos.z, 0));
+            vec4 tileGamma = gamma_read4(ivec4(0, 0, pos.z, 0));
+            vec4 pix = image.read4(ivec4(pos.xyz, 0));
             return (pix - tileMean) / tileStd * tileGamma + tileBeta;
         }
     `
@@ -400,10 +397,10 @@ function BatchNormalize(gl, layer, deps){
         uniform Tensor beta;
         uniform Tensor gamma;
 
-        vec4 process(ivec4 pos) {
-            return (readTensor(image, pos.xyz) + 
-                readTensor(beta, 0, 0, pos.z)) * 
-                readTensor(gamma, 0, 0, pos.z);
+        vec4 process4(ivec4 pos) {
+            return (image.read4(ivec4(pos.xyz, 0)) + 
+                beta_read4(ivec4(0, 0, pos.z, 0))) * 
+                gamma_read4(ivec4(0, 0, pos.z, 0));
         }
     `
 
@@ -484,12 +481,11 @@ function Convolve2D(gl, layer, deps){
         uniform ivec2 imageSubsample;
 
         const ivec2 kernelTileSize = #(kernel.shape).xy;
-        const int imageTileCount = (#(image.shape).z - 1) / 4 + 1;
 
-        vec4 process(ivec4 pos){
+        vec4 process4(ivec4 pos){
             vec4 sum = vec4(0, 0, 0, 0);
 
-            for(int f = 0; f < imageTileCount; f++){
+            for(int f = 0; f < #(image.shape).z; f += 4){
                 for(int kx = 0; kx < kernelTileSize.x; kx++){
                     int inputX = pos.x * imageSubsample.x + kx - imagePadding.x;
                     if(inputX < 0 || inputX >= int(image.shape.x)) continue;
@@ -498,12 +494,12 @@ function Convolve2D(gl, layer, deps){
                         int inputY = pos.y  * imageSubsample.y + ky - imagePadding.y;
                         if(inputY < 0 || inputY >= int(image.shape.y)) continue;
 
-                        vec4 inputPix = readTensor(image, inputX, inputY, f);
+                        vec4 inputPix = image.read4(ivec4(inputX, inputY, f, 0));
 
-                        sum += inputPix.r * readTensor(kernel, kx, ky, pos.z, 4 * f + 0)
-                             + inputPix.g * readTensor(kernel, kx, ky, pos.z, 4 * f + 1)
-                             + inputPix.b * readTensor(kernel, kx, ky, pos.z, 4 * f + 2)
-                             + inputPix.a * readTensor(kernel, kx, ky, pos.z, 4 * f + 3);
+                        sum += inputPix.r * kernel.read4(ivec4(kx, ky, pos.z, f + 0))
+                             + inputPix.g * kernel.read4(ivec4(kx, ky, pos.z, f + 1))
+                             + inputPix.b * kernel.read4(ivec4(kx, ky, pos.z, f + 2))
+                             + inputPix.a * kernel.read4(ivec4(kx, ky, pos.z, f + 3));
                     }
                 }
             }
@@ -536,12 +532,11 @@ function BiasConvolve2D(gl, layer, deps){
         uniform ivec2 imageSubsample;
 
         const ivec2 kernelTileSize = #(kernel.shape).xy;
-        const int imageTileCount = (#(image.shape).z - 1) / 4 + 1;
 
-        vec4 process(ivec4 pos){
-            vec4 sum = readTensor(bias, 0, 0, pos.z);
+        vec4 process4(ivec4 pos){
+            vec4 sum = bias_read4(ivec4(0, 0, pos.z, 0));
 
-            for(int f = 0; f < imageTileCount; f++){
+            for(int f = 0; f < #(image.shape).z; f += 4){
                 for(int kx = 0; kx < kernelTileSize.x; kx++){
                     int inputX = pos.x * imageSubsample.x + kx - imagePadding.x;
                     if(inputX < 0 || inputX >= int(image.shape.x)) continue;
@@ -550,12 +545,12 @@ function BiasConvolve2D(gl, layer, deps){
                         int inputY = pos.y  * imageSubsample.y + ky - imagePadding.y;
                         if(inputY < 0 || inputY >= int(image.shape.y)) continue;
 
-                        vec4 inputPix = readTensor(image, inputX, inputY, f);
+                        vec4 inputPix = image.read4(ivec4(inputX, inputY, f, 0));
 
-                        sum += inputPix.r * readTensor(kernel, kx, ky, pos.z, 4 * f + 0)
-                             + inputPix.g * readTensor(kernel, kx, ky, pos.z, 4 * f + 1)
-                             + inputPix.b * readTensor(kernel, kx, ky, pos.z, 4 * f + 2)
-                             + inputPix.a * readTensor(kernel, kx, ky, pos.z, 4 * f + 3);
+                        sum += inputPix.r * kernel.read4(ivec4(kx, ky, pos.z, f + 0))
+                             + inputPix.g * kernel.read4(ivec4(kx, ky, pos.z, f + 1))
+                             + inputPix.b * kernel.read4(ivec4(kx, ky, pos.z, f + 2))
+                             + inputPix.a * kernel.read4(ivec4(kx, ky, pos.z, f + 3));
                     }
                 }
             }
@@ -594,7 +589,7 @@ function MaxPooling2D(gl, layer, deps){
 
         const ivec2 pool_size = #(_pool_size);
 
-        vec4 process(ivec4 pos){
+        vec4 process4(ivec4 pos){
             vec4 value = vec4(-10000, -10000, -10000, -10000);
             for(int kx = 0; kx < pool_size.x; kx++){
                 int inputX = pos.x * strides.x + kx - padding.x;
@@ -602,7 +597,7 @@ function MaxPooling2D(gl, layer, deps){
                 for(int ky = 0; ky < pool_size.y; ky++){
                     int inputY = pos.y  * strides.y + ky - padding.y;
                     if(inputY < 0 || inputY >= int(image.shape.y)) continue;
-                    value = max(value, readTensor(image, inputX, inputY, pos.z, pos.w));
+                    value = max(value, image.read4(ivec4(inputX, inputY, pos.z, pos.w)));
                 }
             }
             return value;
@@ -638,7 +633,7 @@ function AveragePooling2D(gl, layer, deps){
 
         const ivec2 pool_size = #(_pool_size);
 
-        vec4 process(ivec4 pos){
+        vec4 process4(ivec4 pos){
             vec4 value = vec4(0, 0, 0, 0);
             for(int kx = 0; kx < pool_size.x; kx++){
                 int inputX = pos.x * strides.x + kx - padding.x;
@@ -646,7 +641,7 @@ function AveragePooling2D(gl, layer, deps){
                 for(int ky = 0; ky < pool_size.y; ky++){
                     int inputY = pos.y  * strides.y + ky - padding.y;
                     if(inputY < 0 || inputY >= int(image.shape.y)) continue;
-                    value += readTensor(image, inputX, inputY, pos.z, pos.w);
+                    value += image.read4(ivec4(inputX, inputY, pos.z, pos.w));
                 }
             }
             return value / float(pool_size.x * pool_size.y);
@@ -676,11 +671,11 @@ function ConcatChannel(gl, layer, deps){
         uniform Tensor a;
         uniform Tensor b;
 
-        vec4 process(ivec4 pos) {
+        vec4 process4(ivec4 pos) {
             if(pos.z < a.shape.z / 4){
-                return readTensor(a, pos);
+                return a_read4(pos);
             }else{
-                return readTensor(b, ivec4(pos.xy, pos.z - a.shape.z / 4, pos.w));
+                return b_read4(ivec4(pos.xy, pos.z - a.shape.z / 4, pos.w));
             }
         }
     `

@@ -57,7 +57,6 @@ export function pack(info, array, encode4, format){
         }
     }
 
-    console.log(data)
     return data
 }
 

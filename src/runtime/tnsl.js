@@ -35,6 +35,12 @@ export default function TNSL(str){
             }
             throw new Error('Can not inline expression ' + body);
         })
+        .replace(/\b(\w+)\s*\.\s*(\w+)\b/g, function(all, name, prop){
+            if(name in uniforms && uniforms[name].shape){
+                return name + '_' + prop;
+            }
+            return all;
+        })
         // .replace(/\#\s*(\w+)\s*\[(.*?)\]/g, function(all, tensor, body){
         //     return tensor + '_read(ivec4(' + body + '))'
         // })

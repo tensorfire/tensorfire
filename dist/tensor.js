@@ -786,7 +786,6 @@ function pack(info, array, encode4, format) {
         }
     }
 
-    console.log(data);
     return data;
 }
 
@@ -1807,6 +1806,11 @@ function TNSL(str) {
                 return (obj.every(Number.isInteger) ? 'i' : '') + 'vec' + obj.length + '(' + obj.join(',') + ')';
             }
             throw new Error('Can not inline expression ' + body);
+        }).replace(/\b(\w+)\s*\.\s*(\w+)\b/g, function (all, name, prop) {
+            if (name in uniforms && uniforms[name].shape) {
+                return name + '_' + prop;
+            }
+            return all;
         });
         // .replace(/\#\s*(\w+)\s*\[(.*?)\]/g, function(all, tensor, body){
         //     return tensor + '_read(ivec4(' + body + '))'
@@ -1909,6 +1913,7 @@ var BaseTensor = function () {
 		value: function update(data) {
 			if (!data) return this._update(null);
 			if (data.shape) return this._update(this._format.pack.pack(this.info, data, this._format.codec.encode, this.format));
+			if (this.type != 'uint8') console.warn('Calling update with raw TypedArray may not work across all browsers.');
 			return this._update(data);
 		}
 	}, {
@@ -2142,7 +2147,7 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             var format = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.type;
             var T = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : OutputTensor;
 
-            var TENSOR_IDENTITY = '\n            uniform Tensor image;\n            vec4 process4(ivec4 pos) { return image_read4(pos); }\n        ';
+            var TENSOR_IDENTITY = '\n            uniform Tensor image;\n            vec4 process4(ivec4 pos) { return image.read4(pos); }\n        ';
             var out = new T(this.gl, this.shape, format);
             out.run(TENSOR_IDENTITY, { image: this });
             return out;
@@ -2173,6 +2178,7 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             if (this.format.pack == 'tile' && this.format.density == '4:4' && this.format.codec == 'raw') {
                 this._show(opt);
             } else {
+                // C.info.main_input.output.copy({ type: 'uint8', pack: 'tile', density: '4:4', codec: 'linquant', min: 0, max: 255 })._show({ })
                 this.withCopy(function (x) {
                     return x.show(opt);
                 }, { type: 'uint8', pack: 'tile', density: '4:4', codec: 'raw' });
@@ -2184,12 +2190,22 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             throw new Error('Only OutputTensor can run shaders.');
         }
     }, {
+        key: 'compile',
+        value: function compile(shader, params) {
+            throw new Error('Only OutputTensor can compile shaders.');
+        }
+    }, {
         key: 'read',
         value: function read() {
             console.warn("Copying before read...");
             return this.withCopy(function (x) {
                 return x.read();
             });
+        }
+    }, {
+        key: 'swap',
+        value: function swap() {
+            throw new Error("Only InPlaceTensor can be both a parameter and destination.");
         }
     }]);
 
@@ -2243,6 +2259,11 @@ var OutputTensor = exports.OutputTensor = function (_Tensor) {
             return (0, _index.Run)(shader, this, params);
         }
     }, {
+        key: 'compile',
+        value: function compile(shader, params) {
+            return (0, _index.Compile)(shader, this, params);
+        }
+    }, {
         key: 'read',
         value: function read() {
             var array = this._format.pack.unpack(this.info, this._read(), this._format.codec.decode, this.type);
@@ -2276,7 +2297,7 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
         var _this3 = _possibleConstructorReturn(this, (_ref2 = InPlaceTensor.__proto__ || Object.getPrototypeOf(InPlaceTensor)).call.apply(_ref2, [this].concat(args)));
 
         _this3.tex2 = _this3.tex;
-        _this3.tex = makeTexture(gl);
+        _this3.tex = (0, _helpers.makeTexture)(_this3.gl);
         _this3.update(null);
         return _this3;
     }

@@ -80,6 +80,7 @@ export default class BaseTensor {
 		if(!data) return this._update(null);
 		if(data.shape) return this._update(
 			this._format.pack.pack(this.info, data, this._format.codec.encode, this.format));
+		if(this.type != 'uint8') console.warn('Calling update with raw TypedArray may not work across all browsers.');
 		return this._update(data);
 	}
 

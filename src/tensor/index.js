@@ -1,8 +1,8 @@
 import BaseTensor from './base.js';
 import showTexture from './show.js'
 import runFeatureTests from './feature.js'
-import { makeFrameBuffer } from './helpers.js'
-import { Run } from '../runtime/index.js'
+import { makeTexture, makeFrameBuffer } from './helpers.js'
+import { Run, Compile } from '../runtime/index.js'
 
 export class Tensor extends BaseTensor {
     // new Tensor(gl)
@@ -76,7 +76,7 @@ export class Tensor extends BaseTensor {
 	copy(format = this.type, T = OutputTensor){
         const TENSOR_IDENTITY = `
             uniform Tensor image;
-            vec4 process4(ivec4 pos) { return image_read4(pos); }
+            vec4 process4(ivec4 pos) { return image.read4(pos); }
         `;
         var out = new T(this.gl, this.shape, format);
         out.run(TENSOR_IDENTITY, { image: this })
@@ -97,6 +97,7 @@ export class Tensor extends BaseTensor {
             && this.format.codec == 'raw'){
             this._show(opt)
         }else{
+            // C.info.main_input.output.copy({ type: 'uint8', pack: 'tile', density: '4:4', codec: 'linquant', min: 0, max: 255 })._show({ })
             this.withCopy(x => x.show(opt), 
                 { type: 'uint8', pack: 'tile', density: '4:4', codec: 'raw' })
         };
@@ -105,9 +106,15 @@ export class Tensor extends BaseTensor {
     run(shader, params){
         throw new Error('Only OutputTensor can run shaders.')
     }
+    compile(shader, params){
+        throw new Error('Only OutputTensor can compile shaders.')
+    }
     read(){
         console.warn("Copying before read...")
         return this.withCopy(x => x.read())
+    }
+    swap(){
+        throw new Error("Only InPlaceTensor can be both a parameter and destination.");
     }
 }
 
@@ -141,6 +148,9 @@ export class OutputTensor extends Tensor {
     run(shader, params){
         return Run(shader, this, params);
     }
+    compile(shader, params){
+        return Compile(shader, this, params);
+    }
 
 	read(){
 		var array = this._format.pack.unpack(this.info, this._read(), this._format.codec.decode, this.type);
@@ -161,7 +171,7 @@ export class InPlaceTensor extends OutputTensor {
 		super(...args)
 
         this.tex2 = this.tex;
-        this.tex = makeTexture(gl);
+        this.tex = makeTexture(this.gl);
 		this.update(null);
 	}
     destroy(){
