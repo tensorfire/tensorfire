@@ -2122,7 +2122,6 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
         }
 
         var type = null;
-
         if (format === 'float32' && (gl.NO_FLOAT_TEXTURES || gl.NO_RENDER_FLOAT && _this instanceof OutputTensor) || format === 'softfloat') {
             format = { type: 'uint8', pack: 'stride', density: '1:4', codec: 'softfloat' };
             type = 'float32';
@@ -2131,9 +2130,7 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
         }
 
         _this.type = type || format.type;
-
         _this._init(gl, format, shape, data);
-
         return _this;
     }
 
@@ -2147,6 +2144,18 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             var out = new T(this.gl, this.shape, format);
             out.run(TENSOR_IDENTITY, { image: this });
             return out;
+        }
+    }, {
+        key: 'withCopy',
+        value: function withCopy(fn) {
+            for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+                args[_key - 1] = arguments[_key];
+            }
+
+            var copy = this.copy.apply(this, args);
+            var result = fn(copy);
+            copy.destroy();
+            return result;
         }
     }, {
         key: '_show',
@@ -2175,8 +2184,10 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
     }, {
         key: 'read',
         value: function read() {
-            console.warn('Copying to OutputTensor for reading...');
-            return this.copy().read();
+            console.warn("Copying before read...");
+            return this.withCopy(function (x) {
+                return x.read();
+            });
         }
     }]);
 
@@ -2191,8 +2202,8 @@ var OutputTensor = exports.OutputTensor = function (_Tensor) {
 
         _classCallCheck(this, OutputTensor);
 
-        for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-            args[_key] = arguments[_key];
+        for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+            args[_key2] = arguments[_key2];
         }
 
         var _this2 = _possibleConstructorReturn(this, (_ref = OutputTensor.__proto__ || Object.getPrototypeOf(OutputTensor)).call.apply(_ref, [this].concat(args)));
@@ -2256,8 +2267,8 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
 
         _classCallCheck(this, InPlaceTensor);
 
-        for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-            args[_key2] = arguments[_key2];
+        for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+            args[_key3] = arguments[_key3];
         }
 
         return _possibleConstructorReturn(this, (_ref2 = InPlaceTensor.__proto__ || Object.getPrototypeOf(InPlaceTensor)).call.apply(_ref2, [this].concat(args)));

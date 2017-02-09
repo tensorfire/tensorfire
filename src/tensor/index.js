@@ -56,7 +56,6 @@ export class Tensor extends BaseTensor {
         }
 
         var type = null;
-
         if((format === 'float32' && 
             (gl.NO_FLOAT_TEXTURES || 
             (gl.NO_RENDER_FLOAT && this instanceof OutputTensor)))
@@ -68,9 +67,7 @@ export class Tensor extends BaseTensor {
         }
 
         this.type = type || format.type;
-
         this._init(gl, format, shape, data);
-        
 	}
 
 
@@ -82,6 +79,13 @@ export class Tensor extends BaseTensor {
         var out = new T(this.gl, this.shape, format);
         out.run(TENSOR_IDENTITY, { image: this })
         return out
+    }
+
+    withCopy(fn, ...args){
+        var copy = this.copy(...args);
+        var result = fn(copy)
+        copy.destroy()
+        return result;
     }
 
 	_show(opt = {}){ showTexture(this.gl, this.tex, opt) }
@@ -101,8 +105,8 @@ export class Tensor extends BaseTensor {
         throw new Error('Only OutputTensor can run shaders.')
     }
     read(){
-        console.warn('Copying to OutputTensor for reading...')
-        return this.copy().read()
+        console.warn("Copying before read...")
+        return this.withCopy(x => x.read())
     }
 }
 
@@ -116,7 +120,6 @@ export class OutputTensor extends Tensor {
         super.destroy()
         this.gl.deleteFramebuffer(this.fbo)
     }
-
 
     _read(){
         var gl = this.gl,
