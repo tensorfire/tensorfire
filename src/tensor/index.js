@@ -95,9 +95,8 @@ export class Tensor extends BaseTensor {
             && this.format.codec == 'raw'){
             this._show(opt)
         }else{
-            var out = this.copy({ type: 'uint8', pack: 'tile', density: '4:4', codec: 'raw' })
-            out.show(opt)
-            out.destroy()
+            this.withCopy(x => x.show(opt), 
+                { type: 'uint8', pack: 'tile', density: '4:4', codec: 'raw' })
         };
     }
 

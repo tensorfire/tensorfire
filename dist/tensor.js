@@ -2171,9 +2171,9 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             if (this.format.pack == 'tile' && this.format.density == '4:4' && this.format.codec == 'raw') {
                 this._show(opt);
             } else {
-                var out = this.copy({ type: 'uint8', pack: 'tile', density: '4:4', codec: 'raw' });
-                out.show(opt);
-                out.destroy();
+                this.withCopy(function (x) {
+                    return x.show(opt);
+                }, { type: 'uint8', pack: 'tile', density: '4:4', codec: 'raw' });
             };
         }
     }, {
