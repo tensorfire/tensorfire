@@ -1,0 +1,41 @@
+<head>
+
+</head>
+<body>
+<h1>TensorCore4</h1>
+<style type="text/css">
+    body {
+        font-family: sans-serif;
+    }
+</style>
+<script src="../../dist/demo-util.js"></script>
+
+<script type="text/javascript">
+    function include(url){
+        document.write('<script src="' + url + '?' + Math.random() + '"><' + "/script>")
+    }
+    include("../../dist/tensor.js")
+</script>
+
+<script>
+
+
+var gl = KV.createGL(),
+    OutputTensor = KV.OutputTensor,
+    Tensor = KV.Tensor,
+    InPlaceTensor = KV.InPlaceTensor;
+
+
+const Gradient = `
+    vec4 process4(ivec4 pos) {
+        return vec4(vec2(pos.xy) / 512.0, float(pos.z) / float(@shape.z), 1);
+    }
+`;
+
+
+pix = new OutputTensor(gl, [512, 512, 4])
+pix.run(Gradient)
+pix.show()
+
+
+</script>

@@ -90,6 +90,9 @@ export class Tensor extends BaseTensor {
         };
     }
 
+    run(shader, params){
+        throw new Error('Only OutputTensor can run shaders.')
+    }
     read(){
         console.warn('Copying to OutputTensor for reading...')
         return this.copy().read()
@@ -124,13 +127,21 @@ export class OutputTensor extends Tensor {
         return pixels;
     }
 
-
     run(shader, params){
         return Run(shader, this, params);
     }
-	
+
 	read(){
-		return this._format.pack.unpack(this.info, this._read(), this._format.codec.decode, this.type)
+		var array = this._format.pack.unpack(this.info, this._read(), this._format.codec.decode, this.type);
+        
+        // strip trailing singleton dimensions
+        var shape = array.shape.slice(0),
+            stride = array.stride.slice(0);
+        while(shape[shape.length - 1] == 1){
+            shape.pop()
+            stride.pop()
+        }
+        return ndarray(array.data, shape, stride, array.offset);
 	}
 }
 

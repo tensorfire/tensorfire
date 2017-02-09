@@ -1,0 +1,77 @@
+<head>
+
+</head>
+<body>
+<h1>TensorCore4</h1>
+<style type="text/css">
+    body {
+        font-family: sans-serif;
+    }
+</style>
+<script src="../../dist/demo-util.js"></script>
+
+<script type="text/javascript">
+    function include(url){
+        document.write('<script src="' + url + '?' + Math.random() + '"><' + "/script>")
+    }
+    include("../../dist/tensor.js")
+</script>
+
+<script>
+
+
+var gl = KV.createGL(),
+    OutputTensor = KV.OutputTensor,
+    Tensor = KV.Tensor,
+    InPlaceTensor = KV.InPlaceTensor;
+
+// const Gradient = TP`
+//     float process(ivec4 pos) {
+//         return float(pos.x) / 512.0;
+//     }
+// `;
+
+const Gradient = `
+    vec4 process4(ivec4 pos) {
+        return vec4(vec2(pos.xy) / 512.0, float(pos.z) / float(@shape.z), 1);
+    }
+`;
+
+
+// pix = new Tensor(gl, [1, 1, 4], [1, 0.4, 133, 4], 'uint8')
+
+pix = new OutputTensor(gl, ndpack([[1, 0, 8.2], [3, 4, 3.3], [0.1, 0.5, 1.3]]), 'softfloat')
+
+// pix.run(pixient)
+pix.show()
+
+
+// grad = new OutputTensor(gl, [512, 512, 4*15], 'softfloat')
+
+// grad.run(Gradient)
+// grad.show()
+
+// Gradient(grad)
+// Gradient(grad)
+// Gradient(grad)
+// Gradient(grad)
+// grad.show()
+
+
+
+// const Transpose = TP`
+//     uniform Tensor image;
+//     float process(ivec4 pos) {
+//         return image_read(pos.yxzw) / 512.0;
+//     }
+// `
+
+// tr = new OutputTensor(gl, grad.shape)
+// Transpose(tr, { image: grad })
+// Transpose(tr, { image: grad })
+// Transpose(tr, { image: grad })
+// Transpose(tr, { image: grad })
+
+// tr.show()
+
+</script>

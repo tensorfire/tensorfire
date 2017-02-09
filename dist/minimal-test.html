@@ -1,0 +1,75 @@
+<script>
+
+var CHECK_FLOAT_VERTEX = "attribute vec2 a_pos; void main() { gl_Position = vec4(a_pos, 0, 1); }";
+var CHECK_FLOAT_FRAGMENT = "void main() { gl_FragColor = vec4(3.14159, -2.71828, 1.61828, 42); }";
+
+function compileShader(gl, shaderSource, shaderType) {
+    var shader = gl.createShader(shaderType);
+    gl.shaderSource(shader, shaderSource);
+    gl.compileShader(shader);
+    return shader;
+}
+
+function checkRenderFloat(gl){
+	// make a float texture
+    var tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 8, 8, 0, gl.RGBA, gl.FLOAT, null);
+
+    // make a framebuffer
+    var framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+
+    // create the program
+    var program = gl.createProgram();
+    gl.attachShader(program, compileShader(gl, CHECK_FLOAT_VERTEX, gl.VERTEX_SHADER));
+    gl.attachShader(program, compileShader(gl, CHECK_FLOAT_FRAGMENT, gl.FRAGMENT_SHADER));
+    gl.linkProgram(program);
+    gl.useProgram(program);
+
+    // bind position attribute buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ -1,-1, 1,-1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+    var positionLocation = gl.getAttribLocation(program, "a_pos");
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+    // render to the viewport
+    gl.viewport(0, 0, 8, 8);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    // check the status
+    var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+
+    // cleanup
+    gl.deleteTexture(tex)
+    gl.deleteFramebuffer(fbo)
+    gl.deleteProgram(program)
+
+    return status == gl.FRAMEBUFFER_COMPLETE;
+}
+
+function createGL(canvas){
+    if(!canvas){
+        canvas = document.createElement('canvas');
+        canvas.width = 512
+        canvas.height = 512
+        document.body.appendChild(canvas)
+    }
+    var gl = canvas.getContext("webgl", { antialias: false }) 
+          || canvas.getContext("experimental-webgl", { antialias: false });
+    if (!gl) alert('Could not initialize WebGL, try another browser');
+    return gl;
+}
+
+
+var gl = createGL();
+if(checkRenderFloat(gl)){
+	document.write("Yay, your browser supports rendering to floating point framebuffers!")
+}else{
+	document.write("Walp, your browser does not support rendering to floating point framebuffers!")
+}
+
+</script>

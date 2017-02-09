@@ -1863,9 +1863,11 @@ var BaseTensor = function () {
 			this.gl = gl;
 
 			// validate shape
+			if (!Array.isArray(shape)) throw new Error("shape must be Array");
+			if (shape.length > 4) throw new Error("Tensor must have dimension <= 4");
 			if (shape.some(function (k) {
 				return !isFinite(k) || k < 1 || !Number.isInteger(k);
-			}) || shape.length > 4) throw new Error('Invalid shape: ' + shape);
+			})) throw new Error('Invalid shape: ' + shape);
 			shape = shape.concat([1, 1, 1, 1]).slice(0, 4);
 			this.shape = shape;
 
@@ -2019,7 +2021,6 @@ function makeFrameBuffer(gl, texture) {
 function makeTexture(gl) {
     var texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -2159,6 +2160,11 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             };
         }
     }, {
+        key: 'run',
+        value: function run(shader, params) {
+            throw new Error('Only OutputTensor can run shaders.');
+        }
+    }, {
         key: 'read',
         value: function read() {
             console.warn('Copying to OutputTensor for reading...');
@@ -2218,7 +2224,16 @@ var OutputTensor = exports.OutputTensor = function (_Tensor) {
     }, {
         key: 'read',
         value: function read() {
-            return this._format.pack.unpack(this.info, this._read(), this._format.codec.decode, this.type);
+            var array = this._format.pack.unpack(this.info, this._read(), this._format.codec.decode, this.type);
+
+            // strip trailing singleton dimensions
+            var shape = array.shape.slice(0),
+                stride = array.stride.slice(0);
+            while (shape[shape.length - 1] == 1) {
+                shape.pop();
+                stride.pop();
+            }
+            return ndarray(array.data, shape, stride, array.offset);
         }
     }]);
 

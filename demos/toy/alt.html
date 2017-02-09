@@ -1,0 +1,202 @@
+<head>
+
+<script src="https://cdn.logrocket.com/LogRocket.min.js"></script>
+<script>window.LogRocket.init('tensorfire/core');</script>
+
+</head>
+<body>
+<h1>TensorCore3</h1>
+<style type="text/css">
+    body {
+        font-family: sans-serif;
+    }
+</style>
+<script src="../../dist/demo-util.js"></script>
+
+<script type="text/javascript">
+    function include(url){
+        document.write('<script src="' + url + '?' + Math.random() + '"><' + "/script>")
+    }
+    include("../../dist/tensor.js")
+</script>
+
+<script>
+
+var gl = KV.createGL(),
+    OutputTensor = KV.OutputTensor,
+    Tensor = KV.Tensor,
+    InPlaceTensor = KV.InPlaceTensor,
+    TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
+
+
+
+const MakeGradient = TP`
+    float processf(ivec4 pos) {
+        if(mod(float(pos.z), 4.0) == 0.0){
+            return float(pos.y) / 512.0;
+        }else if(mod(float(pos.z), 4.0) == 1.0){
+            return float(pos.x) / 512.0;
+        }else if(mod(float(pos.z), 4.0) == 2.0){
+            return float(0);
+        }else{
+            return float(1);
+        }
+    }
+`;
+
+// const Grayscale = TP`
+//     uniform Tensor image;
+//     float processf(ivec4 pos) {
+//         return dot(#image[pos].rgb, vec3(0.2126, 0.7152, 0.0722));
+//     }
+// `;
+
+// const Transpose = TP`
+//     uniform Tensor image;
+//     float processf(ivec4 pos) {
+//         return image_readf(ivec4(pos.yxzw));
+//     }
+// `;
+
+
+
+// const MakeGradient = TP`
+//     vec4 process(ivec4 pos) {
+//         return vec4(vec2(pos.yx) / 512.0, 0, 1);
+//     }
+// `;
+
+const Transpose = TP`
+    uniform Tensor image;
+    vec4 process(ivec4 pos) {
+        return #image[pos.yxzw];
+    }
+`;
+
+
+// const CalcDelta = TP`
+//     uniform Tensor image;
+//     vec4 process(ivec4 pos) {
+//         return vec4(vec2(0.5) + 20.0 * (#image[pos] - vec4(vec2(pos.yx) / 512.0, 0, 1)).xy, 0.5, 1);
+//     }
+// `;
+
+const Grayscale = TP`
+    uniform Tensor image;
+    vec4 process(ivec4 pos) {
+        return vec4(vec3(dot(#image[pos].rgb, vec3(0.2126, 0.7152, 0.0722))), 1);
+    }
+`;
+
+
+
+// const Sum = TP`
+//     uniform Tensor argle;
+//     vec4 process(ivec4 pos) {
+//         return #argle[pos];
+//     }
+// `;
+
+
+// const Sum = TP`
+//     uniform Tensor argle;
+//     uniform Tensor bargle;
+//     float processf(ivec4 pos) {
+//         return argle_readf(ivec4(pos)) + bargle_readf(ivec4(pos));
+//     }
+// `;
+
+// const Sum = TP`
+//     uniform Tensor argle;
+//     uniform Tensor bargle;
+
+// vec4 process(ivec4 pos){
+//     vec4 derp = (argle_read(pos) + bargle_read(pos));
+//     return vec4(2, derp.gba) + vec4(derp.r - 0.1, 0, 0, 0);
+//     // return vec4(derp.rgb, 2);
+//     // return vec4(
+//     //     derp.rgb,
+//     //     2
+//     // );
+// }
+// `;
+
+const Sum = TP`
+    uniform Tensor argle;
+    uniform Tensor bargle;
+
+    vec4 process(ivec4 pos) {
+        return argle_read(pos) + bargle_read(pos);
+    }
+`;
+
+
+// const Sum = TP`
+//     uniform Tensor argle;
+//     uniform Tensor bargle;
+
+//     vec4 xprocess(ivec4 pos) {
+//         return argle_read(pos) + bargle_read(pos);
+//     }
+
+//     vec4 process(ivec4 pos) {
+//         vec4 val = xprocess(pos);
+//         return vec4(val.rgb, chsel(val, 3));
+//     }
+// `;
+
+
+// const Sum = TP`
+//     uniform Tensor argle;
+//     uniform Tensor bargle;
+
+//     vec4 hyperprocess(ivec4 pos) {
+//         return argle_read(ivec4(pos)) + bargle_read(ivec4(pos));
+//     }
+
+//     float zombocom(ivec4 pos);
+//     vec4 process(ivec4 pos){
+//         return vec4(
+//             zombocom(ivec4(pos.xy, pos.z + 0, pos.w)),
+//             zombocom(ivec4(pos.xy, pos.z + 1, pos.w)),
+//             zombocom(ivec4(pos.xy, pos.z + 2, pos.w)),
+//             zombocom(ivec4(pos.xy, pos.z + 3, pos.w))
+//         );
+//     }
+
+//     float zombocom(ivec4 pos){
+//         return chsel(hyperprocess(pos), imod(pos.z, 4));
+//     }
+
+// `;
+
+gl.NO_FLOAT_TEXTURES = true;
+
+// onerror = function(e){
+//     alert(e)
+// }
+
+
+grad = new OutputTensor(gl, [512, 512, 4 * 11])
+MakeGradient(grad)
+grad.show()
+
+// delta = new OutputTensor(gl, grad.shape)
+// CalcDelta(delta, { image: grad })
+// delta.show()
+
+gray = new OutputTensor(gl, grad.shape);
+Grayscale(gray, { image: grad })
+gray.show()
+
+tr = new OutputTensor(gl, grad.shape);
+Transpose(tr, { image: gray })
+tr.show()
+
+sum = new OutputTensor(gl, grad.shape);
+Sum(sum, { argle: tr, bargle: gray })
+sum.show()
+
+
+
+</script>

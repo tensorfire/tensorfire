@@ -1,4 +1,6 @@
 node_modules
 .nyc_output
 .DS_Store
+src-old
 resnet50_weights.buf
+demos/handwriting

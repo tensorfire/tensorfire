@@ -1,0 +1,39 @@
+<body>
+<h1>3D Sphere</h1>
+<style type="text/css">
+    body {
+        font-family: sans-serif;
+    }
+</style>
+<script src="../../dist/demo-util.js"></script>
+<script src="../../dist/tensor.js"></script>
+<script>
+
+var gl = KV.createGL(),
+    OutputTensor = KV.OutputTensor,
+    Tensor = KV.Tensor,
+    InPlaceTensor = KV.InPlaceTensor,
+    TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
+
+
+
+const MakeSphere = TP`
+    vec4 process(ivec4 pos) {
+        if(dot(pow(vec3(pos.xyz) - vec3(out_shape)/vec3(2,2,8), vec3(2.0)), vec3(1.0)) < 900.0){
+            return vec4(1, 0, 0, 1);
+        }else{
+            return vec4(0.7, 0.7, 0.7, 1);
+        }
+    }
+`;
+
+
+grad = new OutputTensor(gl, [64, 64, 4 * 64])
+MakeSphere(grad)
+grad.show()
+
+// gray = new OutputTensor(gl, [512, 512, 4 * 4]);
+// Grayscale(gray, { image: grad })
+// gray.show()
+
+</script>

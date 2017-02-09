@@ -23,7 +23,9 @@ export default class BaseTensor {
 		this.gl = gl;
 
 		// validate shape
-        if(shape.some(k => !isFinite(k) || k < 1 || !Number.isInteger(k)) || shape.length > 4) 
+		if(!Array.isArray(shape)) throw new Error("shape must be Array");
+		if(shape.length > 4) throw new Error("Tensor must have dimension <= 4");
+        if(shape.some(k => !isFinite(k) || k < 1 || !Number.isInteger(k))) 
             throw new Error('Invalid shape: ' + shape);
         shape = shape.concat([1, 1, 1, 1]).slice(0, 4)
 		this.shape = shape;
