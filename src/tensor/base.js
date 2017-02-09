@@ -1,4 +1,3 @@
-import showTexture from './show.js'
 import { makeTexture, makeFrameBuffer, checkRenderFloat } from './helpers.js'
 import Formats from '../format/index.js'
 
@@ -94,6 +93,5 @@ export default class BaseTensor {
 		}
 	}
 
-	_show(opt = {}){ showTexture(this.gl, this.tex, opt) }
     destroy(){ this.gl.deleteTexture(this.tex) }
 }

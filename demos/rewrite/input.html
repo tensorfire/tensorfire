@@ -33,7 +33,8 @@ const Gradient = `
 
 // pix = new Tensor(gl, [1, 1, 4], [1, 0.4, 133, 4], 'uint8')
 
-pix = new OutputTensor(gl, ndpack([[1, 0, 8.2], [3, 4, 3.3], [0.1, 0.5, 1.3]]), 'softfloat')
+orig = ndpack([[1, 0, 8.2], [3, 4, 3.3], [0.1, 0.5, 1.3]])
+pix = new OutputTensor(gl, orig, 'uint8')
 
 // pix.run(pixient)
 pix.show()

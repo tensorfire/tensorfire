@@ -1,4 +1,5 @@
 import BaseTensor from './base.js';
+import showTexture from './show.js'
 import runFeatureTests from './feature.js'
 import { makeFrameBuffer } from './helpers.js'
 import { Run } from '../runtime/index.js'
@@ -35,6 +36,11 @@ export class Tensor extends BaseTensor {
         if(typeof data === 'string'){ // data = uint8 | float32
             if(format !== null)
                 throw new Error('Format must not be specified if data is a string.');
+            format = data;
+            data = null;
+        }else if(data && typeof data === 'object' && data.type && data.codec && data.pack && data.density){
+            if(format !== null)
+                throw new Error('Format must not be specified if data is an object.');
             format = data;
             data = null;
         }
@@ -74,18 +80,19 @@ export class Tensor extends BaseTensor {
             vec4 process4(ivec4 pos) { return image_read4(pos); }
         `;
         var out = new T(this.gl, this.shape, format);
-        Run(TENSOR_IDENTITY, out, { image: this })
+        out.run(TENSOR_IDENTITY, { image: this })
         return out
     }
 
+	_show(opt = {}){ showTexture(this.gl, this.tex, opt) }
     show(opt = {}){
         if(this.format.pack == 'tile' 
             && this.format.density == '4:4' 
             && this.format.codec == 'raw'){
-            this._show(opt)   
+            this._show(opt)
         }else{
-            var out = this.copy('uint8')
-            out._show(opt)
+            var out = this.copy({ type: 'uint8', pack: 'tile', density: '4:4', codec: 'raw' })
+            out.show(opt)
             out.destroy()
         };
     }

@@ -1823,10 +1823,6 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _show2 = require('./show.js');
-
-var _show3 = _interopRequireDefault(_show2);
-
 var _helpers = require('./helpers.js');
 
 var _index = require('../format/index.js');
@@ -1916,12 +1912,6 @@ var BaseTensor = function () {
 			return this._update(data);
 		}
 	}, {
-		key: '_show',
-		value: function _show() {
-			var opt = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-			(0, _show3.default)(this.gl, this.tex, opt);
-		}
-	}, {
 		key: 'destroy',
 		value: function destroy() {
 			this.gl.deleteTexture(this.tex);
@@ -1944,7 +1934,7 @@ var BaseTensor = function () {
 
 exports.default = BaseTensor;
 
-},{"../format/index.js":16,"./helpers.js":26,"./show.js":28}],25:[function(require,module,exports){
+},{"../format/index.js":16,"./helpers.js":26}],25:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2041,11 +2031,17 @@ exports.InPlaceTensor = exports.OutputTensor = exports.Tensor = undefined;
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _base = require('./base.js');
 
 var _base2 = _interopRequireDefault(_base);
+
+var _show2 = require('./show.js');
+
+var _show3 = _interopRequireDefault(_show2);
 
 var _feature = require('./feature.js');
 
@@ -2108,6 +2104,10 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             if (format !== null) throw new Error('Format must not be specified if data is a string.');
             format = data;
             data = null;
+        } else if (data && (typeof data === 'undefined' ? 'undefined' : _typeof(data)) === 'object' && data.type && data.codec && data.pack && data.density) {
+            if (format !== null) throw new Error('Format must not be specified if data is an object.');
+            format = data;
+            data = null;
         }
 
         if (format === null) {
@@ -2145,8 +2145,14 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
 
             var TENSOR_IDENTITY = '\n            uniform Tensor image;\n            vec4 process4(ivec4 pos) { return image_read4(pos); }\n        ';
             var out = new T(this.gl, this.shape, format);
-            (0, _index.Run)(TENSOR_IDENTITY, out, { image: this });
+            out.run(TENSOR_IDENTITY, { image: this });
             return out;
+        }
+    }, {
+        key: '_show',
+        value: function _show() {
+            var opt = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+            (0, _show3.default)(this.gl, this.tex, opt);
         }
     }, {
         key: 'show',
@@ -2156,8 +2162,8 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             if (this.format.pack == 'tile' && this.format.density == '4:4' && this.format.codec == 'raw') {
                 this._show(opt);
             } else {
-                var out = this.copy('uint8');
-                out._show(opt);
+                var out = this.copy({ type: 'uint8', pack: 'tile', density: '4:4', codec: 'raw' });
+                out.show(opt);
                 out.destroy();
             };
         }
@@ -2260,7 +2266,7 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
     return InPlaceTensor;
 }(OutputTensor);
 
-},{"../runtime/index.js":20,"./base.js":24,"./feature.js":25,"./helpers.js":26}],28:[function(require,module,exports){
+},{"../runtime/index.js":20,"./base.js":24,"./feature.js":25,"./helpers.js":26,"./show.js":28}],28:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
