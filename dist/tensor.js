@@ -385,12 +385,12 @@ Object.defineProperty(exports, "__esModule", {
 	value: true
 });
 exports.default = {
-	hard_sigmoid: 'vec4 @activation1(float data){\n    return clamp(data * 0.2 + 0.5, 0.0, 1.0);\n}',
+	hard_sigmoid: 'float @activation1(float data){\n    return clamp(data * 0.2 + 0.5, 0.0, 1.0);\n}',
 	linear: '#define @activation1 \n',
-	relu: 'vec4 @activation1(float data){\n    return max(data, 0.0);\n}\n',
-	rgb: 'vec4 @activation1(float data){\n    return data / 255.0; \n}',
-	sigmoid: 'vec4 @activation1(float data){\n    return (1.0/(1.0 + exp(-2.0 * \n        clamp(data,-20.0, 20.0) )));\n}\n',
-	tanh: 'vec4 @activation1(float data){\n    vec4 e = exp(2.0 * clamp(data, -20.0, 20.0) );\n    return (e-1.0)/(e+1.0);\n}'
+	relu: 'float @activation1(float data){\n    return max(data, 0.0);\n}\n',
+	rgb: 'float @activation1(float data){\n    return data / 255.0; \n}',
+	sigmoid: 'float @activation1(float data){\n    return (1.0/(1.0 + exp(-2.0 * \n        clamp(data,-20.0, 20.0) )));\n}\n',
+	tanh: 'float @activation1(float data){\n    float e = exp(2.0 * clamp(data, -20.0, 20.0) );\n    return (e-1.0)/(e+1.0);\n}'
 };
 
 },{}],5:[function(require,module,exports){
@@ -400,6 +400,8 @@ Object.defineProperty(exports, "__esModule", {
 	value: true
 });
 exports.init = init;
+exports.encode = encode;
+exports.decode = decode;
 var encodeShader = exports.encodeShader = 'uniform float @range;\n\nvec4 @encode1(float v) {\n\tfloat z = clamp(v / @range + 0.5, 0.0, 1.0);\n\n\treturn mod(z * vec4(\n\t\t256.0 * 256.0 * 256.0 * 256.0,\n\t\t256.0 * 256.0 * 256.0,\n\t\t256.0 * 256.0,\n\t\t256.0\n\t), vec4(256.0)) / 255.0;\n}';
 var decodeShader = exports.decodeShader = 'uniform float @range;\n\nfloat @decode1(vec4 rgba) {\n\tfloat f = dot(rgba, vec4(\n\t\t255.0 / 256.0 / 256.0 / 256.0 / 256.0,\n\t\t255.0 / 256.0 / 256.0 / 256.0,\n\t\t255.0 / 256.0 / 256.0,\n\t\t255.0 / 256.0\n\t));\n\treturn (f - 0.5) * @range;\n}';
 
@@ -407,6 +409,18 @@ function init(shape, format) {
 	return {
 		range: format.range || 4096
 	};
+}
+
+function encode(buf, value, info) {
+	var z = Math.min(1, Math.max(0, value / info.range + 0.5));
+	buf[0] = z * 256 * 256 * 256 * 256 % 256;
+	buf[1] = z * 256 * 256 * 256 % 256;
+	buf[2] = z * 256 * 256 % 256;
+	buf[3] = z * 256 % 256;
+}
+
+function decode(buf) {
+	return buf[0] / 256.0 / 256.0 / 256.0 / 256.0 + buf[1] / 256.0 / 256.0 / 256.0 + buf[2] / 256.0 / 256.0 + buf[3] / 256.0;
 }
 
 },{}],6:[function(require,module,exports){
@@ -515,9 +529,7 @@ function pack(info, array, encode1, format) {
     array = ndarray(array.data, array.shape.concat([1, 1, 1, 1]).slice(0, 4), array.stride.concat([1, 1, 1, 1]).slice(0, 4), array.offset);
 
     var shape = info.shape;
-    var length = 4 * shape.reduce(function (a, b) {
-        return a * b;
-    });
+    var length = info.texSize[0] * info.texSize[1] * 4;
 
     if (format.type === 'float32') {
         var data = new Float32Array(length);
@@ -531,13 +543,11 @@ function pack(info, array, encode1, format) {
                 for (var w = 0; w < shape[3]; w++) {
                     var tile = x + y * shape[0] + z * shape[0] * shape[1] + w * shape[0] * shape[1] * shape[2];
 
-                    encode1(data.subarray(4 * tile, 4 * tile + 4), array.get(x, y, z, w));
+                    encode1(data.subarray(4 * tile, 4 * tile + 4), array.get(x, y, z, w), info);
                 }
             }
         }
     }
-
-    console.log(data);
 
     return data;
 }
@@ -558,7 +568,7 @@ function unpack(info, data, decode1, type) {
                 for (var w = 0; w < shape[3]; w++) {
                     var tile = x + y * shape[0] + z * shape[0] * shape[1] + w * shape[0] * shape[1] * shape[2];
 
-                    array.set(x, y, z, w, decode1(data.subarray(4 * tile, 4 * tile + 4)));
+                    array.set(x, y, z, w, decode1(data.subarray(4 * tile, 4 * tile + 4), info));
                 }
             }
         }
@@ -611,10 +621,12 @@ function pack(info, ndarray) {
     //  shape:
     //  cols:
     // }
+    throw new Error("not implemented: format/1-4/pack/tile/index.js:pack");
 }
 
 function unpack(info, arr) {
     // return ndarray
+    throw new Error("not implemented: format/1-4/pack/tile/index.js:unpack");
 }
 
 },{}],10:[function(require,module,exports){
@@ -780,7 +792,7 @@ function pack(info, array, encode4, format) {
                     var tile = i + j * shape[0] + k * shape[0] * shape[1] + w * shape[0] * shape[1] * chans;
 
                     var pos = 4 * tile;
-                    encode4(data.subarray(pos, pos + 4), b < 1 ? 0 : array.get(i, j, 4 * k + 0, w), b < 2 ? 0 : array.get(i, j, 4 * k + 1, w), b < 3 ? 0 : array.get(i, j, 4 * k + 2, w), b < 4 ? 0 : array.get(i, j, 4 * k + 3, w));
+                    encode4(data.subarray(pos, pos + 4), b < 1 ? 0 : array.get(i, j, 4 * k + 0, w), b < 2 ? 0 : array.get(i, j, 4 * k + 1, w), b < 3 ? 0 : array.get(i, j, 4 * k + 2, w), b < 4 ? 0 : array.get(i, j, 4 * k + 3, w), info);
                 }
             }
         }
@@ -818,7 +830,7 @@ function unpack(info, data, decode4, type) {
 
                     var tile = i + j * shape[0] + k * shape[0] * shape[1] + w * shape[0] * shape[1] * chans;
 
-                    decode4(buf, data[4 * tile + 0], data[4 * tile + 1], data[4 * tile + 2], data[4 * tile + 3]);
+                    decode4(buf, data[4 * tile + 0], data[4 * tile + 1], data[4 * tile + 2], data[4 * tile + 3], info);
 
                     for (var x = 0; x < b; x++) {
                         array.set(i, j, 4 * k + x, w, buf[x]);
@@ -843,6 +855,7 @@ var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = [
 
 exports.init = init;
 exports.pack = pack;
+exports.unpack = unpack;
 
 var _ndarray = require('ndarray');
 
@@ -904,151 +917,17 @@ function pack(info, array, encode4, format) {
                 for (var j = 0; j < th; j++) {
 
                     var pos = 4 * ((ih + j) * width + jw + i);
-                    encode4(data.subarray(pos, pos + 4), b < 1 ? 0 : array.get(i, j, 4 * z + 0, w), b < 2 ? 0 : array.get(i, j, 4 * z + 1, w), b < 3 ? 0 : array.get(i, j, 4 * z + 2, w), b < 4 ? 0 : array.get(i, j, 4 * z + 3, w));
-                    // data[4 * ((ih+i) * width + jw + j)] = vec4[0]
-
-                    // for(var k = 0; k < b; k++){
-                    //     data[
-                    //         4 * ((ih+i) * width
-                    //         + jw + j) + k
-                    //     ] = array.get(i, j, 4*z+k, w)
-                    // }
+                    encode4(data.subarray(pos, pos + 4), b < 1 ? 0 : array.get(i, j, 4 * z + 0, w), b < 2 ? 0 : array.get(i, j, 4 * z + 1, w), b < 3 ? 0 : array.get(i, j, 4 * z + 2, w), b < 4 ? 0 : array.get(i, j, 4 * z + 3, w), info);
                 }
             }
         }
     }
-    console.log(data);
     return data;
 }
 
-// import ndops from "ndarray-ops"
-
-
-// export function pack_old(info, array, codec, format){
-// 	// return Uint8Array or Float32Array
-//     array = ndarray(array.data, 
-//         array.shape.concat([1, 1, 1, 1]).slice(0, 4),
-//         array.stride.concat([1, 1, 1, 1]).slice(0, 4),
-//         array.offset)
-
-//     var shape = array.shape,
-//         tiles = Math.ceil(shape[2] / 4) * shape[3],
-//         tw = shape[0],
-//         th = shape[1],
-//         cols = info.cols,
-//         [width, height] = info.texSize,
-//         chunks = Math.ceil(shape[2] / 4),
-//         length = width * height * 4;
-
-//     if(format.type === 'float32'){
-//         var data = new Float32Array(length);    
-//     }else if(format.type === 'uint8'){
-//         var data = new Uint8Array(length);    
-//     }    
-//     var out = ndarray(data, [height, width, 4])
-
-//     for(var z = 0; z < chunks; z++){
-//         for(var w = 0; w < shape[3]; w++){
-//             var tile = w * chunks + z;
-//             var b = Math.min(z*4+4, shape[2])-z*4;
-//             var lhs = out
-//                 .hi(th * Math.floor(tile / cols) + th, tw * (tile % cols) + tw,  b)
-//                 .lo(th * Math.floor(tile / cols)     , tw * (tile % cols)     ,  0)
-//             var rhs = array
-//                 .hi(null, null, 4*z+b, null)
-//                 .lo(null, null, 4*z, null)
-//                 .pick(null, null, null, w)
-//                 .transpose(1, 0, 2)
-//             ndops.assign(lhs, rhs)
-//         }
-//     }
-
-//     console.log(data)
-//     return data;
-// }
-
-
-// export function unpack(info, arr){
-// 	// return ndarray
-
-
-// }
-
-
-// function packTensor(array, cols, type = 'float32'){
-//     array = ndarray(array.data, 
-//         array.shape.concat([1, 1, 1, 1]).slice(0, 4),
-//         array.stride.concat([1, 1, 1, 1]).slice(0, 4),
-//         array.offset)
-
-//     var shape = array.shape,
-//         tiles = Math.ceil(shape[2] / 4) * shape[3],
-//         tw = shape[0],
-//         th = shape[1],
-//         width = tw * cols, 
-//         height = th * Math.ceil(tiles / cols),
-//         chunks = Math.ceil(shape[2] / 4),
-//         length = width * height * 4;
-
-//     if(type === 'float32'){
-//         var data = new Float32Array(length);    
-//     }else if(type === 'uint8'){
-//         var data = new Uint8Array(length);    
-//     }
-
-//     var out = ndarray(data, [height, width, 4])
-
-//     for(var z = 0; z < chunks; z++){
-//         for(var w = 0; w < shape[3]; w++){
-//             var tile = w * chunks + z;
-//             var b = Math.min(z*4+4, shape[2])-z*4;
-//             var lhs = out
-//                 .hi(th * Math.floor(tile / cols) + th, tw * (tile % cols) + tw,  b)
-//                 .lo(th * Math.floor(tile / cols)     , tw * (tile % cols)     ,  0)
-//             var rhs = array
-//                 .hi(null, null, 4*z+b, null)
-//                 .lo(null, null, 4*z, null)
-//                 .pick(null, null, null, w)
-//                 .transpose(1, 0, 2)
-//             ndops.assign(lhs, rhs)
-//         }
-//     }
-//     return data;
-// }
-
-
-// function unpackTensor(data, shape, cols){
-//     var length = shape.reduce((a, b) => a * b)
-//     var array = ndarray(new Float32Array(length), shape)
-
-//     var shape = array.shape,
-//         tiles = Math.ceil(shape[2] / 4) * shape[3],
-//         tw = shape[0],
-//         th = shape[1],
-//         width = tw * cols, 
-//         height = th * Math.ceil(tiles / cols),
-//         chunks = Math.ceil(shape[2] / 4);
-
-//     var out = ndarray(data, [height, width, 4])
-
-//     for(var z = 0; z < chunks; z++){
-//         for(var w = 0; w < shape[3]; w++){
-//             var tile = w * chunks + z;
-//             var b = Math.min(z*4+4, shape[2])-z*4;
-//             var lhs = out
-//                 .hi(th * Math.floor(tile / cols) + th, tw * (tile % cols) + tw,  b)
-//                 .lo(th * Math.floor(tile / cols)     , tw * (tile % cols)     ,  0)
-//             var rhs = array
-//                 .hi(null, null, 4*z+b, null)
-//                 .lo(null, null, 4*z, null)
-//                 .pick(null, null, null, w)
-//                 .transpose(1, 0, 2)
-//             ndops.assign(rhs, lhs)
-//         }
-//     }
-
-//     return array
-// }
+function unpack(info, data, decode4, type) {
+    throw new Error("not implemented: format/4-4/pack/tile/index.js:unpack");
+}
 
 },{"ndarray":3}],16:[function(require,module,exports){
 'use strict';
@@ -2129,11 +2008,11 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
         }
 
         var type = null;
-        if (format === 'float32' && (gl.NO_FLOAT_TEXTURES || gl.NO_RENDER_FLOAT && _this instanceof OutputTensor) || format === 'softfloat') {
+        if (format === 'float32' && (true || gl.NO_FLOAT_TEXTURES || gl.NO_RENDER_FLOAT && _this instanceof OutputTensor) || format === 'softfloat') {
             format = { type: 'uint8', pack: 'stride', density: '1:4', codec: 'softfloat' };
             type = 'float32';
         } else if (format === 'uint8' || format === 'float32') {
-            format = { type: format, pack: 'stride', density: '4:4', codec: 'raw' };
+            format = { type: format, pack: 'tile', density: '4:4', codec: 'raw' };
         }
 
         _this.type = type || format.type;

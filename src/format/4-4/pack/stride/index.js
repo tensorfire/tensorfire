@@ -51,7 +51,7 @@ export function pack(info, array, encode4, format){
                         b < 1 ? 0 : array.get(i, j, 4*k+0, w), 
                         b < 2 ? 0 : array.get(i, j, 4*k+1, w), 
                         b < 3 ? 0 : array.get(i, j, 4*k+2, w), 
-                        b < 4 ? 0 : array.get(i, j, 4*k+3, w))
+                        b < 4 ? 0 : array.get(i, j, 4*k+3, w), info)
                 }
             }
         }
@@ -93,7 +93,7 @@ export function unpack(info, data, decode4, type){
                         data[4 * tile + 0],
                         data[4 * tile + 1],
                         data[4 * tile + 2],
-                        data[4 * tile + 3])
+                        data[4 * tile + 3], info)
 
 
                     for(var x = 0; x < b; x++){

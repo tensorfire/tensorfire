@@ -25,8 +25,7 @@ export function pack(info, array, encode1, format){
         array.offset)
 
     var shape = info.shape;
-    var length = 4 * shape.reduce((a, b) => a * b);
-
+    var length = info.texSize[0] * info.texSize[1] * 4;
 
     if(format.type === 'float32'){
         var data = new Float32Array(length);    
@@ -43,13 +42,11 @@ export function pack(info, array, encode1, format){
                         z * shape[0] * shape[1] +
                         w * shape[0] * shape[1] * shape[2];
 
-                    encode1(data.subarray(4*tile, 4*tile+4), array.get(x, y, z, w))
+                    encode1(data.subarray(4*tile, 4*tile+4), array.get(x, y, z, w), info)
                 }
             }
         }
     }
-
-    console.log(data)
 
     return data;
 }
@@ -74,7 +71,7 @@ export function unpack(info, data, decode1, type){
                         z * shape[0] * shape[1] +
                         w * shape[0] * shape[1] * shape[2];
 
-                    array.set(x, y, z, w, decode1(data.subarray(4*tile, 4*tile+4)))
+                    array.set(x, y, z, w, decode1(data.subarray(4*tile, 4*tile+4), info))
                 }
             }
         }

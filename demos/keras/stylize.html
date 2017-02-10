@@ -36,16 +36,24 @@ async function stylize(){
     var compiled = await compile(gl, network, { main_input: image })
     C = compiled
     console.time('stylize')
-    await run(gl, compiled, { main_input: image, layerPause: false })
-    C.info['batchnormalization_16+activation_11'].output.read()
-    C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
+    await run(gl, compiled, { main_input: image, layerPause: true })
+    // C.info['batchnormalization_16+activation_11'].output.read()
+    // C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
     console.timeEnd('stylize')
 
+    await new Promise(e => setTimeout(e, 1000))
+
     console.time('stylize')
-    await run(gl, compiled, { main_input: image, layerPause: false })
-    C.info['batchnormalization_16+activation_11'].output.read()
-    C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
+    await run(gl, compiled, { main_input: image, layerPause: true })
+    // C.info['batchnormalization_16+activation_11'].output.read()
+    // C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
     console.timeEnd('stylize')
+
+    // console.time('stylize')
+    // await run(gl, compiled, { main_input: image, layerPause: false })
+    // C.info['batchnormalization_16+activation_11'].output.read()
+    // C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
+    // console.timeEnd('stylize')
     
     // await destroy(gl, compiled)
 

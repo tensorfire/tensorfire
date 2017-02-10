@@ -37,9 +37,11 @@ export function pack(info, ndarray){
     //  shape:
     //  cols:
     // }
+    throw new Error("not implemented: format/1-4/pack/tile/index.js:pack")
 }
 
 
 export function unpack(info, arr){
     // return ndarray
+    throw new Error("not implemented: format/1-4/pack/tile/index.js:unpack")
 }
