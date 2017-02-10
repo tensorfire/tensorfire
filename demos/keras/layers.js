@@ -476,7 +476,7 @@ function Convolve2D(gl, layer, deps){
     const SHADER = `
         uniform Tensor image;
         uniform Tensor kernel;
-
+        
         uniform ivec2 imagePadding;
         uniform ivec2 imageSubsample;
 
@@ -495,7 +495,7 @@ function Convolve2D(gl, layer, deps){
                         if(inputY < 0 || inputY >= int(image.shape.y)) continue;
 
                         vec4 inputPix = image.read4(ivec4(inputX, inputY, f, 0));
-
+                        
                         sum += inputPix.r * kernel.read4(ivec4(kx, ky, pos.z, f + 0))
                              + inputPix.g * kernel.read4(ivec4(kx, ky, pos.z, f + 1))
                              + inputPix.b * kernel.read4(ivec4(kx, ky, pos.z, f + 2))

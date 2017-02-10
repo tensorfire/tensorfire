@@ -61,15 +61,15 @@ async function run(gl, compiled, options){
                 var size = info[layer.name].output.texSize;
                 // if(size[0] * size[1] > 1000){ 
                 
-                info[layer.name].output.show({ scale: 1/255, offset: 0, flipY: true });
+                // info[layer.name].output.show({ scale: 1, offset: 0 });
 
-                    info[layer.name].output.show({ scale: 150/255, offset: 0.5, flipY: true });
+                    info[layer.name].output.show({ scale: 150/255, offset: 0.5 });
                     await new Promise(resolve => requestAnimationFrame(resolve))
                 // }
                 // await new Promise(resolve => setTimeout(resolve, 1000))
                 // return
                 // if(layer.name == 'batchnormalization_1_mean') return;
-                if(layer.name == 'convolution2d_2') return;
+                // if(layer.name == 'convolution2d_2') return;
                 
             }
 

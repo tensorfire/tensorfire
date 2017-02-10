@@ -11,7 +11,7 @@ void main(){
 	gl_FragColor = @encode4(@activation4(process4(ivec4(
 		imod(tile, @shape.x),
 		imod(tile / @shape.x, @shape.y),
-		imod(tile / @shape.x / @shape.y, shapez ),
+		4 * imod(tile / @shape.x / @shape.y, shapez),
 		tile / @shape.x / @shape.y / shapez
 	))));
 }

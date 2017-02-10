@@ -5,7 +5,7 @@ uniform ivec4 @shape;
 vec4 @read4(ivec4 pos){
 	int tile  = pos.x + 
 				pos.y * @shape.x + 
-				pos.z * @shape.x * @shape.y +
+				(pos.z / 4) * @shape.x * @shape.y +
 				pos.w * @shape.x * @shape.y * ceildiv(@shape.z, 4);
 
 	return @decode4(texture2D(@tex, 
