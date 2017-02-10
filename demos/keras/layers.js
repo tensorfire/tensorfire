@@ -279,6 +279,59 @@ function ChannelFullyConnected(gl, layer, deps){
 
 
 
+// function Deconvolve2D(gl, layer, deps){
+//     const SHADER = `
+//         uniform Tensor image;
+//         uniform Tensor kernel;
+
+//         uniform ivec2 imagePadding;
+//         uniform ivec2 imageSubsample;
+
+//         const ivec2 kernelTileSize = #(kernel.shape).xy;
+
+//         vec4 process4(ivec4 pos){
+//             vec4 sum = vec4(0, 0, 0, 0);
+
+//             for(int f = 0; f < #(image.shape).z; f += 4){
+//                 for(int kx = 0; kx < kernelTileSize.x; kx++){
+//                     int inputX = pos.x + kx - imagePadding.x;
+//                     if(imod(inputX, 2) != 0 || inputX < 0 || inputX >= int(image.shape.x) * 2) continue;
+
+//                     for(int ky = 0; ky < kernelTileSize.y; ky++){
+//                         int inputY = pos.y + ky - imagePadding.y;
+//                         if(imod(inputY, 2) != 0 || inputY < 0 || inputY >= int(image.shape.y) * 2) continue;
+
+//                         vec4 inputPix = image.read4(ivec4(inputX / 2, inputY / 2, f, 0));
+
+//                         sum += inputPix.r * kernel.read4(ivec4(kx, ky, pos.z, f + 0))
+//                              + inputPix.g * kernel.read4(ivec4(kx, ky, pos.z, f + 1))
+//                              + inputPix.b * kernel.read4(ivec4(kx, ky, pos.z, f + 2))
+//                              + inputPix.a * kernel.read4(ivec4(kx, ky, pos.z, f + 3));
+//                     }
+//                 }
+//             }
+//             return sum;
+//         }
+//     `
+//     var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2).step(-1, -1))
+
+//     var outputShape = [
+//         deps.image.shape[0] * layer.subsample[0], 
+//         deps.image.shape[1] * layer.subsample[1], 
+//         kernelTensor.shape[2]
+//     ];
+
+//     var output = new OutputTensor(gl, outputShape)
+//     return TensorProgram(SHADER, output, {
+//         image: deps.image,
+//         kernel: kernelTensor,
+//         imagePadding: layer.padding,
+//         imageSubsample: layer.subsample,
+//         _activation: layer.activation
+//     })
+// }
+
+
 function Deconvolve2D(gl, layer, deps){
     const SHADER = `
         uniform Tensor image;
@@ -289,10 +342,10 @@ function Deconvolve2D(gl, layer, deps){
 
         const ivec2 kernelTileSize = #(kernel.shape).xy;
 
-        vec4 process4(ivec4 pos){
-            vec4 sum = vec4(0, 0, 0, 0);
+        float process(ivec4 pos){
+            float sum = 0.0;
 
-            for(int f = 0; f < #(image.shape).z; f += 4){
+            for(int f = 0; f < #(image.shape).z; f++){
                 for(int kx = 0; kx < kernelTileSize.x; kx++){
                     int inputX = pos.x + kx - imagePadding.x;
                     if(imod(inputX, 2) != 0 || inputX < 0 || inputX >= int(image.shape.x) * 2) continue;
@@ -301,12 +354,8 @@ function Deconvolve2D(gl, layer, deps){
                         int inputY = pos.y + ky - imagePadding.y;
                         if(imod(inputY, 2) != 0 || inputY < 0 || inputY >= int(image.shape.y) * 2) continue;
 
-                        vec4 inputPix = image.read4(ivec4(inputX / 2, inputY / 2, f, 0));
-
-                        sum += inputPix.r * kernel.read4(ivec4(kx, ky, pos.z, f + 0))
-                             + inputPix.g * kernel.read4(ivec4(kx, ky, pos.z, f + 1))
-                             + inputPix.b * kernel.read4(ivec4(kx, ky, pos.z, f + 2))
-                             + inputPix.a * kernel.read4(ivec4(kx, ky, pos.z, f + 3));
+                        float inputPix = image.read(ivec4(inputX / 2, inputY / 2, f, 0));
+                        sum += inputPix * kernel.read(ivec4(kx, ky, pos.z, f));
                     }
                 }
             }
@@ -472,6 +521,56 @@ function calcOutputShape(inputShape, kernelShape, subsample = [1, 1], borderMode
     // this.inputPadding = [paddingRowBefore, paddingRowAfter, paddingColBefore, paddingColAfter]
 }
 
+// function Convolve2D(gl, layer, deps){
+//     const SHADER = `
+//         uniform Tensor image;
+//         uniform Tensor kernel;
+        
+//         uniform ivec2 imagePadding;
+//         uniform ivec2 imageSubsample;
+
+//         const ivec2 kernelTileSize = #(kernel.shape).xy;
+
+//         vec4 process4(ivec4 pos){
+//             vec4 sum = vec4(0, 0, 0, 0);
+
+//             for(int f = 0; f < #(image.shape).z; f += 4){
+//                 for(int kx = 0; kx < kernelTileSize.x; kx++){
+//                     int inputX = pos.x * imageSubsample.x + kx - imagePadding.x;
+//                     if(inputX < 0 || inputX >= int(image.shape.x)) continue;
+
+//                     for(int ky = 0; ky < kernelTileSize.y; ky++){
+//                         int inputY = pos.y  * imageSubsample.y + ky - imagePadding.y;
+//                         if(inputY < 0 || inputY >= int(image.shape.y)) continue;
+
+//                         vec4 inputPix = image.read4(ivec4(inputX, inputY, f, 0));
+                        
+//                         sum += inputPix.r * kernel.read4(ivec4(kx, ky, pos.z, f + 0))
+//                              + inputPix.g * kernel.read4(ivec4(kx, ky, pos.z, f + 1))
+//                              + inputPix.b * kernel.read4(ivec4(kx, ky, pos.z, f + 2))
+//                              + inputPix.a * kernel.read4(ivec4(kx, ky, pos.z, f + 3));
+//                     }
+//                 }
+//             }
+//             return sum;
+//         }
+//     `
+//     console.assert(layer.kernel.shape[2] == deps.image.shape[2])
+//     var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2))
+//     var { inputPadding, outputShape } = calcOutputShape(deps.image.shape, 
+//         [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.subsample, layer.border_mode)
+//     var outputTensor = new OutputTensor(gl, outputShape)
+
+//     return TensorProgram(SHADER, outputTensor, {
+//         kernel: kernelTensor,
+//         image: deps.image,
+
+//         imagePadding: inputPadding,
+//         imageSubsample: layer.subsample,
+//         _activation: layer.activation
+//     })
+// }
+
 function Convolve2D(gl, layer, deps){
     const SHADER = `
         uniform Tensor image;
@@ -482,10 +581,10 @@ function Convolve2D(gl, layer, deps){
 
         const ivec2 kernelTileSize = #(kernel.shape).xy;
 
-        vec4 process4(ivec4 pos){
-            vec4 sum = vec4(0, 0, 0, 0);
+        float process(ivec4 pos){
+            float sum = 0.0;
 
-            for(int f = 0; f < #(image.shape).z; f += 4){
+            for(int f = 0; f < #(image.shape).z; f++){
                 for(int kx = 0; kx < kernelTileSize.x; kx++){
                     int inputX = pos.x * imageSubsample.x + kx - imagePadding.x;
                     if(inputX < 0 || inputX >= int(image.shape.x)) continue;
@@ -494,12 +593,8 @@ function Convolve2D(gl, layer, deps){
                         int inputY = pos.y  * imageSubsample.y + ky - imagePadding.y;
                         if(inputY < 0 || inputY >= int(image.shape.y)) continue;
 
-                        vec4 inputPix = image.read4(ivec4(inputX, inputY, f, 0));
-                        
-                        sum += inputPix.r * kernel.read4(ivec4(kx, ky, pos.z, f + 0))
-                             + inputPix.g * kernel.read4(ivec4(kx, ky, pos.z, f + 1))
-                             + inputPix.b * kernel.read4(ivec4(kx, ky, pos.z, f + 2))
-                             + inputPix.a * kernel.read4(ivec4(kx, ky, pos.z, f + 3));
+                        float inputPix = image.read(ivec4(inputX, inputY, f, 0));
+                        sum += inputPix * kernel.read(ivec4(kx, ky, pos.z, f));
                     }
                 }
             }
