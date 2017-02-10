@@ -35,7 +35,18 @@ async function stylize(){
     
     var compiled = await compile(gl, network, { main_input: image })
     C = compiled
-    await run(gl, compiled, { main_input: image, layerPause: true })
+    console.time('stylize')
+    await run(gl, compiled, { main_input: image, layerPause: false })
+    C.info['batchnormalization_16+activation_11'].output.read()
+    C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
+    console.timeEnd('stylize')
+
+    console.time('stylize')
+    await run(gl, compiled, { main_input: image, layerPause: false })
+    C.info['batchnormalization_16+activation_11'].output.read()
+    C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
+    console.timeEnd('stylize')
+    
     // await destroy(gl, compiled)
 
 }
