@@ -1,13 +1,12 @@
 uniform ivec2 @texSize;
 uniform ivec4 @shape;
-uniform ivec4 @stride;
+uniform vec4 @stride;
 
 vec4 process4(ivec4 pos);
 void main(){
+	int tile = @texSize.x * int(gl_FragCoord.y) + int(gl_FragCoord.x);
 	int shapez = ceildiv(@shape.z, 4);
-	int tile = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);
-	int chunks = @shape.x * @shape.y * shapez * @shape.w;
-	if(tile >= chunks){ checkerboard(); return; }
+	if(tile >= int(@stride.w) * @shape.w){ checkerboard(); return; }
 
 	gl_FragColor = @encode4(@activation4(process4(ivec4(
 		imod(tile, @shape.x),
