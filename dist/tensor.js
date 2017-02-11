@@ -865,7 +865,7 @@ var _ndarray2 = _interopRequireDefault(_ndarray);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 @read4(ivec4 pos){\n    return @decode4(texture2D(@tex, (\n        vec2(tile2vec(\n            ceildiv(@shape.z, 4) * pos.w + pos.z / 4\n        , @cols) * @shape.xy) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize)));\n}\n';
+var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\n\nvec4 @read4(ivec4 pos){\n\tfloat tile = float(vec2tile(pos.zw / ivec2(4, 1), ceildiv(@shape.z, 4)));\n    return @decode4(texture2D(@tex, (\n        vec2(\n        \tmod(tile, float(@cols)),\n        \tfloor(tile / float(@cols))\n        ) * vec2(@shape.xy) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize)));\n}\n';
 var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 process4(ivec4 pos);\nvoid main(){\n    int tile = vec2tile(ivec2(gl_FragCoord.xy) / @shape.xy, @cols);\n    int chunks = ceildiv(@shape.z, 4);\n    if(tile * 4 >= @shape.z * @shape.w){ checkerboard(); return; }\n    gl_FragColor = @encode4(@activation4(process4(ivec4(\n        mod(gl_FragCoord.xy, vec2(@shape.xy)), \n        tile2vec(tile, chunks) * ivec2(4, 1)))));\n}\n\n';
 
 function init(shape) {
@@ -2014,7 +2014,7 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             format = { type: 'uint8', pack: 'stride', density: '1:4', codec: 'softfloat' };
             type = 'float32';
         } else if (format === 'uint8' || format === 'float32') {
-            format = { type: format, pack: 'stride', density: '4:4', codec: 'raw' };
+            format = { type: format, pack: 'tile', density: '4:4', codec: 'raw' };
         }
 
         _this.type = type || format.type;

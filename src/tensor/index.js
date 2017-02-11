@@ -65,7 +65,7 @@ export class Tensor extends BaseTensor {
             format = { type: 'uint8', pack: 'stride', density: '1:4', codec: 'softfloat' }
             type = 'float32'
         }else if(format === 'uint8' || format === 'float32'){
-            format = { type: format, pack: 'stride', density: '4:4', codec: 'raw' }
+            format = { type: format, pack: 'tile', density: '4:4', codec: 'raw' }
         }
 
         this.type = type || format.type;
