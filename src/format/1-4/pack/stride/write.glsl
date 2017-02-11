@@ -1,5 +1,6 @@
 uniform ivec2 @texSize;
 uniform ivec4 @shape;
+uniform vec4 @stride;
 
 // vec4 clampify(vec4 v){
 //     return vec4(ivec4(clamp(v, vec4(0), vec4(1)) * 255.0)) / 255.0;

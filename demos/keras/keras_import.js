@@ -241,10 +241,12 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
     }
 
     // expand softmax activations
-    for(let layer of network){
+    for(var i = 0; i < network.length; i++){
+        let layer = network[i];
+
         if(layer.type != 'Activation') continue;
         if(layer.activation != 'softmax') continue;
-        network.splice(network.indexOf(layer), 1, {
+        network.splice(i, 1, {
             type: 'ExpSum',
             name: layer.name + '_expsum',
             deps: { image: layer.deps.image },
@@ -253,19 +255,30 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
             name: layer.name,
             deps: { image: layer.deps.image, helper: layer.name + '_expsum' },
         });
+        i--;
     }
 
     // elide activations
-    for(let layer of network){
+    // for(let layer of network){
+    for(var i = 0; i < network.length; i++){
+        let layer = network[i];
+
         if(layer.type != 'Activation') continue;
         // make sure nothing else depends on its input
-        if(network.some(k => k !== layer && Object.values(k.deps).includes(layer.deps.image) ))
+        if(network.some(k => k !== layer && Object.values(k.deps).includes(layer.deps.image) )){
+            console.log('stuff depends', layer)
             continue;
+        }
         var input = network.find(k => k.name == layer.deps.image);
         // make sure input does not already have an attached activation
-        if(input.activation) continue;
+        if(input.activation){
+            console.log('already has input activation', layer)
+            continue;
+        }
+
         // remove this thing
-        network.splice(network.indexOf(layer), 1);
+        network.splice(i, 1);
+        i--;
         // rename the input and set the activation
         var new_name = input.name + '+' + layer.name;
         rename_deps(layer.name, new_name)
@@ -274,9 +287,11 @@ function import_keras_network(keras_model, keras_model_meta, buffer){
     }
 
     // remove dropout and stuff
-    for(let layer of network){
+    for(var i = 0; i < network.length; i++){
+        let layer = network[i];
         if(layer.type != 'Identity') continue;
-        network.splice(network.indexOf(layer), 1);
+        network.splice(i, 1);
+        i--;
         rename_deps(layer.name, layer.deps.image);
     }
 

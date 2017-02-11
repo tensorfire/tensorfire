@@ -45,6 +45,7 @@ async function run(gl, compiled, options){
         info[layer.name].done = false;
     }
 
+    var lastFrame = Date.now()
     while(true){
         var pending = network
             .filter(k => !info[k.name].done);
@@ -64,7 +65,9 @@ async function run(gl, compiled, options){
                 if(size[0] * size[1] > 1000){ 
                 
                 // info[layer.name].output.show({ scale: 1, offset: 0 });
+
                     gl.flush()
+                    
                     info[layer.name].output.show({ scale: 150/255, offset: 0.5 });
                     await new Promise(resolve => requestAnimationFrame(resolve))
                 }
@@ -74,6 +77,8 @@ async function run(gl, compiled, options){
                 // if(layer.name == 'convolution2d_2') return;
                 
             }
+
+            // if(layer.name == 'convolution2d_2') return;
 
             // info[layer.name].output.show({ scale: 150/255, offset: 0.5, flipY: true });
             // await new Promise(resolve => requestAnimationFrame(resolve))

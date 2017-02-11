@@ -13,3 +13,19 @@ export function init(shape, format){
 		// min: ,
 	}
 }
+
+export function encode(data, r, g, b, a, info){
+	throw new Error('not implemented')
+	// data[0] = r;
+	// data[1] = g;
+	// data[2] = b;
+	// data[3] = a;
+}
+
+
+export function decode(data, r, g, b, a, info){
+	data[0] = (r / 255) * (info.range[1] - info.range[0]) + info.range[0];
+	data[1] = (g / 255) * (info.range[1] - info.range[0]) + info.range[0];
+	data[2] = (b / 255) * (info.range[1] - info.range[0]) + info.range[0];
+	data[3] = (a / 255) * (info.range[1] - info.range[0]) + info.range[0];
+}

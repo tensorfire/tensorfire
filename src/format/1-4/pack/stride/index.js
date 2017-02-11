@@ -13,6 +13,8 @@ export function init(shape){
     return {
         texSize: texSize,
         shape: shape,
+        // vec4(1, @shape.x, @shape.x * @shape.y, @shape.x * @shape.y * @shape.z)
+        stride: [1, shape[0], shape[0] * shape[1], shape[0] * shape[1] * shape[2]]
     }
 }
 

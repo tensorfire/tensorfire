@@ -33,438 +33,696 @@ function InputLayer(gl, layer, deps, options){
     }
 }
 
+// const FormatStatistics = [
+//   {
+//     "name": "main_input",
+//     "min": 0,
+//     "max": 255
+//   },
+//   {
+//     "name": "convolution2d_1",
+//     "min": -3626.10693359375,
+//     "max": 3305.6865234375
+//   },
+//   {
+//     "name": "batchnormalization_1_mean",
+//     "min": -1715.647705078125,
+//     "max": 1822.1619873046875
+//   },
+//   {
+//     "name": "batchnormalization_1_residual",
+//     "min": 3.637978807091713e-12,
+//     "max": 10538415
+//   },
+//   {
+//     "name": "batchnormalization_1_variance",
+//     "min": 9247.154296875,
+//     "max": 228804.765625
+//   },
+//   {
+//     "name": "batchnormalization_1+activation_1",
+//     "min": 0,
+//     "max": 13.208250045776367
+//   },
+//   {
+//     "name": "convolution2d_2",
+//     "min": -88.34521484375,
+//     "max": 63.568145751953125
+//   },
+//   {
+//     "name": "batchnormalization_2_mean",
+//     "min": -18.02031135559082,
+//     "max": 12.497589111328125
+//   },
+//   {
+//     "name": "batchnormalization_2_residual",
+//     "min": 3.552713678800501e-13,
+//     "max": 6276.134765625
+//   },
+//   {
+//     "name": "batchnormalization_2_variance",
+//     "min": 8.93504524230957,
+//     "max": 102.31684112548828
+//   },
+//   {
+//     "name": "batchnormalization_2+activation_2",
+//     "min": 0,
+//     "max": 11.939108848571777
+//   },
+//   {
+//     "name": "convolution2d_3",
+//     "min": -84.6211166381836,
+//     "max": 85.77696990966797
+//   },
+//   {
+//     "name": "batchnormalization_3_mean",
+//     "min": -16.070049285888672,
+//     "max": 13.691821098327637
+//   },
+//   {
+//     "name": "batchnormalization_3_residual",
+//     "min": 3.552713678800501e-13,
+//     "max": 7013.689453125
+//   },
+//   {
+//     "name": "batchnormalization_3_variance",
+//     "min": 22.92977523803711,
+//     "max": 124.43011474609375
+//   },
+//   {
+//     "name": "batchnormalization_3+activation_3",
+//     "min": 0,
+//     "max": 13.623411178588867
+//   },
+//   {
+//     "name": "convolution2d_4",
+//     "min": -84.64530944824219,
+//     "max": 124.49554443359375
+//   },
+//   {
+//     "name": "batchnormalization_4_mean",
+//     "min": -16.419282913208008,
+//     "max": 27.900487899780273
+//   },
+//   {
+//     "name": "batchnormalization_4_residual",
+//     "min": 9.094947017729282e-13,
+//     "max": 9428.6806640625
+//   },
+//   {
+//     "name": "batchnormalization_4_variance",
+//     "min": 19.818931579589844,
+//     "max": 442.01885986328125
+//   },
+//   {
+//     "name": "batchnormalization_4+activation_4",
+//     "min": 0,
+//     "max": 12.061802864074707
+//   },
+//   {
+//     "name": "convolution2d_5",
+//     "min": -78.44379425048828,
+//     "max": 73.0664291381836
+//   },
+//   {
+//     "name": "batchnormalization_5_mean",
+//     "min": -17.426504135131836,
+//     "max": 17.240392684936523
+//   },
+//   {
+//     "name": "batchnormalization_5_residual",
+//     "min": 1.8417267710901797e-11,
+//     "max": 5685.9599609375
+//   },
+//   {
+//     "name": "batchnormalization_5_variance",
+//     "min": 16.863115310668945,
+//     "max": 139.30795288085938
+//   },
+//   {
+//     "name": "batchnormalization_5",
+//     "min": -7.309256076812744,
+//     "max": 6.503152847290039
+//   },
+//   {
+//     "name": "merge_1",
+//     "min": -7.309256076812744,
+//     "max": 15.004384994506836
+//   },
+//   {
+//     "name": "convolution2d_6",
+//     "min": -153.66493225097656,
+//     "max": 325.5685729980469
+//   },
+//   {
+//     "name": "batchnormalization_6_mean",
+//     "min": -15.474926948547363,
+//     "max": 10.63546085357666
+//   },
+//   {
+//     "name": "batchnormalization_6_residual",
+//     "min": 6.386926543200389e-10,
+//     "max": 110489.859375
+//   },
+//   {
+//     "name": "batchnormalization_6_variance",
+//     "min": 129.97276306152344,
+//     "max": 2270.09814453125
+//   },
+//   {
+//     "name": "batchnormalization_6+activation_5",
+//     "min": 0,
+//     "max": 9.897893905639648
+//   },
+//   {
+//     "name": "convolution2d_7",
+//     "min": -170.50607299804688,
+//     "max": 132.15560913085938
+//   },
+//   {
+//     "name": "batchnormalization_7_mean",
+//     "min": -11.967262268066406,
+//     "max": 9.921875953674316
+//   },
+//   {
+//     "name": "batchnormalization_7_residual",
+//     "min": 9.094947017729282e-13,
+//     "max": 27261.111328125
+//   },
+//   {
+//     "name": "batchnormalization_7_variance",
+//     "min": 9.951315879821777,
+//     "max": 147.45118713378906
+//   },
+//   {
+//     "name": "batchnormalization_7",
+//     "min": -17.087804794311523,
+//     "max": 12.716047286987305
+//   },
+//   {
+//     "name": "merge_2",
+//     "min": -15.081731796264648,
+//     "max": 14.879046440124512
+//   },
+//   {
+//     "name": "convolution2d_8",
+//     "min": -165.42617797851562,
+//     "max": 532.8707885742188
+//   },
+//   {
+//     "name": "batchnormalization_8_mean",
+//     "min": -15.603959083557129,
+//     "max": 12.526711463928223
+//   },
+//   {
+//     "name": "batchnormalization_8_residual",
+//     "min": 5.684341886080801e-10,
+//     "max": 293142.65625
+//   },
+//   {
+//     "name": "batchnormalization_8_variance",
+//     "min": 97.04519653320312,
+//     "max": 1572.54345703125
+//   },
+//   {
+//     "name": "batchnormalization_8+activation_6",
+//     "min": 0,
+//     "max": 9.906005859375
+//   },
+//   {
+//     "name": "convolution2d_9",
+//     "min": -315.56597900390625,
+//     "max": 321.25518798828125
+//   },
+//   {
+//     "name": "batchnormalization_9_mean",
+//     "min": -12.702116012573242,
+//     "max": 10.204585075378418
+//   },
+//   {
+//     "name": "batchnormalization_9_residual",
+//     "min": 4.604316927725449e-12,
+//     "max": 102291.90625
+//   },
+//   {
+//     "name": "batchnormalization_9_variance",
+//     "min": 7.37477970123291,
+//     "max": 130.01266479492188
+//   },
+//   {
+//     "name": "batchnormalization_9",
+//     "min": -23.896930694580078,
+//     "max": 29.545085906982422
+//   },
+//   {
+//     "name": "merge_3",
+//     "min": -19.339553833007812,
+//     "max": 19.406970977783203
+//   },
+//   {
+//     "name": "convolution2d_10",
+//     "min": -221.14932250976562,
+//     "max": 478.88665771484375
+//   },
+//   {
+//     "name": "batchnormalization_10_mean",
+//     "min": -16.542442321777344,
+//     "max": 10.944856643676758
+//   },
+//   {
+//     "name": "batchnormalization_10_residual",
+//     "min": 5.684341886080802e-14,
+//     "max": 229578.515625
+//   },
+//   {
+//     "name": "batchnormalization_10_variance",
+//     "min": 58.0169677734375,
+//     "max": 1163.9898681640625
+//   },
+//   {
+//     "name": "batchnormalization_10+activation_7",
+//     "min": 0,
+//     "max": 15.82600212097168
+//   },
+//   {
+//     "name": "convolution2d_11",
+//     "min": -534.5223999023438,
+//     "max": 592.5685424804688
+//   },
+//   {
+//     "name": "batchnormalization_11_mean",
+//     "min": -6.993751525878906,
+//     "max": 10.276752471923828
+//   },
+//   {
+//     "name": "batchnormalization_11_residual",
+//     "min": 2.0463630789890885e-12,
+//     "max": 348560.4375
+//   },
+//   {
+//     "name": "batchnormalization_11_variance",
+//     "min": 4.2195611000061035,
+//     "max": 220.74119567871094
+//   },
+//   {
+//     "name": "batchnormalization_11",
+//     "min": -43.378326416015625,
+//     "max": 50.226585388183594
+//   },
+//   {
+//     "name": "merge_4",
+//     "min": -32.688446044921875,
+//     "max": 39.732421875
+//   },
+//   {
+//     "name": "convolution2d_12",
+//     "min": -513.4615478515625,
+//     "max": 785.3054809570312
+//   },
+//   {
+//     "name": "batchnormalization_12_mean",
+//     "min": -19.262622833251953,
+//     "max": 6.411626815795898
+//   },
+//   {
+//     "name": "batchnormalization_12_residual",
+//     "min": 2.25611529458547e-10,
+//     "max": 609637.875
+//   },
+//   {
+//     "name": "batchnormalization_12_variance",
+//     "min": 129.36819458007812,
+//     "max": 1457.820068359375
+//   },
+//   {
+//     "name": "batchnormalization_12+activation_8",
+//     "min": 0,
+//     "max": 17.36801528930664
+//   },
+//   {
+//     "name": "convolution2d_13",
+//     "min": -720.658447265625,
+//     "max": 665.928466796875
+//   },
+//   {
+//     "name": "batchnormalization_13_mean",
+//     "min": -7.670976161956787,
+//     "max": 8.608590126037598
+//   },
+//   {
+//     "name": "batchnormalization_13_residual",
+//     "min": 1.7195134205394424e-12,
+//     "max": 521323.3125
+//   },
+//   {
+//     "name": "batchnormalization_13_variance",
+//     "min": 4.11276912689209,
+//     "max": 212.0294647216797
+//   },
+//   {
+//     "name": "batchnormalization_13",
+//     "min": -80.00421905517578,
+//     "max": 71.35077667236328
+//   },
+//   {
+//     "name": "merge_5",
+//     "min": -94.991455078125,
+//     "max": 72.77928161621094
+//   },
+//   {
+//     "name": "deconvolution2d_1",
+//     "min": -341.80633544921875,
+//     "max": 651.0524291992188
+//   },
+//   {
+//     "name": "batchnormalization_14_mean",
+//     "min": -5.647652626037598,
+//     "max": 1.4636738300323486
+//   },
+//   {
+//     "name": "batchnormalization_14_residual",
+//     "min": 2.8776980798284058e-11,
+//     "max": 428544.1875
+//   },
+//   {
+//     "name": "batchnormalization_14_variance",
+//     "min": 55.54350280761719,
+//     "max": 219.10662841796875
+//   },
+//   {
+//     "name": "batchnormalization_14+activation_9",
+//     "min": 0,
+//     "max": 71.03335571289062
+//   },
+//   {
+//     "name": "deconvolution2d_2",
+//     "min": -216.25164794921875,
+//     "max": 593.9701538085938
+//   },
+//   {
+//     "name": "batchnormalization_15_mean",
+//     "min": -0.9807345867156982,
+//     "max": 0.35006144642829895
+//   },
+//   {
+//     "name": "batchnormalization_15_residual",
+//     "min": 1.9984014443252818e-15,
+//     "max": 353640.4375
+//   },
+//   {
+//     "name": "batchnormalization_15_variance",
+//     "min": 1.3400719165802002,
+//     "max": 12.161338806152344
+//   },
+//   {
+//     "name": "batchnormalization_15+activation_10",
+//     "min": 0,
+//     "max": 204.03343200683594
+//   },
+//   {
+//     "name": "convolution2d_14",
+//     "min": -2992.584228515625,
+//     "max": 3003.136474609375
+//   },
+//   {
+//     "name": "batchnormalization_16_mean",
+//     "min": -4.172943115234375,
+//     "max": -0.930151104927063
+//   },
+//   {
+//     "name": "batchnormalization_16_residual",
+//     "min": 2.0463630789890885e-10,
+//     "max": 9024416
+//   },
+//   {
+//     "name": "batchnormalization_16_variance",
+//     "min": 363.3876037597656,
+//     "max": 686.4163818359375
+//   },
+//   {
+//     "name": "batchnormalization_16+activation_11",
+//     "min": -1,
+//     "max": 1
+//   }
+// ]
+
+
 const FormatStatistics = [
   {
-    "name": "main_input",
+    "name": "input_1",
+    "min": -113.67900085449219,
+    "max": 150.99400329589844
+  },
+  {
+    "name": "conv1+relu_conv1",
     "min": 0,
-    "max": 255
+    "max": 835.7869873046875
   },
   {
-    "name": "convolution2d_1",
-    "min": -3626.10693359375,
-    "max": 3305.6865234375
-  },
-  {
-    "name": "batchnormalization_1_mean",
-    "min": -1715.647705078125,
-    "max": 1822.1619873046875
-  },
-  {
-    "name": "batchnormalization_1_residual",
-    "min": 3.637978807091713e-12,
-    "max": 10538415
-  },
-  {
-    "name": "batchnormalization_1_variance",
-    "min": 9247.154296875,
-    "max": 228804.765625
-  },
-  {
-    "name": "batchnormalization_1+activation_1",
+    "name": "pool1",
     "min": 0,
-    "max": 13.208250045776367
+    "max": 835.7869873046875
   },
   {
-    "name": "convolution2d_2",
-    "min": -88.34521484375,
-    "max": 63.568145751953125
-  },
-  {
-    "name": "batchnormalization_2_mean",
-    "min": -18.02031135559082,
-    "max": 12.497589111328125
-  },
-  {
-    "name": "batchnormalization_2_residual",
-    "min": 3.552713678800501e-13,
-    "max": 6276.134765625
-  },
-  {
-    "name": "batchnormalization_2_variance",
-    "min": 8.93504524230957,
-    "max": 102.31684112548828
-  },
-  {
-    "name": "batchnormalization_2+activation_2",
+    "name": "fire2/squeeze1x1+fire2/relu_squeeze1x1",
     "min": 0,
-    "max": 11.939108848571777
+    "max": 1087.8956298828125
   },
   {
-    "name": "convolution2d_3",
-    "min": -84.6211166381836,
-    "max": 85.77696990966797
-  },
-  {
-    "name": "batchnormalization_3_mean",
-    "min": -16.070049285888672,
-    "max": 13.691821098327637
-  },
-  {
-    "name": "batchnormalization_3_residual",
-    "min": 3.552713678800501e-13,
-    "max": 7013.689453125
-  },
-  {
-    "name": "batchnormalization_3_variance",
-    "min": 22.92977523803711,
-    "max": 124.43011474609375
-  },
-  {
-    "name": "batchnormalization_3+activation_3",
+    "name": "fire2/expand1x1+fire2/relu_expand1x1",
     "min": 0,
-    "max": 13.623411178588867
+    "max": 528.5732421875
   },
   {
-    "name": "convolution2d_4",
-    "min": -84.64530944824219,
-    "max": 124.49554443359375
+    "name": "fire2/expand3x3",
+    "min": -1276.78955078125,
+    "max": 982.8897705078125
   },
   {
-    "name": "batchnormalization_4_mean",
-    "min": -16.419282913208008,
-    "max": 27.900487899780273
-  },
-  {
-    "name": "batchnormalization_4_residual",
-    "min": 9.094947017729282e-13,
-    "max": 9428.6806640625
-  },
-  {
-    "name": "batchnormalization_4_variance",
-    "min": 19.818931579589844,
-    "max": 442.01885986328125
-  },
-  {
-    "name": "batchnormalization_4+activation_4",
+    "name": "fire2/relu_expand3x3",
     "min": 0,
-    "max": 12.061802864074707
+    "max": 982.8897705078125
   },
   {
-    "name": "convolution2d_5",
-    "min": -78.44379425048828,
-    "max": 73.0664291381836
-  },
-  {
-    "name": "batchnormalization_5_mean",
-    "min": -17.426504135131836,
-    "max": 17.240392684936523
-  },
-  {
-    "name": "batchnormalization_5_residual",
-    "min": 1.8417267710901797e-11,
-    "max": 5685.9599609375
-  },
-  {
-    "name": "batchnormalization_5_variance",
-    "min": 16.863115310668945,
-    "max": 139.30795288085938
-  },
-  {
-    "name": "batchnormalization_5",
-    "min": -7.309256076812744,
-    "max": 6.503152847290039
-  },
-  {
-    "name": "merge_1",
-    "min": -7.309256076812744,
-    "max": 15.004384994506836
-  },
-  {
-    "name": "convolution2d_6",
-    "min": -153.66493225097656,
-    "max": 325.5685729980469
-  },
-  {
-    "name": "batchnormalization_6_mean",
-    "min": -15.474926948547363,
-    "max": 10.63546085357666
-  },
-  {
-    "name": "batchnormalization_6_residual",
-    "min": 6.386926543200389e-10,
-    "max": 110489.859375
-  },
-  {
-    "name": "batchnormalization_6_variance",
-    "min": 129.97276306152344,
-    "max": 2270.09814453125
-  },
-  {
-    "name": "batchnormalization_6+activation_5",
+    "name": "fire2/concat",
     "min": 0,
-    "max": 9.897893905639648
+    "max": 982.8897705078125
   },
   {
-    "name": "convolution2d_7",
-    "min": -170.50607299804688,
-    "max": 132.15560913085938
-  },
-  {
-    "name": "batchnormalization_7_mean",
-    "min": -11.967262268066406,
-    "max": 9.921875953674316
-  },
-  {
-    "name": "batchnormalization_7_residual",
-    "min": 9.094947017729282e-13,
-    "max": 27261.111328125
-  },
-  {
-    "name": "batchnormalization_7_variance",
-    "min": 9.951315879821777,
-    "max": 147.45118713378906
-  },
-  {
-    "name": "batchnormalization_7",
-    "min": -17.087804794311523,
-    "max": 12.716047286987305
-  },
-  {
-    "name": "merge_2",
-    "min": -15.081731796264648,
-    "max": 14.879046440124512
-  },
-  {
-    "name": "convolution2d_8",
-    "min": -165.42617797851562,
-    "max": 532.8707885742188
-  },
-  {
-    "name": "batchnormalization_8_mean",
-    "min": -15.603959083557129,
-    "max": 12.526711463928223
-  },
-  {
-    "name": "batchnormalization_8_residual",
-    "min": 5.684341886080801e-10,
-    "max": 293142.65625
-  },
-  {
-    "name": "batchnormalization_8_variance",
-    "min": 97.04519653320312,
-    "max": 1572.54345703125
-  },
-  {
-    "name": "batchnormalization_8+activation_6",
+    "name": "fire3/squeeze1x1+fire3/relu_squeeze1x1",
     "min": 0,
-    "max": 9.906005859375
+    "max": 958.9950561523438
   },
   {
-    "name": "convolution2d_9",
-    "min": -315.56597900390625,
-    "max": 321.25518798828125
-  },
-  {
-    "name": "batchnormalization_9_mean",
-    "min": -12.702116012573242,
-    "max": 10.204585075378418
-  },
-  {
-    "name": "batchnormalization_9_residual",
-    "min": 4.604316927725449e-12,
-    "max": 102291.90625
-  },
-  {
-    "name": "batchnormalization_9_variance",
-    "min": 7.37477970123291,
-    "max": 130.01266479492188
-  },
-  {
-    "name": "batchnormalization_9",
-    "min": -23.896930694580078,
-    "max": 29.545085906982422
-  },
-  {
-    "name": "merge_3",
-    "min": -19.339553833007812,
-    "max": 19.406970977783203
-  },
-  {
-    "name": "convolution2d_10",
-    "min": -221.14932250976562,
-    "max": 478.88665771484375
-  },
-  {
-    "name": "batchnormalization_10_mean",
-    "min": -16.542442321777344,
-    "max": 10.944856643676758
-  },
-  {
-    "name": "batchnormalization_10_residual",
-    "min": 5.684341886080802e-14,
-    "max": 229578.515625
-  },
-  {
-    "name": "batchnormalization_10_variance",
-    "min": 58.0169677734375,
-    "max": 1163.9898681640625
-  },
-  {
-    "name": "batchnormalization_10+activation_7",
+    "name": "fire3/expand1x1+fire3/relu_expand1x1",
     "min": 0,
-    "max": 15.82600212097168
+    "max": 481.03472900390625
   },
   {
-    "name": "convolution2d_11",
-    "min": -534.5223999023438,
-    "max": 592.5685424804688
+    "name": "fire3/expand3x3",
+    "min": -1245.5400390625,
+    "max": 659.12255859375
   },
   {
-    "name": "batchnormalization_11_mean",
-    "min": -6.993751525878906,
-    "max": 10.276752471923828
-  },
-  {
-    "name": "batchnormalization_11_residual",
-    "min": 2.0463630789890885e-12,
-    "max": 348560.4375
-  },
-  {
-    "name": "batchnormalization_11_variance",
-    "min": 4.2195611000061035,
-    "max": 220.74119567871094
-  },
-  {
-    "name": "batchnormalization_11",
-    "min": -43.378326416015625,
-    "max": 50.226585388183594
-  },
-  {
-    "name": "merge_4",
-    "min": -32.688446044921875,
-    "max": 39.732421875
-  },
-  {
-    "name": "convolution2d_12",
-    "min": -513.4615478515625,
-    "max": 785.3054809570312
-  },
-  {
-    "name": "batchnormalization_12_mean",
-    "min": -19.262622833251953,
-    "max": 6.411626815795898
-  },
-  {
-    "name": "batchnormalization_12_residual",
-    "min": 2.25611529458547e-10,
-    "max": 609637.875
-  },
-  {
-    "name": "batchnormalization_12_variance",
-    "min": 129.36819458007812,
-    "max": 1457.820068359375
-  },
-  {
-    "name": "batchnormalization_12+activation_8",
+    "name": "fire3/relu_expand3x3",
     "min": 0,
-    "max": 17.36801528930664
+    "max": 659.12255859375
   },
   {
-    "name": "convolution2d_13",
-    "min": -720.658447265625,
-    "max": 665.928466796875
-  },
-  {
-    "name": "batchnormalization_13_mean",
-    "min": -7.670976161956787,
-    "max": 8.608590126037598
-  },
-  {
-    "name": "batchnormalization_13_residual",
-    "min": 1.7195134205394424e-12,
-    "max": 521323.3125
-  },
-  {
-    "name": "batchnormalization_13_variance",
-    "min": 4.11276912689209,
-    "max": 212.0294647216797
-  },
-  {
-    "name": "batchnormalization_13",
-    "min": -80.00421905517578,
-    "max": 71.35077667236328
-  },
-  {
-    "name": "merge_5",
-    "min": -94.991455078125,
-    "max": 72.77928161621094
-  },
-  {
-    "name": "deconvolution2d_1",
-    "min": -341.80633544921875,
-    "max": 651.0524291992188
-  },
-  {
-    "name": "batchnormalization_14_mean",
-    "min": -5.647652626037598,
-    "max": 1.4636738300323486
-  },
-  {
-    "name": "batchnormalization_14_residual",
-    "min": 2.8776980798284058e-11,
-    "max": 428544.1875
-  },
-  {
-    "name": "batchnormalization_14_variance",
-    "min": 55.54350280761719,
-    "max": 219.10662841796875
-  },
-  {
-    "name": "batchnormalization_14+activation_9",
+    "name": "fire3/concat",
     "min": 0,
-    "max": 71.03335571289062
+    "max": 659.12255859375
   },
   {
-    "name": "deconvolution2d_2",
-    "min": -216.25164794921875,
-    "max": 593.9701538085938
-  },
-  {
-    "name": "batchnormalization_15_mean",
-    "min": -0.9807345867156982,
-    "max": 0.35006144642829895
-  },
-  {
-    "name": "batchnormalization_15_residual",
-    "min": 1.9984014443252818e-15,
-    "max": 353640.4375
-  },
-  {
-    "name": "batchnormalization_15_variance",
-    "min": 1.3400719165802002,
-    "max": 12.161338806152344
-  },
-  {
-    "name": "batchnormalization_15+activation_10",
+    "name": "pool3",
     "min": 0,
-    "max": 204.03343200683594
+    "max": 659.12255859375
   },
   {
-    "name": "convolution2d_14",
-    "min": -2992.584228515625,
-    "max": 3003.136474609375
+    "name": "fire4/squeeze1x1+fire4/relu_squeeze1x1",
+    "min": 0,
+    "max": 1130.6966552734375
   },
   {
-    "name": "batchnormalization_16_mean",
-    "min": -4.172943115234375,
-    "max": -0.930151104927063
+    "name": "fire4/expand1x1+fire4/relu_expand1x1",
+    "min": 0,
+    "max": 553.9724731445312
   },
   {
-    "name": "batchnormalization_16_residual",
-    "min": 2.0463630789890885e-10,
-    "max": 9024416
+    "name": "fire4/expand3x3",
+    "min": -1349.0439453125,
+    "max": 1046.2935791015625
   },
   {
-    "name": "batchnormalization_16_variance",
-    "min": 363.3876037597656,
-    "max": 686.4163818359375
+    "name": "fire4/relu_expand3x3",
+    "min": 0,
+    "max": 1046.2935791015625
   },
   {
-    "name": "batchnormalization_16+activation_11",
-    "min": -1,
-    "max": 1
-  }
+    "name": "fire4/concat",
+    "min": 0,
+    "max": 1046.2935791015625
+  },
+  {
+    "name": "fire5/squeeze1x1+fire5/relu_squeeze1x1",
+    "min": 0,
+    "max": 994.6986694335938
+  },
+  {
+    "name": "fire5/expand1x1+fire5/relu_expand1x1",
+    "min": 0,
+    "max": 469.5686950683594
+  },
+  {
+    "name": "fire5/expand3x3",
+    "min": -1118.4071044921875,
+    "max": 794.2552490234375
+  },
+  {
+    "name": "fire5/relu_expand3x3",
+    "min": 0,
+    "max": 794.2552490234375
+  },
+  {
+    "name": "fire5/concat",
+    "min": 0,
+    "max": 794.2552490234375
+  },
+  {
+    "name": "pool5",
+    "min": 0,
+    "max": 794.2552490234375
+  },
+  {
+    "name": "fire6/squeeze1x1+fire6/relu_squeeze1x1",
+    "min": 0,
+    "max": 1529.8265380859375
+  },
+  {
+    "name": "fire6/expand1x1+fire6/relu_expand1x1",
+    "min": 0,
+    "max": 863.7772827148438
+  },
+  {
+    "name": "fire6/expand3x3",
+    "min": -1178.98486328125,
+    "max": 815.5369873046875
+  },
+  {
+    "name": "fire6/relu_expand3x3",
+    "min": 0,
+    "max": 815.5369873046875
+  },
+  {
+    "name": "fire6/concat",
+    "min": 0,
+    "max": 863.7772827148438
+  },
+  {
+    "name": "fire7/squeeze1x1+fire7/relu_squeeze1x1",
+    "min": 0,
+    "max": 1051.5531005859375
+  },
+  {
+    "name": "fire7/expand1x1+fire7/relu_expand1x1",
+    "min": 0,
+    "max": 443.2496643066406
+  },
+  {
+    "name": "fire7/expand3x3",
+    "min": -789.2604370117188,
+    "max": 668.0328979492188
+  },
+  {
+    "name": "fire7/relu_expand3x3",
+    "min": 0,
+    "max": 668.0328979492188
+  },
+  {
+    "name": "fire7/concat",
+    "min": 0,
+    "max": 668.0328979492188
+  },
+  {
+    "name": "fire8/squeeze1x1+fire8/relu_squeeze1x1",
+    "min": 0,
+    "max": 593.4243774414062
+  },
+  {
+    "name": "fire8/expand1x1+fire8/relu_expand1x1",
+    "min": 0,
+    "max": 234.11473083496094
+  },
+  {
+    "name": "fire8/expand3x3",
+    "min": -556.43896484375,
+    "max": 530.8920288085938
+  },
+  {
+    "name": "fire8/relu_expand3x3",
+    "min": 0,
+    "max": 530.8920288085938
+  },
+  {
+    "name": "fire8/concat",
+    "min": 0,
+    "max": 530.8920288085938
+  },
+  {
+    "name": "fire9/squeeze1x1+fire9/relu_squeeze1x1",
+    "min": 0,
+    "max": 531.1656494140625
+  },
+  {
+    "name": "fire9/expand1x1+fire9/relu_expand1x1",
+    "min": 0,
+    "max": 284.14593505859375
+  },
+  {
+    "name": "fire9/expand3x3",
+    "min": -658.1574096679688,
+    "max": 371.5225524902344
+  },
+  {
+    "name": "fire9/relu_expand3x3",
+    "min": 0,
+    "max": 371.5225524902344
+  },
+  {
+    "name": "fire9/concat",
+    "min": 0,
+    "max": 371.5225524902344
+  },
+  {
+    "name": "conv10+relu_conv10",
+    "min": 0,
+    "max": 116.50133514404297
+  },
+  {
+    "name": "globalaveragepooling2d_1",
+    "min": 2.625295639038086,
+    "max": 27.529251098632812
+  },
+  // {
+  //   "name": "loss_expsum",
+  //   "min": 1319031537664,
+  //   "max": 1319031537664
+  // },
+  // {
+  //   "name": "loss",
+  //   "min": 1.0468782958572564e-11,
+  //   "max": 0.6847723126411438
+  // }
 ]
+
+// C.network.map(k => {
+//   var data = C.info[k.name].output.read();
+//   return {
+//     name: k.name,
+//     min: ndops.inf(data),
+//     max: ndops.sup(data)
+//   }
+// })
 
 function getFormat(layer){
 
@@ -561,11 +819,10 @@ function ComputeMean(gl, layer, deps){
 function ExpSum(gl, layer, deps){
     const SHADER = `
         uniform Tensor image;
-        const int channels = (#(image.shape).z - 1) / 4 + 1;
 
         vec4 process4(ivec4 pos) {
             vec4 sumVal = vec4(0);
-            for(int i = 0; i < channels; i++){
+            for(int i = 0; i < #(image.shape).z; i+=4){
                 sumVal += exp(image.read4(ivec4(0, 0, i, 0)));
             }
             return vec4(dot(sumVal, vec4(1)));
@@ -574,7 +831,7 @@ function ExpSum(gl, layer, deps){
     console.assert(deps.image.shape[0] == 1)
     console.assert(deps.image.shape[1] == 1)
     console.assert(deps.image.shape[3] == 1)
-    var softmaxHelper = new OutputTensor(gl, [1, 1, 4])
+    var softmaxHelper = new OutputTensor(gl, [1, 1, 4], getFormat(layer))
     return TensorProgram(SHADER, softmaxHelper, {
         image: deps.image
     })
@@ -587,7 +844,7 @@ function Softmax(gl, layer, deps){
         uniform Tensor helper;
 
         vec4 process4(ivec4 pos) {
-            return exp(image.read4(pos)) / helper_read4(ivec4(0));
+            return exp(image.read4(pos)) / helper.read4(ivec4(0));
         }
     `
     console.assert(deps.helper.shape[0] == 1)
@@ -595,7 +852,7 @@ function Softmax(gl, layer, deps){
     console.assert(deps.helper.shape[2] == 4)
     console.assert(deps.helper.shape[3] == 1)
 
-    var output = new OutputTensor(gl, deps.image.shape)
+    var output = new OutputTensor(gl, deps.image.shape, getFormat(layer))
 
     return TensorProgram(SHADER, output, {
         image: deps.image,
@@ -610,7 +867,7 @@ function Sum(gl, layer, deps){
         uniform Tensor b;
 
         vec4 process4(ivec4 pos) {
-            return a_read4(pos) + b_read4(pos);
+            return a.read4(pos) + b.read4(pos);
         }
     `
     if(deps.a.shape.some((k, i) => k != deps.b.shape[i]))
@@ -671,7 +928,7 @@ function Activation(gl, layer, deps){
         }
     `
     console.assert(['tanh', 'relu'].includes(layer.activation))
-    var output = new OutputTensor(gl, deps.image.shape)
+    var output = new OutputTensor(gl, deps.image.shape, getFormat(layer))
     return TensorProgram(SHADER, output, {
         image: deps.image,
         _activation: layer.activation
@@ -701,17 +958,16 @@ function ChannelFullyConnected(gl, layer, deps){
         uniform Tensor weights;
         uniform Tensor bias;
 
-        const int imageTileCount = (#(image.shape).z - 1) / 4 + 1;
         vec4 process4(ivec4 pos) {
-            vec4 sum = bias_read4(ivec4(0, 0, pos.z, 0));
+            vec4 sum = bias.read4(ivec4(0, 0, pos.z, 0));
 
-            for(int f = 0; f < imageTileCount; f++){
+            for(int f = 0; f < #(image.shape).z; f += 4){
                 vec4 inputPix = image.read4(ivec4(0, 0, f, 0));
 
-                sum += inputPix.r * weights_read4(ivec4(0, 0, pos.z, 4 * f + 0))
-                     + inputPix.g * weights_read4(ivec4(0, 0, pos.z, 4 * f + 1))
-                     + inputPix.b * weights_read4(ivec4(0, 0, pos.z, 4 * f + 2))
-                     + inputPix.a * weights_read4(ivec4(0, 0, pos.z, 4 * f + 3));
+                sum += inputPix.r * weights.read4(ivec4(0, 0, pos.z, f + 0))
+                     + inputPix.g * weights.read4(ivec4(0, 0, pos.z, f + 1))
+                     + inputPix.b * weights.read4(ivec4(0, 0, pos.z, f + 2))
+                     + inputPix.a * weights.read4(ivec4(0, 0, pos.z, f + 3));
             }
             return sum;
         }
@@ -890,9 +1146,9 @@ function InstanceNormalize(gl, layer, deps){
 
         vec4 process4(ivec4 pos) {
             vec4 tileMean = mean.read4(ivec4(0, 0, pos.z, 0));
-            vec4 tileStd = vec4(eps, eps, eps, eps) + sqrt(variance_read4(ivec4(0, 0, pos.z, 0)));
-            vec4 tileBeta = beta_read4(ivec4(0, 0, pos.z, 0));
-            vec4 tileGamma = gamma_read4(ivec4(0, 0, pos.z, 0));
+            vec4 tileStd = vec4(eps, eps, eps, eps) + sqrt(variance.read4(ivec4(0, 0, pos.z, 0)));
+            vec4 tileBeta = beta.read4(ivec4(0, 0, pos.z, 0));
+            vec4 tileGamma = gamma.read4(ivec4(0, 0, pos.z, 0));
             vec4 pix = image.read4(ivec4(pos.xyz, 0));
             return (pix - tileMean) / tileStd * tileGamma + tileBeta;
         }
@@ -922,8 +1178,8 @@ function BatchNormalize(gl, layer, deps){
 
         vec4 process4(ivec4 pos) {
             return (image.read4(ivec4(pos.xyz, 0)) + 
-                beta_read4(ivec4(0, 0, pos.z, 0))) * 
-                gamma_read4(ivec4(0, 0, pos.z, 0));
+                beta.read4(ivec4(0, 0, pos.z, 0))) * 
+                gamma.read4(ivec4(0, 0, pos.z, 0));
         }
     `
 
@@ -1103,7 +1359,7 @@ function BiasConvolve2D(gl, layer, deps){
         const ivec2 kernelTileSize = #(kernel.shape).xy;
 
         vec4 process4(ivec4 pos){
-            vec4 sum = bias_read4(ivec4(0, 0, pos.z, 0));
+            vec4 sum = bias.read4(ivec4(0, 0, pos.z, 0));
 
             for(int f = 0; f < #(image.shape).z; f += 4){
                 for(int kx = 0; kx < kernelTileSize.x; kx++){
@@ -1134,7 +1390,7 @@ function BiasConvolve2D(gl, layer, deps){
 
     var { inputPadding, outputShape } = calcOutputShape(deps.image.shape, 
         [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.subsample, layer.border_mode)
-    var outputTensor = new OutputTensor(gl, outputShape)
+    var outputTensor = new OutputTensor(gl, outputShape, getFormat(layer))
 
     return TensorProgram(SHADER, outputTensor, {
         kernel: kernelTensor,
@@ -1179,7 +1435,7 @@ function MaxPooling2D(gl, layer, deps){
         layer.strides, layer.border_mode)
 
 
-    var outputTensor = new OutputTensor(gl, outputShape)
+    var outputTensor = new OutputTensor(gl, outputShape, getFormat(layer))
     return TensorProgram(SHADER, outputTensor, {
         image: deps.image,
 
@@ -1241,10 +1497,10 @@ function ConcatChannel(gl, layer, deps){
         uniform Tensor b;
 
         vec4 process4(ivec4 pos) {
-            if(pos.z < a.shape.z / 4){
-                return a_read4(pos);
+            if(pos.z < a.shape.z){
+                return a.read4(pos);
             }else{
-                return b_read4(ivec4(pos.xy, pos.z - a.shape.z / 4, pos.w));
+                return b.read4(ivec4(pos.xy, pos.z - a.shape.z, pos.w));
             }
         }
     `
@@ -1261,7 +1517,7 @@ function ConcatChannel(gl, layer, deps){
     var output = new OutputTensor(gl, [
         deps.a.shape[0], deps.a.shape[1], 
         deps.a.shape[2] + deps.b.shape[2],
-        deps.a.shape[3]]);
+        deps.a.shape[3]], getFormat(layer));
 
     return TensorProgram(SHADER, output, {
         a: deps.a,

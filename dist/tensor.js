@@ -508,8 +508,8 @@ Object.defineProperty(exports, "__esModule", {
 exports.init = init;
 exports.pack = pack;
 exports.unpack = unpack;
-var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nfloat @read(ivec4 pos){\n\tfloat tile = dot(vec4(pos), vec4(1, @shape.x, @shape.x * @shape.y, @shape.x * @shape.y * @shape.z));\n\treturn @decode1(texture2D(@tex, \n\t\tvec2(mod(tile, float(@texSize.x)) + 0.5, floor(tile / float(@texSize.x)) + 0.5) / vec2(@texSize)));\n}\n';
-var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\n\n// vec4 clampify(vec4 v){\n//     return vec4(ivec4(clamp(v, vec4(0), vec4(1)) * 255.0)) / 255.0;\n// }\n\nfloat process(ivec4 pos);\nvoid main(){\n\tint tile = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint chunks = @shape.x * @shape.y * @shape.z * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tgl_FragColor = @encode1(@activation1(process(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\timod(tile / @shape.x / @shape.y, @shape.z ),\n\t\ttile / @shape.x / @shape.y / @shape.z\n\t))));\n}';
+var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform vec4 @stride;\n\nfloat @read(ivec4 pos){\n\tfloat tile = dot(vec4(pos), @stride);\n\treturn @decode1(texture2D(@tex, \n\t\tvec2(\n\t\t\tmod(tile, float(@texSize.x)) + 0.5, \n\t\t\tfloor(tile / float(@texSize.x)) + 0.5\n\t\t) / vec2(@texSize)));\n}\n';
+var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform vec4 @stride;\n\n// vec4 clampify(vec4 v){\n//     return vec4(ivec4(clamp(v, vec4(0), vec4(1)) * 255.0)) / 255.0;\n// }\n\nfloat process(ivec4 pos);\nvoid main(){\n\tint tile = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint chunks = @shape.x * @shape.y * @shape.z * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tgl_FragColor = @encode1(@activation1(process(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\timod(tile / @shape.x / @shape.y, @shape.z ),\n\t\ttile / @shape.x / @shape.y / @shape.z\n\t))));\n}';
 
 function init(shape) {
     // var length = 4 * Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
@@ -520,7 +520,9 @@ function init(shape) {
     var texSize = [cols, Math.ceil(length / cols)];
     return {
         texSize: texSize,
-        shape: shape
+        shape: shape,
+        // vec4(1, @shape.x, @shape.x * @shape.y, @shape.x * @shape.y * @shape.z)
+        stride: [1, shape[0], shape[0] * shape[1], shape[0] * shape[1] * shape[2]]
     };
 }
 
@@ -651,6 +653,8 @@ Object.defineProperty(exports, "__esModule", {
 	value: true
 });
 exports.init = init;
+exports.encode = encode;
+exports.decode = decode;
 var encodeShader = exports.encodeShader = 'uniform vec2 @range;\n\nvec4 @encode4(vec4 v){\n\treturn (v - vec4(@range.x)) / vec4(@range.y - @range.x);\n}';
 var decodeShader = exports.decodeShader = 'uniform vec2 @range;\n\nvec4 @decode4(vec4 v){\n\treturn v * vec4(@range.y - @range.x) + vec4(@range.x);\n}';
 
@@ -660,6 +664,21 @@ function init(shape, format) {
 		// max: ,
 		// min: ,
 	};
+}
+
+function encode(data, r, g, b, a, info) {
+	throw new Error('not implemented');
+	// data[0] = r;
+	// data[1] = g;
+	// data[2] = b;
+	// data[3] = a;
+}
+
+function decode(data, r, g, b, a, info) {
+	data[0] = r / 255 * (info.range[1] - info.range[0]) + info.range[0];
+	data[1] = g / 255 * (info.range[1] - info.range[0]) + info.range[0];
+	data[2] = b / 255 * (info.range[1] - info.range[0]) + info.range[0];
+	data[3] = a / 255 * (info.range[1] - info.range[0]) + info.range[0];
 }
 
 },{}],12:[function(require,module,exports){
@@ -805,7 +824,7 @@ function pack(info, array, encode4, format) {
 
 function unpack(info, data, decode4, type) {
     var shape = info.shape;
-    var length = shape.reduce(function (a, b) {
+    var shapelength = shape.reduce(function (a, b) {
         return a * b;
     });
 
@@ -816,13 +835,14 @@ function unpack(info, data, decode4, type) {
 
     var chans = Math.ceil(info.shape[2] / 4);
 
-    if (type === 'float32') {
-        var array = ndarray(new Float32Array(length), shape);
-        var buf = new Float32Array(4);
-    } else if (type == 'uint8') {
-        var array = ndarray(new Uint8Array(length), shape);
-        var buf = new Uint8Array(4);
-    } else throw new Error('unimplemented type');
+    // if(type === 'float32'){
+    var array = ndarray(new Float32Array(shapelength), shape);
+    var buf = new Float32Array(4);
+    // }else if(type == 'uint8'){
+    //     var array = ndarray(new Uint8Array(shapelength), shape)
+    //     var buf = new Uint8Array(4);
+    // }else throw new Error('unimplemented type');
+
 
     for (var i = 0; i < info.shape[0]; i++) {
         for (var j = 0; j < info.shape[1]; j++) {
@@ -2014,7 +2034,7 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             format = { type: 'uint8', pack: 'stride', density: '1:4', codec: 'softfloat' };
             type = 'float32';
         } else if (format === 'uint8' || format === 'float32') {
-            format = { type: format, pack: 'tile', density: '4:4', codec: 'raw' };
+            format = { type: format, pack: 'stride', density: '4:4', codec: 'raw' };
         }
 
         _this.type = type || format.type;

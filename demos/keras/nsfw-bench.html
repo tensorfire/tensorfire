@@ -1,0 +1,225 @@
+<body>
+<script src="../../dist/demo-util.js"></script>
+<script src="../../dist/tensor.js"></script>
+
+<style type="text/css">
+    body {
+        font-family: sans-serif;
+    }
+</style>
+
+<script src="layers.js"></script>
+<script src="util.js"></script>
+<script src="network.js"></script>
+<script src="lodash.js"></script>
+<script src="benchmark.js"></script>
+<script src="keras_import.js"></script>
+<script src="imagenet.js"></script>
+<div id="results"></div>
+
+<script>
+var gl = KV.createGL(),
+    OutputTensor = KV.OutputTensor,
+    Tensor = KV.Tensor,
+    InPlaceTensor = KV.InPlaceTensor,
+    TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
+gl.canvas.width = 256
+gl.canvas.height = 256
+
+
+
+async function stylize(){
+    // var keras_model = await loadJSON('models/nsfw-squeeze-fine.json');
+    // var keras_model_meta = await loadJSON('models/nsfw-squeeze-fine_metadata.json');
+    // var buffer = await loadBuffer('models/nsfw-squeeze-fine_weights.buf');
+    var keras_model = await loadJSON('models/parkay.json');
+    var keras_model_meta = await loadJSON('models/parkay_metadata.json');
+    var buffer = await loadBuffer('models/parkay_weights.buf');
+
+
+    var network = import_keras_network(keras_model, keras_model_meta, buffer)
+
+    // var image = (await loadArrayFromURL('data/convolution2d_1-input-315x420x3')).transpose(1, 0, 2)
+    // var image = (await loadArrayFromURL('data/input-382x508x3')).transpose(1, 0, 2)
+
+    var image = (await loadArrayFromURL('data/cat-227x227x3')).transpose(1, 0, 2);
+    ;(new Tensor(gl, image)).show({ offset: 0.5, scale: 1/256, flipY: true })
+
+    
+    var compiled = await compile(gl, network, { input_1: image })
+    C = compiled
+    // console.time('squeeze')
+    // await run(gl, compiled, { main_input: image, layerPause: true })
+    // // C.info['batchnormalization_16+activation_11'].output.read()
+    // // C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
+    // console.timeEnd('squeeze')
+
+    console.time('squeeze')
+    await run(gl, compiled, { main_input: image, layerPause: true })
+    // C.info['batchnormalization_16+activation_11'].output.read()
+    // C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
+    C.info.loss.output.show()
+    var data = compiled.info.loss.output.read().data
+    console.timeEnd('squeeze')
+
+
+
+    
+        var results = Array.from(compiled.info.loss.output.read().data)
+            .map((k, i) => [imagenetClasses[i][1], k])
+            .sort((b, a) => a[1] - b[1])
+            .slice(0, 10);
+
+
+    document.body.style.background = data[1] > 0.85 ? 'red' : 'green'
+
+
+    var table = h('table', h('tbody', 
+        results.map(k => 
+            h('tr', [
+                h('td', k[0]),
+                h('td', (k[1] * 100).toFixed(2) + '%' )
+            ])
+        )
+    ))
+
+    // document.getElementById('results').innerHTML = (endTime - startTime) + 'ms '
+    document.getElementById('results').appendChild(table)
+
+    await new Promise(x => requestAnimationFrame(x))
+    
+    // await new Promise(e => setTimeout(e, 1000))
+
+    // console.time('stylize')
+    // await run(gl, compiled, { main_input: image, layerPause: true })
+    // // C.info['batchnormalization_16+activation_11'].output.read()
+    // // C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
+    // console.timeEnd('stylize')
+
+    // console.time('stylize')
+    // await run(gl, compiled, { main_input: image, layerPause: false })
+    // C.info['batchnormalization_16+activation_11'].output.read()
+    // C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
+    // console.timeEnd('stylize')
+    
+    // await destroy(gl, compiled)
+
+    // var bench = new Benchmark('foo', {
+
+    //   // a flag to indicate the benchmark is deferred
+    //   'defer': true,
+
+    //   // benchmark test function
+    //   'fn': function(deferred) {
+    //     // call `Deferred#resolve` when the deferred test is finished
+    //     // console.log(deferred)
+        
+    //     setTimeout(function(){
+    //         deferred.elapsed = 7;
+    //         deferred.resolve();
+    //     }, 10)
+        
+    //   }
+    // });
+
+    // bench.on('complete', function(){
+    //     console.log(bench.toString())
+    // })
+    // bench.run({ async: true })
+    // console.log(bench)
+    var times = []
+    for(var i = 0; i < 30; i++){
+        var start = performance.now();
+        // var data = await new Promise(resolve => 
+        //     C.info["fire7/squeeze1x1+fire7/relu_squeeze1x1"].run(null, resolve))
+        // times.push(data.gpuTime / 1000)
+        await run(gl, compiled, { main_input: image, layerPause: false })
+        // C.info['batchnormalization_16+activation_11'].output.read()
+        // C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
+        var data = compiled.info.loss.output.read().data
+
+        times.push((performance.now() - start) / 1000)
+    }
+    console.log(times)
+    /**
+    * T-Distribution two-tailed critical values for 95% confidence.
+    * For more info see http://www.itl.nist.gov/div898/handbook/eda/section3/eda3672.htm.
+    */
+    var tTable = {
+        '1':  12.706, '2':  4.303, '3':  3.182, '4':  2.776, '5':  2.571, '6':  2.447,
+        '7':  2.365,  '8':  2.306, '9':  2.262, '10': 2.228, '11': 2.201, '12': 2.179,
+        '13': 2.16,   '14': 2.145, '15': 2.131, '16': 2.12,  '17': 2.11,  '18': 2.101,
+        '19': 2.093,  '20': 2.086, '21': 2.08,  '22': 2.074, '23': 2.069, '24': 2.064,
+        '25': 2.06,   '26': 2.056, '27': 2.052, '28': 2.048, '29': 2.045, '30': 2.042,
+        'infinity': 1.96
+    };
+
+    var mean = _.mean(times),
+        size = times.length,
+        variance = _.reduce(times, 
+            (sum, x) => sum + Math.pow(x - mean, 2)
+        , 0) / (size - 1) || 0,
+        sd = Math.sqrt(variance),
+        // Compute the standard error of the mean (a.k.a. the standard deviation of the sampling distribution of the sample mean).
+        sem = sd / Math.sqrt(size);
+        // Compute the degrees of freedom.
+        df = size - 1,
+        // Compute the critical value.
+        critical = tTable[Math.round(df) || 1] || tTable.infinity,
+        // Compute the margin of error.
+        moe = sem * critical,
+        // Compute the relative margin of error.
+        rme = (moe / mean) * 100 || 0,
+        hz = 1 / mean;
+    
+    var stats = {
+        'deviation': sd,
+        'mean': mean,
+        'moe': moe,
+        'rme': rme,
+        'sem': sem,
+        'variance': variance
+    }
+
+
+    console.log(stats)
+
+    console.log(formatNumber(hz.toFixed(hz < 100 ? 2 : 0)) + ' ops/sec ' + '\xb1' +
+          stats.rme.toFixed(2) + '% (' + size + ' run' + (size == 1 ? '' : 's') + ' sampled)');
+
+
+    
+}
+
+function formatNumber(number) {
+  number = String(number).split('.');
+  return number[0].replace(/(?=(?:\d{3})+$)(?!\b)/g, ',') +
+    (number[1] ? '.' + number[1] : '');
+}
+
+stylize()
+
+
+// var suite = new Benchmark.Suite;
+
+// // add tests
+// suite.add('RegExp#test', function() {
+//   /o/.test('Hello World!');
+// })
+// .add('String#indexOf', function() {
+//   'Hello World!'.indexOf('o') > -1;
+// })
+// .add('String#match', function() {
+//   !!'Hello World!'.match(/o/);
+// })
+// // add listeners
+// .on('cycle', function(event) {
+//   console.log(String(event.target));
+// })
+// .on('complete', function() {
+//   console.log('Fastest is ' + this.filter('fastest').map('name'));
+// })
+// // run async
+// .run({ 'async': true });
+
+</script>
