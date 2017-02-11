@@ -3,6 +3,7 @@ async function compile(gl, network, options){
 
     console.time('compiling network')
     var finished = 0;
+    console.groupCollapsed('compiling')
     while(true){
         var pending = network
             .filter(k => !(k.name in info));
@@ -29,6 +30,7 @@ async function compile(gl, network, options){
             if(options.progress) await options.progress(finished / network.length, layer);
         }
     }
+    console.groupEnd('compiling')
     console.timeEnd('compiling network')
     
     return { network, info };

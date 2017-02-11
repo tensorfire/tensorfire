@@ -1,5 +1,6 @@
 uniform ivec2 @texSize;
 uniform ivec4 @shape;
+uniform ivec4 @stride;
 
 vec4 process4(ivec4 pos);
 void main(){

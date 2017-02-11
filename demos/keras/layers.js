@@ -2,8 +2,8 @@ function TensorProgram(shader, out, uniforms){
     out.compile(shader, uniforms)
     return {
         output: out,
-        run(){
-            out.run(shader, uniforms)
+        run(options, callback){
+            out.run(shader, uniforms, callback)
         },
         destroy(){
             out.destroy()
@@ -33,6 +33,479 @@ function InputLayer(gl, layer, deps, options){
     }
 }
 
+const FormatStatistics = [
+  {
+    "name": "main_input",
+    "min": 0,
+    "max": 255
+  },
+  {
+    "name": "convolution2d_1",
+    "min": -3626.10693359375,
+    "max": 3305.6865234375
+  },
+  {
+    "name": "batchnormalization_1_mean",
+    "min": -1715.647705078125,
+    "max": 1822.1619873046875
+  },
+  {
+    "name": "batchnormalization_1_residual",
+    "min": 3.637978807091713e-12,
+    "max": 10538415
+  },
+  {
+    "name": "batchnormalization_1_variance",
+    "min": 9247.154296875,
+    "max": 228804.765625
+  },
+  {
+    "name": "batchnormalization_1+activation_1",
+    "min": 0,
+    "max": 13.208250045776367
+  },
+  {
+    "name": "convolution2d_2",
+    "min": -88.34521484375,
+    "max": 63.568145751953125
+  },
+  {
+    "name": "batchnormalization_2_mean",
+    "min": -18.02031135559082,
+    "max": 12.497589111328125
+  },
+  {
+    "name": "batchnormalization_2_residual",
+    "min": 3.552713678800501e-13,
+    "max": 6276.134765625
+  },
+  {
+    "name": "batchnormalization_2_variance",
+    "min": 8.93504524230957,
+    "max": 102.31684112548828
+  },
+  {
+    "name": "batchnormalization_2+activation_2",
+    "min": 0,
+    "max": 11.939108848571777
+  },
+  {
+    "name": "convolution2d_3",
+    "min": -84.6211166381836,
+    "max": 85.77696990966797
+  },
+  {
+    "name": "batchnormalization_3_mean",
+    "min": -16.070049285888672,
+    "max": 13.691821098327637
+  },
+  {
+    "name": "batchnormalization_3_residual",
+    "min": 3.552713678800501e-13,
+    "max": 7013.689453125
+  },
+  {
+    "name": "batchnormalization_3_variance",
+    "min": 22.92977523803711,
+    "max": 124.43011474609375
+  },
+  {
+    "name": "batchnormalization_3+activation_3",
+    "min": 0,
+    "max": 13.623411178588867
+  },
+  {
+    "name": "convolution2d_4",
+    "min": -84.64530944824219,
+    "max": 124.49554443359375
+  },
+  {
+    "name": "batchnormalization_4_mean",
+    "min": -16.419282913208008,
+    "max": 27.900487899780273
+  },
+  {
+    "name": "batchnormalization_4_residual",
+    "min": 9.094947017729282e-13,
+    "max": 9428.6806640625
+  },
+  {
+    "name": "batchnormalization_4_variance",
+    "min": 19.818931579589844,
+    "max": 442.01885986328125
+  },
+  {
+    "name": "batchnormalization_4+activation_4",
+    "min": 0,
+    "max": 12.061802864074707
+  },
+  {
+    "name": "convolution2d_5",
+    "min": -78.44379425048828,
+    "max": 73.0664291381836
+  },
+  {
+    "name": "batchnormalization_5_mean",
+    "min": -17.426504135131836,
+    "max": 17.240392684936523
+  },
+  {
+    "name": "batchnormalization_5_residual",
+    "min": 1.8417267710901797e-11,
+    "max": 5685.9599609375
+  },
+  {
+    "name": "batchnormalization_5_variance",
+    "min": 16.863115310668945,
+    "max": 139.30795288085938
+  },
+  {
+    "name": "batchnormalization_5",
+    "min": -7.309256076812744,
+    "max": 6.503152847290039
+  },
+  {
+    "name": "merge_1",
+    "min": -7.309256076812744,
+    "max": 15.004384994506836
+  },
+  {
+    "name": "convolution2d_6",
+    "min": -153.66493225097656,
+    "max": 325.5685729980469
+  },
+  {
+    "name": "batchnormalization_6_mean",
+    "min": -15.474926948547363,
+    "max": 10.63546085357666
+  },
+  {
+    "name": "batchnormalization_6_residual",
+    "min": 6.386926543200389e-10,
+    "max": 110489.859375
+  },
+  {
+    "name": "batchnormalization_6_variance",
+    "min": 129.97276306152344,
+    "max": 2270.09814453125
+  },
+  {
+    "name": "batchnormalization_6+activation_5",
+    "min": 0,
+    "max": 9.897893905639648
+  },
+  {
+    "name": "convolution2d_7",
+    "min": -170.50607299804688,
+    "max": 132.15560913085938
+  },
+  {
+    "name": "batchnormalization_7_mean",
+    "min": -11.967262268066406,
+    "max": 9.921875953674316
+  },
+  {
+    "name": "batchnormalization_7_residual",
+    "min": 9.094947017729282e-13,
+    "max": 27261.111328125
+  },
+  {
+    "name": "batchnormalization_7_variance",
+    "min": 9.951315879821777,
+    "max": 147.45118713378906
+  },
+  {
+    "name": "batchnormalization_7",
+    "min": -17.087804794311523,
+    "max": 12.716047286987305
+  },
+  {
+    "name": "merge_2",
+    "min": -15.081731796264648,
+    "max": 14.879046440124512
+  },
+  {
+    "name": "convolution2d_8",
+    "min": -165.42617797851562,
+    "max": 532.8707885742188
+  },
+  {
+    "name": "batchnormalization_8_mean",
+    "min": -15.603959083557129,
+    "max": 12.526711463928223
+  },
+  {
+    "name": "batchnormalization_8_residual",
+    "min": 5.684341886080801e-10,
+    "max": 293142.65625
+  },
+  {
+    "name": "batchnormalization_8_variance",
+    "min": 97.04519653320312,
+    "max": 1572.54345703125
+  },
+  {
+    "name": "batchnormalization_8+activation_6",
+    "min": 0,
+    "max": 9.906005859375
+  },
+  {
+    "name": "convolution2d_9",
+    "min": -315.56597900390625,
+    "max": 321.25518798828125
+  },
+  {
+    "name": "batchnormalization_9_mean",
+    "min": -12.702116012573242,
+    "max": 10.204585075378418
+  },
+  {
+    "name": "batchnormalization_9_residual",
+    "min": 4.604316927725449e-12,
+    "max": 102291.90625
+  },
+  {
+    "name": "batchnormalization_9_variance",
+    "min": 7.37477970123291,
+    "max": 130.01266479492188
+  },
+  {
+    "name": "batchnormalization_9",
+    "min": -23.896930694580078,
+    "max": 29.545085906982422
+  },
+  {
+    "name": "merge_3",
+    "min": -19.339553833007812,
+    "max": 19.406970977783203
+  },
+  {
+    "name": "convolution2d_10",
+    "min": -221.14932250976562,
+    "max": 478.88665771484375
+  },
+  {
+    "name": "batchnormalization_10_mean",
+    "min": -16.542442321777344,
+    "max": 10.944856643676758
+  },
+  {
+    "name": "batchnormalization_10_residual",
+    "min": 5.684341886080802e-14,
+    "max": 229578.515625
+  },
+  {
+    "name": "batchnormalization_10_variance",
+    "min": 58.0169677734375,
+    "max": 1163.9898681640625
+  },
+  {
+    "name": "batchnormalization_10+activation_7",
+    "min": 0,
+    "max": 15.82600212097168
+  },
+  {
+    "name": "convolution2d_11",
+    "min": -534.5223999023438,
+    "max": 592.5685424804688
+  },
+  {
+    "name": "batchnormalization_11_mean",
+    "min": -6.993751525878906,
+    "max": 10.276752471923828
+  },
+  {
+    "name": "batchnormalization_11_residual",
+    "min": 2.0463630789890885e-12,
+    "max": 348560.4375
+  },
+  {
+    "name": "batchnormalization_11_variance",
+    "min": 4.2195611000061035,
+    "max": 220.74119567871094
+  },
+  {
+    "name": "batchnormalization_11",
+    "min": -43.378326416015625,
+    "max": 50.226585388183594
+  },
+  {
+    "name": "merge_4",
+    "min": -32.688446044921875,
+    "max": 39.732421875
+  },
+  {
+    "name": "convolution2d_12",
+    "min": -513.4615478515625,
+    "max": 785.3054809570312
+  },
+  {
+    "name": "batchnormalization_12_mean",
+    "min": -19.262622833251953,
+    "max": 6.411626815795898
+  },
+  {
+    "name": "batchnormalization_12_residual",
+    "min": 2.25611529458547e-10,
+    "max": 609637.875
+  },
+  {
+    "name": "batchnormalization_12_variance",
+    "min": 129.36819458007812,
+    "max": 1457.820068359375
+  },
+  {
+    "name": "batchnormalization_12+activation_8",
+    "min": 0,
+    "max": 17.36801528930664
+  },
+  {
+    "name": "convolution2d_13",
+    "min": -720.658447265625,
+    "max": 665.928466796875
+  },
+  {
+    "name": "batchnormalization_13_mean",
+    "min": -7.670976161956787,
+    "max": 8.608590126037598
+  },
+  {
+    "name": "batchnormalization_13_residual",
+    "min": 1.7195134205394424e-12,
+    "max": 521323.3125
+  },
+  {
+    "name": "batchnormalization_13_variance",
+    "min": 4.11276912689209,
+    "max": 212.0294647216797
+  },
+  {
+    "name": "batchnormalization_13",
+    "min": -80.00421905517578,
+    "max": 71.35077667236328
+  },
+  {
+    "name": "merge_5",
+    "min": -94.991455078125,
+    "max": 72.77928161621094
+  },
+  {
+    "name": "deconvolution2d_1",
+    "min": -341.80633544921875,
+    "max": 651.0524291992188
+  },
+  {
+    "name": "batchnormalization_14_mean",
+    "min": -5.647652626037598,
+    "max": 1.4636738300323486
+  },
+  {
+    "name": "batchnormalization_14_residual",
+    "min": 2.8776980798284058e-11,
+    "max": 428544.1875
+  },
+  {
+    "name": "batchnormalization_14_variance",
+    "min": 55.54350280761719,
+    "max": 219.10662841796875
+  },
+  {
+    "name": "batchnormalization_14+activation_9",
+    "min": 0,
+    "max": 71.03335571289062
+  },
+  {
+    "name": "deconvolution2d_2",
+    "min": -216.25164794921875,
+    "max": 593.9701538085938
+  },
+  {
+    "name": "batchnormalization_15_mean",
+    "min": -0.9807345867156982,
+    "max": 0.35006144642829895
+  },
+  {
+    "name": "batchnormalization_15_residual",
+    "min": 1.9984014443252818e-15,
+    "max": 353640.4375
+  },
+  {
+    "name": "batchnormalization_15_variance",
+    "min": 1.3400719165802002,
+    "max": 12.161338806152344
+  },
+  {
+    "name": "batchnormalization_15+activation_10",
+    "min": 0,
+    "max": 204.03343200683594
+  },
+  {
+    "name": "convolution2d_14",
+    "min": -2992.584228515625,
+    "max": 3003.136474609375
+  },
+  {
+    "name": "batchnormalization_16_mean",
+    "min": -4.172943115234375,
+    "max": -0.930151104927063
+  },
+  {
+    "name": "batchnormalization_16_residual",
+    "min": 2.0463630789890885e-10,
+    "max": 9024416
+  },
+  {
+    "name": "batchnormalization_16_variance",
+    "min": 363.3876037597656,
+    "max": 686.4163818359375
+  },
+  {
+    "name": "batchnormalization_16+activation_11",
+    "min": -1,
+    "max": 1
+  }
+]
+
+function getFormat(layer){
+
+    var stats = FormatStatistics.find(k => k.name == layer.name)
+    if(stats){
+    return undefined
+        // if(layer.name == 'batchnormalization_1_residual'){
+        //     return undefined
+        // }
+        if(layer.name.endsWith('_residual')){
+            // if(stats.max > 10000){
+            //     return {type: "uint8", pack: "stride", density: "4:4", codec: "linquant", min: 0, max: 10000 }
+            // }else{
+            //     return {type: "uint8", pack: "stride", density: "4:4", codec: "linquant", min: 0, max: 2000 }
+            // }
+            
+            // return undefined
+        }
+        if(layer.name.endsWith('_mean')){
+            // return {type: "uint8", pack: "stride", density: "4:4", codec: "linquant", min: -7, max: 7 }
+            // return undefined
+        }
+        if(layer.name.endsWith('_variance')){
+            // return {type: "uint8", pack: "stride", density: "4:4", codec: "linquant", min: 0, max: 100000 }
+            // return undefined
+        }
+        if(layer.name.startsWith('convolution2d_')){
+            // return {type: "uint8", pack: "stride", density: "4:4", codec: "linquant", min: 0, max: 100000 }
+            // return undefined
+        }
+        if(layer.name.startsWith('deconvolution2d_')){
+            // return {type: "uint8", pack: "stride", density: "4:4", codec: "linquant", min: 0, max: 100000 }
+            // return undefined
+        }
+        return {type: "uint8", pack: "stride", density: "4:4", codec: "linquant", min: stats.min, max: stats.max }
+    }
+    return undefined
+}
+
+
+
 
 function ComputeMean(gl, layer, deps){
     const SHADER = `
@@ -49,7 +522,8 @@ function ComputeMean(gl, layer, deps){
             return sum / float(tileSize.x * tileSize.y);
         }
     `
-    var meanTensor = new OutputTensor(gl, [1, 1, deps.image.shape[2]])
+    var meanTensor = new OutputTensor(gl, [1, 1, deps.image.shape[2]], getFormat(layer))
+    
     return TensorProgram(SHADER, meanTensor, {
         image: deps.image,
         _activation: layer.activation
@@ -142,7 +616,7 @@ function Sum(gl, layer, deps){
     if(deps.a.shape.some((k, i) => k != deps.b.shape[i]))
         throw new Error('Mismatched shapes for sum');
 
-    var output = new OutputTensor(gl, deps.a.shape)
+    var output = new OutputTensor(gl, deps.a.shape, getFormat(layer))
     return TensorProgram(SHADER, output, {
         a: deps.a,
         b: deps.b,
@@ -279,6 +753,59 @@ function ChannelFullyConnected(gl, layer, deps){
 
 
 
+function Deconvolve2D(gl, layer, deps){
+    const SHADER = `
+        uniform Tensor image;
+        uniform Tensor kernel;
+
+        uniform ivec2 imagePadding;
+        uniform ivec2 imageSubsample;
+
+        const ivec2 kernelTileSize = #(kernel.shape).xy;
+
+        vec4 process4(ivec4 pos){
+            vec4 sum = vec4(0, 0, 0, 0);
+
+            for(int f = 0; f < #(image.shape).z; f += 4){
+                for(int kx = 0; kx < kernelTileSize.x; kx++){
+                    int inputX = pos.x + kx - imagePadding.x;
+                    if(imod(inputX, 2) != 0 || inputX < 0 || inputX >= int(image.shape.x) * 2) continue;
+
+                    for(int ky = 0; ky < kernelTileSize.y; ky++){
+                        int inputY = pos.y + ky - imagePadding.y;
+                        if(imod(inputY, 2) != 0 || inputY < 0 || inputY >= int(image.shape.y) * 2) continue;
+
+                        vec4 inputPix = image.read4(ivec4(inputX / 2, inputY / 2, f, 0));
+
+                        sum += inputPix.r * kernel.read4(ivec4(kx, ky, pos.z, f + 0))
+                             + inputPix.g * kernel.read4(ivec4(kx, ky, pos.z, f + 1))
+                             + inputPix.b * kernel.read4(ivec4(kx, ky, pos.z, f + 2))
+                             + inputPix.a * kernel.read4(ivec4(kx, ky, pos.z, f + 3));
+                    }
+                }
+            }
+            return sum;
+        }
+    `
+    var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2).step(-1, -1))
+
+    var outputShape = [
+        deps.image.shape[0] * layer.subsample[0], 
+        deps.image.shape[1] * layer.subsample[1], 
+        kernelTensor.shape[2]
+    ];
+
+    var output = new OutputTensor(gl, outputShape, getFormat(layer))
+    return TensorProgram(SHADER, output, {
+        image: deps.image,
+        kernel: kernelTensor,
+        imagePadding: layer.padding,
+        imageSubsample: layer.subsample,
+        _activation: layer.activation
+    })
+}
+
+
 // function Deconvolve2D(gl, layer, deps){
 //     const SHADER = `
 //         uniform Tensor image;
@@ -289,10 +816,10 @@ function ChannelFullyConnected(gl, layer, deps){
 
 //         const ivec2 kernelTileSize = #(kernel.shape).xy;
 
-//         vec4 process4(ivec4 pos){
-//             vec4 sum = vec4(0, 0, 0, 0);
+//         float process(ivec4 pos){
+//             float sum = 0.0;
 
-//             for(int f = 0; f < #(image.shape).z; f += 4){
+//             for(int f = 0; f < #(image.shape).z; f++){
 //                 for(int kx = 0; kx < kernelTileSize.x; kx++){
 //                     int inputX = pos.x + kx - imagePadding.x;
 //                     if(imod(inputX, 2) != 0 || inputX < 0 || inputX >= int(image.shape.x) * 2) continue;
@@ -301,12 +828,8 @@ function ChannelFullyConnected(gl, layer, deps){
 //                         int inputY = pos.y + ky - imagePadding.y;
 //                         if(imod(inputY, 2) != 0 || inputY < 0 || inputY >= int(image.shape.y) * 2) continue;
 
-//                         vec4 inputPix = image.read4(ivec4(inputX / 2, inputY / 2, f, 0));
-
-//                         sum += inputPix.r * kernel.read4(ivec4(kx, ky, pos.z, f + 0))
-//                              + inputPix.g * kernel.read4(ivec4(kx, ky, pos.z, f + 1))
-//                              + inputPix.b * kernel.read4(ivec4(kx, ky, pos.z, f + 2))
-//                              + inputPix.a * kernel.read4(ivec4(kx, ky, pos.z, f + 3));
+//                         float inputPix = image.read(ivec4(inputX / 2, inputY / 2, f, 0));
+//                         sum += inputPix * kernel.read(ivec4(kx, ky, pos.z, f));
 //                     }
 //                 }
 //             }
@@ -331,55 +854,6 @@ function ChannelFullyConnected(gl, layer, deps){
 //     })
 // }
 
-
-function Deconvolve2D(gl, layer, deps){
-    const SHADER = `
-        uniform Tensor image;
-        uniform Tensor kernel;
-
-        uniform ivec2 imagePadding;
-        uniform ivec2 imageSubsample;
-
-        const ivec2 kernelTileSize = #(kernel.shape).xy;
-
-        float process(ivec4 pos){
-            float sum = 0.0;
-
-            for(int f = 0; f < #(image.shape).z; f++){
-                for(int kx = 0; kx < kernelTileSize.x; kx++){
-                    int inputX = pos.x + kx - imagePadding.x;
-                    if(imod(inputX, 2) != 0 || inputX < 0 || inputX >= int(image.shape.x) * 2) continue;
-
-                    for(int ky = 0; ky < kernelTileSize.y; ky++){
-                        int inputY = pos.y + ky - imagePadding.y;
-                        if(imod(inputY, 2) != 0 || inputY < 0 || inputY >= int(image.shape.y) * 2) continue;
-
-                        float inputPix = image.read(ivec4(inputX / 2, inputY / 2, f, 0));
-                        sum += inputPix * kernel.read(ivec4(kx, ky, pos.z, f));
-                    }
-                }
-            }
-            return sum;
-        }
-    `
-    var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2).step(-1, -1))
-
-    var outputShape = [
-        deps.image.shape[0] * layer.subsample[0], 
-        deps.image.shape[1] * layer.subsample[1], 
-        kernelTensor.shape[2]
-    ];
-
-    var output = new OutputTensor(gl, outputShape)
-    return TensorProgram(SHADER, output, {
-        image: deps.image,
-        kernel: kernelTensor,
-        imagePadding: layer.padding,
-        imageSubsample: layer.subsample,
-        _activation: layer.activation
-    })
-}
-
 function SquaredResidual(gl, layer, deps){
     const SHADER = `
         uniform Tensor image;
@@ -395,7 +869,7 @@ function SquaredResidual(gl, layer, deps){
     console.assert(deps.mean.shape[1] == 1)
     console.assert(deps.image.shape[2] == deps.mean.shape[2])
 
-    var residualTensor = new OutputTensor(gl, deps.image.shape)
+    var residualTensor = new OutputTensor(gl, deps.image.shape, getFormat(layer))
 
     return TensorProgram(SHADER, residualTensor, {
         image: deps.image,
@@ -426,8 +900,8 @@ function InstanceNormalize(gl, layer, deps){
 
     var betaTensor = new Tensor(gl, ndarray(layer.beta.data, [1, 1, layer.beta.size]));
     var gammaTensor = new Tensor(gl, ndarray(layer.gamma.data, [1, 1, layer.gamma.size]));
-    var normalizedTensor = new OutputTensor(gl, deps.image.shape)
-
+    var normalizedTensor = new OutputTensor(gl, deps.image.shape, getFormat(layer))
+    
     return TensorProgram(SHADER, normalizedTensor, { 
         image: deps.image, 
         mean: deps.mean, 
@@ -521,6 +995,56 @@ function calcOutputShape(inputShape, kernelShape, subsample = [1, 1], borderMode
     // this.inputPadding = [paddingRowBefore, paddingRowAfter, paddingColBefore, paddingColAfter]
 }
 
+function Convolve2D(gl, layer, deps){
+    const SHADER = `
+        uniform Tensor image;
+        uniform Tensor kernel;
+        
+        uniform ivec2 imagePadding;
+        uniform ivec2 imageSubsample;
+
+        const ivec2 kernelTileSize = #(kernel.shape).xy;
+
+        vec4 process4(ivec4 pos){
+            vec4 sum = vec4(0, 0, 0, 0);
+
+            for(int f = 0; f < #(image.shape).z; f += 4){
+                for(int kx = 0; kx < kernelTileSize.x; kx++){
+                    int inputX = pos.x * imageSubsample.x + kx - imagePadding.x;
+                    if(inputX < 0 || inputX >= int(image.shape.x)) continue;
+
+                    for(int ky = 0; ky < kernelTileSize.y; ky++){
+                        int inputY = pos.y  * imageSubsample.y + ky - imagePadding.y;
+                        if(inputY < 0 || inputY >= int(image.shape.y)) continue;
+
+                        vec4 inputPix = image.read4(ivec4(inputX, inputY, f, 0));
+                        
+                        sum += inputPix.r * kernel.read4(ivec4(kx, ky, pos.z, f + 0))
+                             + inputPix.g * kernel.read4(ivec4(kx, ky, pos.z, f + 1))
+                             + inputPix.b * kernel.read4(ivec4(kx, ky, pos.z, f + 2))
+                             + inputPix.a * kernel.read4(ivec4(kx, ky, pos.z, f + 3));
+                    }
+                }
+            }
+            return sum;
+        }
+    `
+    console.assert(layer.kernel.shape[2] == deps.image.shape[2])
+    var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2))
+    var { inputPadding, outputShape } = calcOutputShape(deps.image.shape, 
+        [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.subsample, layer.border_mode)
+    var outputTensor = new OutputTensor(gl, outputShape, getFormat(layer))
+
+    return TensorProgram(SHADER, outputTensor, {
+        kernel: kernelTensor,
+        image: deps.image,
+
+        imagePadding: inputPadding,
+        imageSubsample: layer.subsample,
+        _activation: layer.activation
+    })
+}
+
 // function Convolve2D(gl, layer, deps){
 //     const SHADER = `
 //         uniform Tensor image;
@@ -531,10 +1055,10 @@ function calcOutputShape(inputShape, kernelShape, subsample = [1, 1], borderMode
 
 //         const ivec2 kernelTileSize = #(kernel.shape).xy;
 
-//         vec4 process4(ivec4 pos){
-//             vec4 sum = vec4(0, 0, 0, 0);
+//         float process(ivec4 pos){
+//             float sum = 0.0;
 
-//             for(int f = 0; f < #(image.shape).z; f += 4){
+//             for(int f = 0; f < #(image.shape).z; f++){
 //                 for(int kx = 0; kx < kernelTileSize.x; kx++){
 //                     int inputX = pos.x * imageSubsample.x + kx - imagePadding.x;
 //                     if(inputX < 0 || inputX >= int(image.shape.x)) continue;
@@ -543,12 +1067,8 @@ function calcOutputShape(inputShape, kernelShape, subsample = [1, 1], borderMode
 //                         int inputY = pos.y  * imageSubsample.y + ky - imagePadding.y;
 //                         if(inputY < 0 || inputY >= int(image.shape.y)) continue;
 
-//                         vec4 inputPix = image.read4(ivec4(inputX, inputY, f, 0));
-                        
-//                         sum += inputPix.r * kernel.read4(ivec4(kx, ky, pos.z, f + 0))
-//                              + inputPix.g * kernel.read4(ivec4(kx, ky, pos.z, f + 1))
-//                              + inputPix.b * kernel.read4(ivec4(kx, ky, pos.z, f + 2))
-//                              + inputPix.a * kernel.read4(ivec4(kx, ky, pos.z, f + 3));
+//                         float inputPix = image.read(ivec4(inputX, inputY, f, 0));
+//                         sum += inputPix * kernel.read(ivec4(kx, ky, pos.z, f));
 //                     }
 //                 }
 //             }
@@ -570,52 +1090,6 @@ function calcOutputShape(inputShape, kernelShape, subsample = [1, 1], borderMode
 //         _activation: layer.activation
 //     })
 // }
-
-function Convolve2D(gl, layer, deps){
-    const SHADER = `
-        uniform Tensor image;
-        uniform Tensor kernel;
-        
-        uniform ivec2 imagePadding;
-        uniform ivec2 imageSubsample;
-
-        const ivec2 kernelTileSize = #(kernel.shape).xy;
-
-        float process(ivec4 pos){
-            float sum = 0.0;
-
-            for(int f = 0; f < #(image.shape).z; f++){
-                for(int kx = 0; kx < kernelTileSize.x; kx++){
-                    int inputX = pos.x * imageSubsample.x + kx - imagePadding.x;
-                    if(inputX < 0 || inputX >= int(image.shape.x)) continue;
-
-                    for(int ky = 0; ky < kernelTileSize.y; ky++){
-                        int inputY = pos.y  * imageSubsample.y + ky - imagePadding.y;
-                        if(inputY < 0 || inputY >= int(image.shape.y)) continue;
-
-                        float inputPix = image.read(ivec4(inputX, inputY, f, 0));
-                        sum += inputPix * kernel.read(ivec4(kx, ky, pos.z, f));
-                    }
-                }
-            }
-            return sum;
-        }
-    `
-    console.assert(layer.kernel.shape[2] == deps.image.shape[2])
-    var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2))
-    var { inputPadding, outputShape } = calcOutputShape(deps.image.shape, 
-        [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.subsample, layer.border_mode)
-    var outputTensor = new OutputTensor(gl, outputShape)
-
-    return TensorProgram(SHADER, outputTensor, {
-        kernel: kernelTensor,
-        image: deps.image,
-
-        imagePadding: inputPadding,
-        imageSubsample: layer.subsample,
-        _activation: layer.activation
-    })
-}
 
 function BiasConvolve2D(gl, layer, deps){
     const SHADER = `

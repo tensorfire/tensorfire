@@ -11,6 +11,8 @@
 <script src="layers.js"></script>
 <script src="util.js"></script>
 <script src="network.js"></script>
+<script src="lodash.js"></script>
+<script src="benchmark.js"></script>
 <script src="keras_import.js"></script>
 <script>
 var gl = KV.createGL(),
@@ -41,13 +43,13 @@ async function stylize(){
     // C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
     console.timeEnd('stylize')
 
-    await new Promise(e => setTimeout(e, 1000))
+    // await new Promise(e => setTimeout(e, 1000))
 
-    console.time('stylize')
-    await run(gl, compiled, { main_input: image, layerPause: true })
-    // C.info['batchnormalization_16+activation_11'].output.read()
-    // C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
-    console.timeEnd('stylize')
+    // console.time('stylize')
+    // await run(gl, compiled, { main_input: image, layerPause: true })
+    // // C.info['batchnormalization_16+activation_11'].output.read()
+    // // C.info['batchnormalization_16+activation_11'].output.show({ scale: 150/255, offset: 0.5 })
+    // console.timeEnd('stylize')
 
     // console.time('stylize')
     // await run(gl, compiled, { main_input: image, layerPause: false })
@@ -57,9 +59,115 @@ async function stylize(){
     
     // await destroy(gl, compiled)
 
+    // var bench = new Benchmark('foo', {
+
+    //   // a flag to indicate the benchmark is deferred
+    //   'defer': true,
+
+    //   // benchmark test function
+    //   'fn': function(deferred) {
+    //     // call `Deferred#resolve` when the deferred test is finished
+    //     // console.log(deferred)
+        
+    //     setTimeout(function(){
+    //         deferred.elapsed = 7;
+    //         deferred.resolve();
+    //     }, 10)
+        
+    //   }
+    // });
+
+    // bench.on('complete', function(){
+    //     console.log(bench.toString())
+    // })
+    // bench.run({ async: true })
+    // console.log(bench)
+    var times = []
+    for(var i = 0; i < 15; i++){
+        var data = await new Promise(resolve => 
+            C.info.convolution2d_1.run(null, resolve))
+        times.push(data.gpuTime / 1000)
+    }
+    console.log(times)
+    /**
+    * T-Distribution two-tailed critical values for 95% confidence.
+    * For more info see http://www.itl.nist.gov/div898/handbook/eda/section3/eda3672.htm.
+    */
+    var tTable = {
+        '1':  12.706, '2':  4.303, '3':  3.182, '4':  2.776, '5':  2.571, '6':  2.447,
+        '7':  2.365,  '8':  2.306, '9':  2.262, '10': 2.228, '11': 2.201, '12': 2.179,
+        '13': 2.16,   '14': 2.145, '15': 2.131, '16': 2.12,  '17': 2.11,  '18': 2.101,
+        '19': 2.093,  '20': 2.086, '21': 2.08,  '22': 2.074, '23': 2.069, '24': 2.064,
+        '25': 2.06,   '26': 2.056, '27': 2.052, '28': 2.048, '29': 2.045, '30': 2.042,
+        'infinity': 1.96
+    };
+
+    var mean = _.mean(times),
+        size = times.length,
+        variance = _.reduce(times, 
+            (sum, x) => sum + Math.pow(x - mean, 2)
+        , 0) / (size - 1) || 0,
+        sd = Math.sqrt(variance),
+        // Compute the standard error of the mean (a.k.a. the standard deviation of the sampling distribution of the sample mean).
+        sem = sd / Math.sqrt(size);
+        // Compute the degrees of freedom.
+        df = size - 1,
+        // Compute the critical value.
+        critical = tTable[Math.round(df) || 1] || tTable.infinity,
+        // Compute the margin of error.
+        moe = sem * critical,
+        // Compute the relative margin of error.
+        rme = (moe / mean) * 100 || 0,
+        hz = 1 / mean;
+    
+    var stats = {
+        'deviation': sd,
+        'mean': mean,
+        'moe': moe,
+        'rme': rme,
+        'sem': sem,
+        'variance': variance
+    }
+
+
+    console.log(stats)
+
+    console.log(formatNumber(hz.toFixed(hz < 100 ? 2 : 0)) + ' ops/sec ' + '\xb1' +
+          stats.rme.toFixed(2) + '% (' + size + ' run' + (size == 1 ? '' : 's') + ' sampled)');
+
+
+    
+}
+
+function formatNumber(number) {
+  number = String(number).split('.');
+  return number[0].replace(/(?=(?:\d{3})+$)(?!\b)/g, ',') +
+    (number[1] ? '.' + number[1] : '');
 }
 
 stylize()
 
+
+// var suite = new Benchmark.Suite;
+
+// // add tests
+// suite.add('RegExp#test', function() {
+//   /o/.test('Hello World!');
+// })
+// .add('String#indexOf', function() {
+//   'Hello World!'.indexOf('o') > -1;
+// })
+// .add('String#match', function() {
+//   !!'Hello World!'.match(/o/);
+// })
+// // add listeners
+// .on('cycle', function(event) {
+//   console.log(String(event.target));
+// })
+// .on('complete', function() {
+//   console.log('Fastest is ' + this.filter('fastest').map('name'));
+// })
+// // run async
+// .run({ 'async': true });
 
 </script>

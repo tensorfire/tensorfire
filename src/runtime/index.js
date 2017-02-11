@@ -20,7 +20,7 @@ export function Compile(shaderGen, output, uniforms = {}){
     return program;
 }
 
-export function Run(shaderGen, output, uniforms = {}){
+export function Run(shaderGen, output, uniforms = {}, callback = null){
     var tp = Compile(shaderGen, output, uniforms);
 
     var gl = output.gl;
@@ -80,8 +80,10 @@ export function Run(shaderGen, output, uniforms = {}){
     
     // var runTime = now() - startTime;
     // timer.end()
+    if(callback && typeof callback != 'function') throw new Error('Callback must be a function');
     endTimer(gl, function(info){
-        console.log('GPU time: ', info)
+        // console.log('GPU time: ', info)
+        if(callback) callback(info);
     })
     // console.log('CPU Run Time', runTime)
 

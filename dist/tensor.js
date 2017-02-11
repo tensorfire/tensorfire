@@ -509,7 +509,7 @@ exports.init = init;
 exports.pack = pack;
 exports.unpack = unpack;
 var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nfloat @read(ivec4 pos){\n\tfloat tile = dot(vec4(pos), vec4(1, @shape.x, @shape.x * @shape.y, @shape.x * @shape.y * @shape.z));\n\treturn @decode1(texture2D(@tex, \n\t\tvec2(mod(tile, float(@texSize.x)) + 0.5, floor(tile / float(@texSize.x)) + 0.5) / vec2(@texSize)));\n}\n';
-var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nvec4 clampify(vec4 v){\n    return vec4(ivec4(clamp(v, vec4(0), vec4(1)) * 255.0)) / 255.0;\n}\n\nfloat process(ivec4 pos);\nvoid main(){\n\tint tile = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint chunks = @shape.x * @shape.y * @shape.z * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tgl_FragColor = clampify(@encode1(@activation1(process(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\timod(tile / @shape.x / @shape.y, @shape.z ),\n\t\ttile / @shape.x / @shape.y / @shape.z\n\t)))));\n}';
+var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\n\n// vec4 clampify(vec4 v){\n//     return vec4(ivec4(clamp(v, vec4(0), vec4(1)) * 255.0)) / 255.0;\n// }\n\nfloat process(ivec4 pos);\nvoid main(){\n\tint tile = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint chunks = @shape.x * @shape.y * @shape.z * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tgl_FragColor = @encode1(@activation1(process(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\timod(tile / @shape.x / @shape.y, @shape.z ),\n\t\ttile / @shape.x / @shape.y / @shape.z\n\t))));\n}';
 
 function init(shape) {
     // var length = 4 * Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
@@ -586,7 +586,7 @@ exports.init = init;
 exports.pack = pack;
 exports.unpack = unpack;
 var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nfloat @read(ivec4 pos){\n    return @decode1(texture2D(@tex, (\n        vec2(tile2vec(\n            vec2tile(pos.zw, @shape.z)\n        , @cols) * ivec2(@shape.xy)) +\n        vec2(pos.xy) + vec2(0.5, 0.5)\n    ) / vec2(@texSize)));\n}\n';
-var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\nvec4 clampify(vec4 v){\n    return vec4(ivec4(clamp(v, vec4(0), vec4(1)) * 255.0)) / 255.0;\n}\n\nfloat process(ivec4 pos);\nvoid main(){\n    int tile = vec2tile(ivec2(gl_FragCoord.xy) / @shape.xy, @cols);\n    if(tile >= @shape.z * @shape.w){ checkerboard(); return; }\n\n    gl_FragColor = clampify(@encode1(@activation1(process(ivec4(\n        mod(vec2(gl_FragCoord.xy), vec2(@shape.xy)), \n        tile2vec(tile, @shape.z))))));\n}';
+var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform int @cols;\n\n// vec4 clampify(vec4 v){\n//     return vec4(ivec4(clamp(v, vec4(0), vec4(1)) * 255.0)) / 255.0;\n// }\n\nfloat process(ivec4 pos);\nvoid main(){\n    int tile = vec2tile(ivec2(gl_FragCoord.xy) / @shape.xy, @cols);\n    if(tile >= @shape.z * @shape.w){ checkerboard(); return; }\n\n    gl_FragColor = @encode1(@activation1(process(ivec4(\n        mod(vec2(gl_FragCoord.xy), vec2(@shape.xy)), \n        tile2vec(tile, @shape.z)))));\n}';
 
 function init(shape) {
     var width = shape[0];
@@ -751,8 +751,8 @@ var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = [
 exports.init = init;
 exports.pack = pack;
 exports.unpack = unpack;
-var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nvec4 @read4(ivec4 pos){\n\tint tile  = pos.x + \n\t\t\t\tpos.y * @shape.x + \n\t\t\t\t(pos.z / 4) * @shape.x * @shape.y +\n\t\t\t\tpos.w * @shape.x * @shape.y * ceildiv(@shape.z, 4);\n\n\treturn @decode4(texture2D(@tex, \n\t\t(vec2(tile2vec(tile, @texSize.x)) + vec2(0.5, 0.5)) / vec2(@texSize)));\n}\n';
-var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\n\nvec4 process4(ivec4 pos);\nvoid main(){\n\tint shapez = ceildiv(@shape.z, 4);\n\tint tile = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint chunks = @shape.x * @shape.y * shapez * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tgl_FragColor = @encode4(@activation4(process4(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\t4 * imod(tile / @shape.x / @shape.y, shapez),\n\t\ttile / @shape.x / @shape.y / shapez\n\t))));\n}\n';
+var readShader = exports.readShader = 'uniform sampler2D @tex;\nuniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform vec4 @stride;\n\nvec4 @read4(ivec4 pos){\n\tfloat tile = dot(vec4(pos), @stride);\n\treturn @decode4(texture2D(@tex,\n\t\tvec2(0.5 + mod(tile, float(@texSize.x)), 0.5 + floor(tile / float(@texSize.x))) / vec2(@texSize)));\n}\n';
+var writeShader = exports.writeShader = 'uniform ivec2 @texSize;\nuniform ivec4 @shape;\nuniform ivec4 @stride;\n\nvec4 process4(ivec4 pos);\nvoid main(){\n\tint shapez = ceildiv(@shape.z, 4);\n\tint tile = vec2tile(ivec2(gl_FragCoord.xy), @texSize.x);\n\tint chunks = @shape.x * @shape.y * shapez * @shape.w;\n\tif(tile >= chunks){ checkerboard(); return; }\n\n\tgl_FragColor = @encode4(@activation4(process4(ivec4(\n\t\timod(tile, @shape.x),\n\t\timod(tile / @shape.x, @shape.y),\n\t\t4 * imod(tile / @shape.x / @shape.y, shapez),\n\t\ttile / @shape.x / @shape.y / shapez\n\t))));\n}\n';
 
 function init(shape) {
     var length = Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
@@ -760,7 +760,9 @@ function init(shape) {
     var texSize = [cols, Math.ceil(length / cols)];
     return {
         texSize: texSize,
-        shape: shape
+        shape: shape,
+
+        stride: [1, shape[0], shape[0] * shape[1] / 4, shape[0] * shape[1] * Math.ceil(shape[2] / 4)]
     };
 }
 
@@ -1322,6 +1324,7 @@ function Compile(shaderGen, output) {
 
 function Run(shaderGen, output) {
     var uniforms = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    var callback = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
     var tp = Compile(shaderGen, output, uniforms);
 
@@ -1382,8 +1385,10 @@ function Run(shaderGen, output) {
 
     // var runTime = now() - startTime;
     // timer.end()
+    if (callback && typeof callback != 'function') throw new Error('Callback must be a function');
     (0, _timer.endTimer)(gl, function (info) {
-        console.log('GPU time: ', info);
+        // console.log('GPU time: ', info)
+        if (callback) callback(info);
     });
     // console.log('CPU Run Time', runTime)
 
@@ -1544,8 +1549,6 @@ function endTimer(gl, callback) {
 }
 
 function createTimer(gl) {
-	return null;
-
 	var extTimer = gl.getExtension('ext_disjoint_timer_query');
 
 	var queryPool = [];
@@ -1589,7 +1592,6 @@ function createTimer(gl) {
 
 	var isPolling = false;
 	function loop() {
-		// console.log('loop', pendingQueries.length)
 		if (pendingQueries.length > 0) {
 			monitorPending();
 			requestAnimationFrame(loop);
@@ -2008,11 +2010,11 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
         }
 
         var type = null;
-        if (format === 'float32' && (true || gl.NO_FLOAT_TEXTURES || gl.NO_RENDER_FLOAT && _this instanceof OutputTensor) || format === 'softfloat') {
+        if (format === 'float32' && (gl.NO_FLOAT_TEXTURES || gl.NO_RENDER_FLOAT && _this instanceof OutputTensor) || format === 'softfloat') {
             format = { type: 'uint8', pack: 'stride', density: '1:4', codec: 'softfloat' };
             type = 'float32';
         } else if (format === 'uint8' || format === 'float32') {
-            format = { type: format, pack: 'tile', density: '4:4', codec: 'raw' };
+            format = { type: format, pack: 'stride', density: '4:4', codec: 'raw' };
         }
 
         _this.type = type || format.type;
@@ -2134,8 +2136,8 @@ var OutputTensor = exports.OutputTensor = function (_Tensor) {
         }
     }, {
         key: 'run',
-        value: function run(shader, params) {
-            return (0, _index.Run)(shader, this, params);
+        value: function run(shader, params, callback) {
+            return (0, _index.Run)(shader, this, params, callback);
         }
     }, {
         key: 'compile',

@@ -10,6 +10,13 @@ export function init(shape){
     return {
         texSize: texSize,
         shape: shape,
+
+        stride: [
+            1, 
+            shape[0], 
+            shape[0] * shape[1] / 4, 
+            shape[0] * shape[1] * Math.ceil(shape[2] / 4)
+        ],
         // decvec: [1, shape[0], shape[0] * shape[1], shape[0] * shape[1] * Math.ceil(shape[2] / 4)]
     }
 }

@@ -28,12 +28,8 @@ export function endTimer(gl, callback){
 	}
 }
 
-function createTimer(gl){
-	return null;
-	
+function createTimer(gl){	
 	var extTimer = gl.getExtension('ext_disjoint_timer_query');
-
-	
 
 	var queryPool = []
     function allocQuery () {
@@ -77,7 +73,6 @@ function createTimer(gl){
 
 	var isPolling = false;
 	function loop(){
-		// console.log('loop', pendingQueries.length)
 		if(pendingQueries.length > 0){
 			monitorPending()
 			requestAnimationFrame(loop)

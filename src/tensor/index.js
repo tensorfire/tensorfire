@@ -59,13 +59,13 @@ export class Tensor extends BaseTensor {
 
         var type = null;
         if((format === 'float32' && 
-            (true || gl.NO_FLOAT_TEXTURES || 
+            (gl.NO_FLOAT_TEXTURES || 
             (gl.NO_RENDER_FLOAT && this instanceof OutputTensor)))
             || format === 'softfloat'){
             format = { type: 'uint8', pack: 'stride', density: '1:4', codec: 'softfloat' }
             type = 'float32'
         }else if(format === 'uint8' || format === 'float32'){
-            format = { type: format, pack: 'tile', density: '4:4', codec: 'raw' }
+            format = { type: format, pack: 'stride', density: '4:4', codec: 'raw' }
         }
 
         this.type = type || format.type;
@@ -145,8 +145,8 @@ export class OutputTensor extends Tensor {
         return pixels;
     }
 
-    run(shader, params){
-        return Run(shader, this, params);
+    run(shader, params, callback){
+        return Run(shader, this, params, callback);
     }
     compile(shader, params){
         return Compile(shader, this, params);
