@@ -22,6 +22,7 @@ function makeOutput(gl, layer, shape){
 
 function makeTensor(gl, layer, data){
   // return new Tensor(gl, data)
+  
   return new Tensor(gl, data, {
     type: 'uint8',
     pack: 'stride',
@@ -503,242 +504,202 @@ const FormatStatistics = [
   {
     "name": "conv1+relu_conv1",
     "min": 0,
-    "max": 835.7869873046875
+    "max": 837.3661499023438
   },
   {
     "name": "pool1",
     "min": 0,
-    "max": 835.7869873046875
+    "max": 837.3661499023438
   },
   {
     "name": "fire2/squeeze1x1+fire2/relu_squeeze1x1",
     "min": 0,
-    "max": 1087.8956298828125
+    "max": 1084.55419921875
   },
   {
     "name": "fire2/expand1x1+fire2/relu_expand1x1",
     "min": 0,
-    "max": 528.5732421875
+    "max": 526.0152587890625
   },
   {
-    "name": "fire2/expand3x3",
-    "min": -1276.78955078125,
-    "max": 982.8897705078125
-  },
-  {
-    "name": "fire2/relu_expand3x3",
+    "name": "fire2/expand3x3+fire2/relu_expand3x3",
     "min": 0,
-    "max": 982.8897705078125
+    "max": 987.0308837890625
   },
   {
     "name": "fire2/concat",
     "min": 0,
-    "max": 982.8897705078125
+    "max": 987.0308837890625
   },
   {
     "name": "fire3/squeeze1x1+fire3/relu_squeeze1x1",
     "min": 0,
-    "max": 958.9950561523438
+    "max": 958.304443359375
   },
   {
     "name": "fire3/expand1x1+fire3/relu_expand1x1",
     "min": 0,
-    "max": 481.03472900390625
+    "max": 483.2312316894531
   },
   {
-    "name": "fire3/expand3x3",
-    "min": -1245.5400390625,
-    "max": 659.12255859375
-  },
-  {
-    "name": "fire3/relu_expand3x3",
+    "name": "fire3/expand3x3+fire3/relu_expand3x3",
     "min": 0,
-    "max": 659.12255859375
+    "max": 631.5106201171875
   },
   {
     "name": "fire3/concat",
     "min": 0,
-    "max": 659.12255859375
+    "max": 631.5106201171875
   },
   {
     "name": "pool3",
     "min": 0,
-    "max": 659.12255859375
+    "max": 631.5106201171875
   },
   {
     "name": "fire4/squeeze1x1+fire4/relu_squeeze1x1",
     "min": 0,
-    "max": 1130.6966552734375
+    "max": 1144.6094970703125
   },
   {
     "name": "fire4/expand1x1+fire4/relu_expand1x1",
     "min": 0,
-    "max": 553.9724731445312
+    "max": 542.0543823242188
   },
   {
-    "name": "fire4/expand3x3",
-    "min": -1349.0439453125,
-    "max": 1046.2935791015625
-  },
-  {
-    "name": "fire4/relu_expand3x3",
+    "name": "fire4/expand3x3+fire4/relu_expand3x3",
     "min": 0,
-    "max": 1046.2935791015625
+    "max": 1036.4840087890625
   },
   {
     "name": "fire4/concat",
     "min": 0,
-    "max": 1046.2935791015625
+    "max": 1036.4840087890625
   },
   {
     "name": "fire5/squeeze1x1+fire5/relu_squeeze1x1",
     "min": 0,
-    "max": 994.6986694335938
+    "max": 972.4642944335938
   },
   {
     "name": "fire5/expand1x1+fire5/relu_expand1x1",
     "min": 0,
-    "max": 469.5686950683594
+    "max": 476.6619567871094
   },
   {
-    "name": "fire5/expand3x3",
-    "min": -1118.4071044921875,
-    "max": 794.2552490234375
-  },
-  {
-    "name": "fire5/relu_expand3x3",
+    "name": "fire5/expand3x3+fire5/relu_expand3x3",
     "min": 0,
-    "max": 794.2552490234375
+    "max": 780.125732421875
   },
   {
     "name": "fire5/concat",
     "min": 0,
-    "max": 794.2552490234375
+    "max": 780.125732421875
   },
   {
     "name": "pool5",
     "min": 0,
-    "max": 794.2552490234375
+    "max": 780.125732421875
   },
   {
     "name": "fire6/squeeze1x1+fire6/relu_squeeze1x1",
     "min": 0,
-    "max": 1529.8265380859375
+    "max": 1543.7227783203125
   },
   {
     "name": "fire6/expand1x1+fire6/relu_expand1x1",
     "min": 0,
-    "max": 863.7772827148438
+    "max": 869.4083251953125
   },
   {
-    "name": "fire6/expand3x3",
-    "min": -1178.98486328125,
-    "max": 815.5369873046875
-  },
-  {
-    "name": "fire6/relu_expand3x3",
+    "name": "fire6/expand3x3+fire6/relu_expand3x3",
     "min": 0,
-    "max": 815.5369873046875
+    "max": 801.72607421875
   },
   {
     "name": "fire6/concat",
     "min": 0,
-    "max": 863.7772827148438
+    "max": 869.4083251953125
   },
   {
     "name": "fire7/squeeze1x1+fire7/relu_squeeze1x1",
     "min": 0,
-    "max": 1051.5531005859375
+    "max": 1079.32080078125
   },
   {
     "name": "fire7/expand1x1+fire7/relu_expand1x1",
     "min": 0,
-    "max": 443.2496643066406
+    "max": 441.2950439453125
   },
   {
-    "name": "fire7/expand3x3",
-    "min": -789.2604370117188,
-    "max": 668.0328979492188
-  },
-  {
-    "name": "fire7/relu_expand3x3",
+    "name": "fire7/expand3x3+fire7/relu_expand3x3",
     "min": 0,
-    "max": 668.0328979492188
+    "max": 659.8307495117188
   },
   {
     "name": "fire7/concat",
     "min": 0,
-    "max": 668.0328979492188
+    "max": 659.8307495117188
   },
   {
     "name": "fire8/squeeze1x1+fire8/relu_squeeze1x1",
     "min": 0,
-    "max": 593.4243774414062
+    "max": 613.322998046875
   },
   {
     "name": "fire8/expand1x1+fire8/relu_expand1x1",
     "min": 0,
-    "max": 234.11473083496094
+    "max": 235.16114807128906
   },
   {
-    "name": "fire8/expand3x3",
-    "min": -556.43896484375,
-    "max": 530.8920288085938
-  },
-  {
-    "name": "fire8/relu_expand3x3",
+    "name": "fire8/expand3x3+fire8/relu_expand3x3",
     "min": 0,
-    "max": 530.8920288085938
+    "max": 538.7855224609375
   },
   {
     "name": "fire8/concat",
     "min": 0,
-    "max": 530.8920288085938
+    "max": 538.7855224609375
   },
   {
     "name": "fire9/squeeze1x1+fire9/relu_squeeze1x1",
     "min": 0,
-    "max": 531.1656494140625
+    "max": 561.6898193359375
   },
   {
     "name": "fire9/expand1x1+fire9/relu_expand1x1",
     "min": 0,
-    "max": 284.14593505859375
+    "max": 289.4763488769531
   },
   {
-    "name": "fire9/expand3x3",
-    "min": -658.1574096679688,
-    "max": 371.5225524902344
-  },
-  {
-    "name": "fire9/relu_expand3x3",
+    "name": "fire9/expand3x3+fire9/relu_expand3x3",
     "min": 0,
-    "max": 371.5225524902344
+    "max": 366.40350341796875
   },
   {
     "name": "fire9/concat",
     "min": 0,
-    "max": 371.5225524902344
+    "max": 366.40350341796875
   },
   {
     "name": "conv10+relu_conv10",
     "min": 0,
-    "max": 116.50133514404297
+    "max": 116.88097381591797
   },
   {
     "name": "globalaveragepooling2d_1",
-    "min": 2.625295639038086,
-    "max": 27.529251098632812
+    "min": 2.5374395847320557,
+    "max": 27.72203254699707
   },
   // {
   //   "name": "loss_expsum",
-  //   "min": 1319031537664,
-  //   "max": 1319031537664
+  //   "min": 1717926363136,
+  //   "max": 1717926363136
   // },
   // {
   //   "name": "loss",
-  //   "min": 1.0468782958572564e-11,
-  //   "max": 0.6847723126411438
+  //   "min": 7.361926172844147e-12,
+  //   "max": 0.6375599503517151
   // }
 ]
 
@@ -755,7 +716,6 @@ function getFormat(layer){
 
     var stats = FormatStatistics.find(k => k.name == layer.name)
     if(stats){
-    // return undefined
         // if(layer.name == 'batchnormalization_1_residual'){
         //     return undefined
         // }
@@ -786,6 +746,7 @@ function getFormat(layer){
         }
         return {type: "uint8", pack: "stride", density: "4:4", codec: "linquant", min: stats.min, max: stats.max }
     }
+    console.warn(layer)
     return undefined
 }
 
