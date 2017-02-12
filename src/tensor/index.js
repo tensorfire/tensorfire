@@ -3,6 +3,7 @@ import showTexture from './show.js'
 import runFeatureTests from './feature.js'
 import { makeTexture, makeFrameBuffer } from './helpers.js'
 import { Run, Compile } from '../runtime/index.js'
+import ndshow from 'ndarray-show'
 
 export class Tensor extends BaseTensor {
     // new Tensor(gl)
@@ -99,7 +100,7 @@ export class Tensor extends BaseTensor {
         }else{
             // C.info.main_input.output.copy({ type: 'uint8', pack: 'tile', density: '4:4', codec: 'linquant', min: 0, max: 255 })._show({ })
             this.withCopy(x => x.show(opt), 
-                { type: 'float32', pack: 'tile', density: '4:4', codec: 'raw' })
+                { type: 'uint8', pack: 'tile', density: '4:4', codec: 'raw' })
         };
     }
 
@@ -112,6 +113,9 @@ export class Tensor extends BaseTensor {
     read(){
         console.warn("Copying before read...")
         return this.withCopy(x => x.read())
+    }
+    print(){
+        return ndshow(this.read())
     }
     swap(){
         throw new Error("Only InPlaceTensor can be both a parameter and destination.");
@@ -173,6 +177,7 @@ export class InPlaceTensor extends OutputTensor {
         this.tex2 = this.tex;
         this.tex = makeTexture(this.gl);
 		this.update(null);
+        this.swap()
 	}
     destroy(){
         super.destroy()

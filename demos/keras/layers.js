@@ -16,16 +16,43 @@ function TensorProgram(shader, out, uniforms){
     }
 }
 
+function makeOutput(gl, layer, shape){
+  return new OutputTensor(gl, shape, getFormat(layer));
+}
+
+function makeTensor(gl, layer, data){
+  // return new Tensor(gl, data)
+  return new Tensor(gl, data, {
+    type: 'uint8',
+    pack: 'stride',
+    density: '4:4',
+    codec: 'linquant',
+    min: ndops.inf(data),
+    max: ndops.sup(data)
+  });
+  // return {type: "uint8", pack: "stride", density: "4:4", codec: "linquant", min: stats.min, max: stats.max }
+}
+
+
+// C.network.map(k => {
+//   var data = C.info[k.name].output.read();
+//   return {
+//     name: k.name,
+//     min: ndops.inf(data),
+//     max: ndops.sup(data)
+//   }
+// })
 
 function InputLayer(gl, layer, deps, options){
     if(!options[layer.name]) throw new Error("Invalid input");
     var tensor = new OutputTensor(gl, options[layer.name]);
     return {
         output: tensor,
-        run(options){
+        run(options, callback){
             if(options[layer.name]){
                 tensor.update(options[layer.name])    
             }
+            if(callback) callback();
         },
         destroy(){
             tensor.destroy()
@@ -728,7 +755,7 @@ function getFormat(layer){
 
     var stats = FormatStatistics.find(k => k.name == layer.name)
     if(stats){
-    return undefined
+    // return undefined
         // if(layer.name == 'batchnormalization_1_residual'){
         //     return undefined
         // }
@@ -780,40 +807,13 @@ function ComputeMean(gl, layer, deps){
             return sum / float(tileSize.x * tileSize.y);
         }
     `
-    var meanTensor = new OutputTensor(gl, [1, 1, deps.image.shape[2]], getFormat(layer))
+    var meanTensor = makeOutput(gl, layer, [1, 1, deps.image.shape[2]])
     
     return TensorProgram(SHADER, meanTensor, {
         image: deps.image,
         _activation: layer.activation
     })
 }
-
-// function SoftmaxHelper(gl, layer, deps){
-//     const SHADER = `
-//         uniform Tensor image;
-//         const channels = (#(image.shape).z - 1) / 4 + 1;
-
-//         vec4 process4(ivec4 pos) {
-//             float maxVal = vec4(-10000);
-//             float sumVal = vec4(0);
-
-//             for(int i = 0; i < channels; i++){
-//                 vec4 pix = image.read4(0, 0, i);
-//                 maxVal = max(maxVal, pix);
-//                 sumVal += pix;
-//             }
-
-//             return vec4(
-//                 dot(sumVal, vec4(1)) / float(image.shape.z),
-//                 max(max(pix.r, pix.g), max(pix.b, pix.a)),
-//                 0, 0);
-//         }
-//     `
-//     var softmaxHelper = new OutputTensor(gl, [1])
-//     return TensorProgram(SHADER, softmaxHelper, {
-//         image: deps.image
-//     })
-// }
 
 
 function ExpSum(gl, layer, deps){
@@ -831,7 +831,7 @@ function ExpSum(gl, layer, deps){
     console.assert(deps.image.shape[0] == 1)
     console.assert(deps.image.shape[1] == 1)
     console.assert(deps.image.shape[3] == 1)
-    var softmaxHelper = new OutputTensor(gl, [1, 1, 4], getFormat(layer))
+    var softmaxHelper = makeOutput(gl, layer, [1, 1, 4])
     return TensorProgram(SHADER, softmaxHelper, {
         image: deps.image
     })
@@ -852,7 +852,7 @@ function Softmax(gl, layer, deps){
     console.assert(deps.helper.shape[2] == 4)
     console.assert(deps.helper.shape[3] == 1)
 
-    var output = new OutputTensor(gl, deps.image.shape, getFormat(layer))
+    var output = makeOutput(gl, layer, deps.image.shape)
 
     return TensorProgram(SHADER, output, {
         image: deps.image,
@@ -873,7 +873,7 @@ function Sum(gl, layer, deps){
     if(deps.a.shape.some((k, i) => k != deps.b.shape[i]))
         throw new Error('Mismatched shapes for sum');
 
-    var output = new OutputTensor(gl, deps.a.shape, getFormat(layer))
+    var output = makeOutput(gl, layer, deps.a.shape)
     return TensorProgram(SHADER, output, {
         a: deps.a,
         b: deps.b,
@@ -907,7 +907,7 @@ function ZeroPadding2D(gl, layer, deps){
     }else{
         throw new Error('invalid padding length')
     }
-    var output = new OutputTensor(gl, [
+    var output = makeOutput(gl, layer, [
         deps.image.shape[0] + padding[0] + padding[1],
         deps.image.shape[1] + padding[2] + padding[3],
         deps.image.shape[2],
@@ -928,7 +928,7 @@ function Activation(gl, layer, deps){
         }
     `
     console.assert(['tanh', 'relu'].includes(layer.activation))
-    var output = new OutputTensor(gl, deps.image.shape, getFormat(layer))
+    var output = makeOutput(gl, layer, deps.image.shape)
     return TensorProgram(SHADER, output, {
         image: deps.image,
         _activation: layer.activation
@@ -978,7 +978,7 @@ function ChannelFullyConnected(gl, layer, deps){
     console.assert(deps.image.shape[3] == 1)
     console.assert(deps.image.shape[2] == layer.weights.shape[0])
 
-    var bias = new Tensor(gl, unsqueeze(unsqueeze(layer.bias, 0), 0))
+    var bias = makeTensor(gl, layer, unsqueeze(unsqueeze(layer.bias, 0), 0))
 
 
     console.assert(bias.shape[0] == 1)
@@ -987,7 +987,7 @@ function ChannelFullyConnected(gl, layer, deps){
         // [ 1, 1, layer.bias ])
 
 
-    var weights = new Tensor(gl, unsqueeze(unsqueeze(layer.weights.transpose(1, 0), 0), 0))
+    var weights = makeTensor(gl, layer, unsqueeze(unsqueeze(layer.weights.transpose(1, 0), 0), 0))
         // [ 1, 1, layer.weights.shape[1], layer.weights.shape[0] ])
 
     console.assert(weights.shape[0] == 1)
@@ -995,7 +995,7 @@ function ChannelFullyConnected(gl, layer, deps){
     console.assert(weights.shape[2] == layer.weights.shape[1])
     console.assert(weights.shape[3] == layer.weights.shape[0])
 
-    var output = new OutputTensor(gl, [1, 1, layer.weights.shape[1]])
+    var output = makeOutput(gl, layer, [1, 1, layer.weights.shape[1]])
 
     return TensorProgram(SHADER, output, {
         image: deps.image,
@@ -1043,7 +1043,7 @@ function Deconvolve2D(gl, layer, deps){
             return sum;
         }
     `
-    var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2).step(-1, -1))
+    var kernelTensor = makeTensor(gl, layer, layer.kernel.transpose(0, 1, 3, 2).step(-1, -1))
 
     var outputShape = [
         deps.image.shape[0] * layer.subsample[0], 
@@ -1051,7 +1051,7 @@ function Deconvolve2D(gl, layer, deps){
         kernelTensor.shape[2]
     ];
 
-    var output = new OutputTensor(gl, outputShape, getFormat(layer))
+    var output = makeOutput(gl, layer, outputShape)
     return TensorProgram(SHADER, output, {
         image: deps.image,
         kernel: kernelTensor,
@@ -1092,7 +1092,7 @@ function Deconvolve2D(gl, layer, deps){
 //             return sum;
 //         }
 //     `
-//     var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2).step(-1, -1))
+//     var kernelTensor = makeTensor(gl, layer, layer.kernel.transpose(0, 1, 3, 2).step(-1, -1))
 
 //     var outputShape = [
 //         deps.image.shape[0] * layer.subsample[0], 
@@ -1100,7 +1100,7 @@ function Deconvolve2D(gl, layer, deps){
 //         kernelTensor.shape[2]
 //     ];
 
-//     var output = new OutputTensor(gl, outputShape)
+//     var output = makeOutput(gl, layer, outputShape)
 //     return TensorProgram(SHADER, output, {
 //         image: deps.image,
 //         kernel: kernelTensor,
@@ -1125,7 +1125,7 @@ function SquaredResidual(gl, layer, deps){
     console.assert(deps.mean.shape[1] == 1)
     console.assert(deps.image.shape[2] == deps.mean.shape[2])
 
-    var residualTensor = new OutputTensor(gl, deps.image.shape, getFormat(layer))
+    var residualTensor = makeOutput(gl, layer, deps.image.shape)
 
     return TensorProgram(SHADER, residualTensor, {
         image: deps.image,
@@ -1154,9 +1154,9 @@ function InstanceNormalize(gl, layer, deps){
         }
     `
 
-    var betaTensor = new Tensor(gl, ndarray(layer.beta.data, [1, 1, layer.beta.size]));
-    var gammaTensor = new Tensor(gl, ndarray(layer.gamma.data, [1, 1, layer.gamma.size]));
-    var normalizedTensor = new OutputTensor(gl, deps.image.shape, getFormat(layer))
+    var betaTensor = makeTensor(gl, layer, ndarray(layer.beta.data, [1, 1, layer.beta.size]));
+    var gammaTensor = makeTensor(gl, layer, ndarray(layer.gamma.data, [1, 1, layer.gamma.size]));
+    var normalizedTensor = makeOutput(gl, layer, deps.image.shape)
     
     return TensorProgram(SHADER, normalizedTensor, { 
         image: deps.image, 
@@ -1207,9 +1207,9 @@ function BatchNormalize(gl, layer, deps){
     // BETA = - mean + beta * (std / gamma)
     // GAMMA = 1 / (std / gamma)
 
-    var betaTensor = new Tensor(gl, ndarray(beta, [1, 1, layer.beta.size]));
-    var gammaTensor = new Tensor(gl, ndarray(gamma, [1, 1, layer.gamma.size]));
-    var normalizedTensor = new OutputTensor(gl, deps.image.shape)
+    var betaTensor = makeTensor(gl, layer, ndarray(beta, [1, 1, layer.beta.size]));
+    var gammaTensor = makeTensor(gl, layer, ndarray(gamma, [1, 1, layer.gamma.size]));
+    var normalizedTensor = makeOutput(gl, layer, deps.image.shape)
 
     return TensorProgram(SHADER, normalizedTensor, { 
         image: deps.image, 
@@ -1286,10 +1286,10 @@ function Convolve2D(gl, layer, deps){
         }
     `
     console.assert(layer.kernel.shape[2] == deps.image.shape[2])
-    var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2))
+    var kernelTensor = makeTensor(gl, layer, layer.kernel.transpose(0, 1, 3, 2))
     var { inputPadding, outputShape } = calcOutputShape(deps.image.shape, 
         [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.subsample, layer.border_mode)
-    var outputTensor = new OutputTensor(gl, outputShape, getFormat(layer))
+    var outputTensor = makeOutput(gl, layer, outputShape)
 
     return TensorProgram(SHADER, outputTensor, {
         kernel: kernelTensor,
@@ -1332,10 +1332,10 @@ function Convolve2D(gl, layer, deps){
 //         }
 //     `
 //     console.assert(layer.kernel.shape[2] == deps.image.shape[2])
-//     var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2))
+//     var kernelTensor = makeTensor(gl, layer, layer.kernel.transpose(0, 1, 3, 2))
 //     var { inputPadding, outputShape } = calcOutputShape(deps.image.shape, 
 //         [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.subsample, layer.border_mode)
-//     var outputTensor = new OutputTensor(gl, outputShape)
+//     var outputTensor = makeOutput(gl, layer, outputShape)
 
 //     return TensorProgram(SHADER, outputTensor, {
 //         kernel: kernelTensor,
@@ -1385,12 +1385,12 @@ function BiasConvolve2D(gl, layer, deps){
     console.assert(layer.kernel.shape[2] == deps.image.shape[2])
     console.assert(layer.bias.shape[0] == layer.kernel.shape[3])
 
-    var kernelTensor = new Tensor(gl, layer.kernel.transpose(0, 1, 3, 2))
-    var biasTensor = new Tensor(gl, ndarray(layer.bias.data, [1, 1, layer.bias.size]));
+    var kernelTensor = makeTensor(gl, layer, layer.kernel.transpose(0, 1, 3, 2))
+    var biasTensor = makeTensor(gl, layer, ndarray(layer.bias.data, [1, 1, layer.bias.size]));
 
     var { inputPadding, outputShape } = calcOutputShape(deps.image.shape, 
         [0, 1, 3, 2].map(k => kernelTensor.shape[k]), layer.subsample, layer.border_mode)
-    var outputTensor = new OutputTensor(gl, outputShape, getFormat(layer))
+    var outputTensor = makeOutput(gl, layer, outputShape)
 
     return TensorProgram(SHADER, outputTensor, {
         kernel: kernelTensor,
@@ -1435,8 +1435,8 @@ function MaxPooling2D(gl, layer, deps){
         layer.strides, layer.border_mode)
 
 
-    var outputTensor = new OutputTensor(gl, outputShape, getFormat(layer))
-    return TensorProgram(SHADER, outputTensor, {
+    var out = makeOutput(gl, layer, outputShape)
+    return TensorProgram(SHADER, out, {
         image: deps.image,
 
         padding: inputPadding,
@@ -1478,8 +1478,8 @@ function AveragePooling2D(gl, layer, deps){
         [ layer.pool_size[0], layer.pool_size[1], -1, deps.image.shape[2]], 
         layer.strides, layer.border_mode)
 
-    var outputTensor = new OutputTensor(gl, outputShape)
-    return TensorProgram(SHADER, outputTensor, {
+    var out = makeOutput(gl, layer, outputShape)
+    return TensorProgram(SHADER, out, {
         image: deps.image,
 
         padding: inputPadding,
@@ -1514,10 +1514,10 @@ function ConcatChannel(gl, layer, deps){
     console.assert(deps.a.shape[1] == deps.b.shape[1])
     console.assert(deps.a.shape[3] == deps.b.shape[3])
 
-    var output = new OutputTensor(gl, [
+    var output = makeOutput(gl, layer, [
         deps.a.shape[0], deps.a.shape[1], 
         deps.a.shape[2] + deps.b.shape[2],
-        deps.a.shape[3]], getFormat(layer));
+        deps.a.shape[3]]);
 
     return TensorProgram(SHADER, output, {
         a: deps.a,

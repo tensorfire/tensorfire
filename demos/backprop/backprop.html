@@ -30,11 +30,11 @@ const ForwardLayer = TP`
         return vec4(1, 1, 1, 1) / (vec4(1, 1, 1, 1) + exp(-x));
     }
 
-    vec4 process(ivec4 pos) {
+    vec4 process4(ivec4 pos) {
         vec4 sum = vec4(0, 0, 0, 0);
         for(int k = 0; k < #(inputs.shape).y; k++){
-            sum += readTensor(inputs, ivec4(pos.x, k, 0, 0))
-                 * readTensor(weights, ivec4(k, pos.y, 0, 0));
+            sum += inputs.read4(ivec4(pos.x, k, 0, 0))
+                 * weights.read4(ivec4(k, pos.y, 0, 0));
         }
         return sigmoid(sum);
     }
@@ -45,9 +45,8 @@ const Subtraction = TP`
     uniform Tensor a;
     uniform Tensor b;
     
-    vec4 process(ivec4 pos) {
-        return readTensor(a, pos) 
-             - readTensor(b, pos);
+    vec4 process4(ivec4 pos) {
+        return a.read4(pos) - b.read4(pos);
     }
 `;
 
@@ -63,9 +62,9 @@ const BackwardLayer = TP`
         return x * (vec4(1,1,1,1) - x);
     }
     
-    vec4 process(ivec4 pos) {
-        return readTensor(error, pos)
-             * dsigmoid(readTensor(outputs, pos));
+    vec4 process4(ivec4 pos) {
+        return error.read4(pos)
+             * dsigmoid(outputs.read4(pos));
     }
 `;
 
@@ -75,11 +74,11 @@ const IntermediateError = TP`
     uniform Tensor delta;
     uniform Tensor weights;
    
-    vec4 process(ivec4 pos) {
+    vec4 process4(ivec4 pos) {
         vec4 sum = vec4(0, 0, 0, 0);
         for(int k = 0; k < #(delta.shape).y; k++){
-            sum += readTensor(delta, ivec4(pos.x, k, 0, 0))
-                 * readTensor(weights, ivec4(pos.y, k, 0, 0));
+            sum += delta.read4(ivec4(pos.x, k, 0, 0))
+                 * weights.read4(ivec4(pos.y, k, 0, 0));
         }
         return sum;
     }
@@ -93,13 +92,13 @@ const UpdateWeights = TP`
     uniform Tensor delta;
     uniform float  alpha;
 
-    vec4 process(ivec4 pos) {
+    vec4 process4(ivec4 pos) {
         vec4 sum = vec4(0, 0, 0, 0);
         for(int k = 0; k < #(outputs.shape).x; k++){
-            sum += readTensor(outputs, ivec4(k, pos.x, 0, 0))
-                 * readTensor(delta, ivec4(k, pos.y, 0, 0));
+            sum += outputs.read4(ivec4(k, pos.x, 0, 0))
+                 * delta.read4(ivec4(k, pos.y, 0, 0));
         }
-        return readTensor(weights, pos) + alpha * sum;
+        return weights.read4(pos) + alpha * sum;
     }
 `;
 
@@ -138,13 +137,13 @@ l1_delta = new OutputTensor(gl, [4, 4])
 
 
 
-for(var i = 0; i < 10000; i++){
+for(var i = 0; i < 1000; i++){
 
     ForwardLayer(l1, { inputs: X, weights: syn0 })
     ForwardLayer(l2, { inputs: l1, weights: syn1 })
     Subtraction(l2_error, { a: y, b: l2 })
 
-    if(i % 1000 == 0){
+    if(i % 100 == 0){
         console.log("Error:", ndops.norm1(l2_error.read()) / l2_error.shape[0])    
     }
 
@@ -157,8 +156,8 @@ for(var i = 0; i < 10000; i++){
 }
 
 
-console.log(syn1.print2())
-console.log(syn0.print2())
+console.log(syn1.print())
+console.log(syn0.print())
 
 syn0.show()
 

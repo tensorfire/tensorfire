@@ -15,11 +15,12 @@ export function init(shape, format){
 }
 
 export function encode(data, r, g, b, a, info){
-	throw new Error('not implemented')
-	// data[0] = r;
-	// data[1] = g;
-	// data[2] = b;
-	// data[3] = a;
+
+	data[0] = Math.round(255 * Math.min(1, Math.max(0, (r - info.range[0])/(info.range[1] - info.range[0]) )))
+	data[1] = Math.round(255 * Math.min(1, Math.max(0, (g - info.range[0])/(info.range[1] - info.range[0]) )))
+	data[2] = Math.round(255 * Math.min(1, Math.max(0, (b - info.range[0])/(info.range[1] - info.range[0]) )))
+	data[3] = Math.round(255 * Math.min(1, Math.max(0, (a - info.range[0])/(info.range[1] - info.range[0]) )))
+	// console.log(data[0], data[1], data[2])
 }
 
 

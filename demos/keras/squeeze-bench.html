@@ -6,6 +6,9 @@
     body {
         font-family: sans-serif;
     }
+    #thing {
+        width: 400px;
+    }
 </style>
 
 <script src="layers.js"></script>
@@ -15,6 +18,7 @@
 <script src="benchmark.js"></script>
 <script src="keras_import.js"></script>
 <script src="imagenet.js"></script>
+<input type="range" id="thing">
 <div id="results"></div>
 
 <script>
@@ -23,8 +27,9 @@ var gl = KV.createGL(),
     Tensor = KV.Tensor,
     InPlaceTensor = KV.InPlaceTensor,
     TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
-gl.canvas.width = 256
-gl.canvas.height = 256
+gl.canvas.width = 400
+gl.canvas.height = 400
+// gl.NO_FLOAT_TEXTURES = true;
 
 
 
@@ -62,16 +67,18 @@ async function stylize(){
     var data = compiled.info.loss.output.read().data
     console.timeEnd('squeeze')
 
+    var slider = document.getElementById('thing')
+    slider.min = 0
+    slider.max = compiled.network.length - 1;
 
 
-    
-        var results = Array.from(compiled.info.loss.output.read().data)
-            .map((k, i) => [imagenetClasses[i][1], k])
-            .sort((b, a) => a[1] - b[1])
-            .slice(0, 10);
+    var results = Array.from(compiled.info.loss.output.read().data)
+        .map((k, i) => [imagenetClasses[i][1], k])
+        .sort((b, a) => a[1] - b[1])
+        .slice(0, 10);
 
 
-    document.body.style.background = data[1] > 0.85 ? 'red' : 'green'
+    // document.body.style.background = data[1] > 0.85 ? 'red' : 'green'
 
 
     var table = h('table', h('tbody', 
@@ -200,6 +207,16 @@ function formatNumber(number) {
 stylize()
 
 
+document.getElementById('thing').oninput = function(){
+    var index = document.getElementById('thing').value - 0
+    var name = C.network[index].name
+    if(index < 39){
+        C.info[name].output.show({ offset: 0.5, scale: 1/255, flipY: true })
+    }else{
+        C.info[name].output.show({ flipY: true })    
+    }
+    
+}
 // var suite = new Benchmark.Suite;
 
 // // add tests

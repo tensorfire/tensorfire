@@ -45,6 +45,8 @@ async function run(gl, compiled, options){
         info[layer.name].done = false;
     }
 
+    // var promises = []
+
     var lastFrame = Date.now()
     while(true){
         var pending = network
@@ -58,6 +60,7 @@ async function run(gl, compiled, options){
             break;
         }
         for(let layer of ready) {
+            // promises.push(new Promise(resolve => info[layer.name].run(options, resolve)))
             info[layer.name].run(options)
             info[layer.name].done = true;
             if(options.layerPause){
@@ -85,6 +88,7 @@ async function run(gl, compiled, options){
             // await new Promise(resolve => setTimeout(resolve, 1000))
         }
     }
+    // await Promise.all(promises);
 }
 
 async function destroy(gl, compiled){
