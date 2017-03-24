@@ -41,29 +41,31 @@ const LSTM = TP`
     float sigmoid(float x){ return 1.0/(1.0+exp(-clamp(x, -10.0, 10.0))); }
     float hard_sigmoid(float x){ return clamp(x * 0.2 + 0.5, 0.0, 1.0); }
 
-    vec4 process(ivec4 pos) {
+    vec4 process4(ivec4 pos) {
         int j = pos.x;
-        vec4 fioc = readTensor(W, j, 0); // bias
+        vec4 fioc = W.read4(j, 0); // bias
         for(int k = 0; k < Ni; k++) // inputs
-            fioc += readTensor(W, j, 1 + k) * readTensor(X, k).x; 
+            fioc += W.read4(j, 1 + k) * X.read4(k, 0).x; 
         for(int k = 0; k < Ns; k++) // prev outputs
-            fioc += readTensor(W, j, 1 + Ni + k) * readTensor(prev, k).x; 
-        float c_t = hard_sigmoid(fioc.x) * readTensor(prev, j).y 
+            fioc += W.read4(j, 1 + Ni + k) * prev.read4(k, 0).x; 
+        float c_t = hard_sigmoid(fioc.x) * prev.read4(j, 0).y 
                   + tanh(fioc.w) * hard_sigmoid(fioc.y); // state
         float h_t = tanh(c_t) * hard_sigmoid(fioc.z); // output
         return vec4(h_t, c_t, 0, 0);
     }
 `
+
+
 const TextureBuffer = TP`
     uniform Tensor buffer;
     uniform Tensor data;
     uniform int index;
 
-    vec4 process(ivec4 pos){
+    vec4 process4(ivec4 pos){
         if(pos.w == index){
-            return readTensor(data, ivec4(pos.xyz, 0));
+            return data.read4(ivec4(pos.xyz, 0));
         }else{
-            return readTensor(buffer, pos);
+            return buffer.read4(pos);
         }
     }
 `
@@ -74,12 +76,12 @@ const FullyConnected = TP`
     uniform Tensor b;
     const int length = #(inputs.shape).x;
 
-    vec4 process(ivec4 pos) {
+    vec4 process4(ivec4 pos) {
         vec4 sum = vec4(0, 0, 0, 0);
         for(int i = 0; i < length; i++){
-            sum += readTensor(inputs, i) * readTensor(W, i, pos.x);
+            sum += inputs.read4(i, 0) * W.read4(i, pos.x);
         }
-        return sum + readTensor(b, pos);
+        return sum + b.read4(pos);
     }
 `
 
@@ -87,12 +89,12 @@ const HardMax = TP`
     uniform Tensor data;
     const int length = #(data.shape).x;
 
-    vec4 process(ivec4 pos) {
+    vec4 process4(ivec4 pos) {
         vec4 maxValue = vec4(-10000, -10000, -10000, -10000);
         for(int i = 0; i < length; i++){
-            maxValue = max(maxValue, readTensor(data, i));
+            maxValue = max(maxValue, data.read4(i, 0));
         }
-        return vec4(greaterThanEqual(readTensor(data, pos), maxValue));
+        return vec4(greaterThanEqual(data.read4(pos), maxValue));
     }
 `
 
@@ -103,14 +105,14 @@ const WarmSample = TP`
 
     const int length = #(data.shape).x;
     
-    vec4 process(ivec4 pos) {
+    vec4 process4(ivec4 pos) {
         float sum = 0.0;
         for(int i = 0; i < length; i++){
-            sum += exp(readTensor(data, i).x / temperature);
+            sum += exp(data.read4(i, 0).x / temperature);
         }
         float samp = 0.0;
         for(int i = 0; i < length; i++){
-            float range = exp(readTensor(data, i).x / temperature) / sum;
+            float range = exp(data.read4(i, 0).x / temperature) / sum;
             if(random > samp && random < samp + range){
                 return vec4(i, 0, 0, 0);
             }
@@ -123,8 +125,8 @@ const WarmSample = TP`
 const OneHot = TP`
     uniform Tensor data;
     
-    vec4 process(ivec4 pos) {
-        if(abs(float(pos.x) - readTensor(data, 0, 0).x) < 1.0){
+    vec4 process4(ivec4 pos) {
+        if(abs(float(pos.x) - data.read4(0, 0).x) < 1.0){
             return vec4(1, 1, 1, 1);
         }else{
             return vec4(0, 0, 0, 0);
@@ -176,7 +178,7 @@ function refreshTweet(){
     
     for(let i = 0; i < buffer.shape[3]; i++){
     	if(i < message.length)
-    		charTensor.update([ chars.indexOf(message[i]), 0, 0, 0 ]);
+    		charTensor.update(ndpack([[ chars.indexOf(message[i]), 0, 0, 0 ]]));
     	
         OneHot(oneHotVector, { data: charTensor })
 		LSTM(state, { X: oneHotVector, prev: state, W: lstmWeights })

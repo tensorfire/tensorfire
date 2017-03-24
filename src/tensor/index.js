@@ -100,7 +100,9 @@ export class Tensor extends BaseTensor {
         }else{
             // C.info.main_input.output.copy({ type: 'uint8', pack: 'tile', density: '4:4', codec: 'linquant', min: 0, max: 255 })._show({ })
             this.withCopy(x => x.show(opt), 
-                { type: 'uint8', pack: 'tile', density: '4:4', codec: 'raw' })
+                { type: 
+                    (gl.NO_FLOAT_TEXTURES || gl.NO_RENDER_FLOAT) ? 'uint8' : 'float32', 
+                    pack: 'tile', density: '4:4', codec: 'raw' })
         };
     }
 

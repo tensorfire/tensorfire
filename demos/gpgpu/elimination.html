@@ -22,29 +22,30 @@ const EliminationStep = TP`
     uniform Tensor mat;
     uniform int k;
 
-    vec4 process(ivec4 pos) {
+    float process(ivec4 pos) {
         if(pos.x > k){
             if(pos.y > k){
-                return readTensor(mat, pos) - readTensor(mat, k, pos.y)
-                    * (readTensor(mat, pos.x, k) / readTensor(mat, k, k));  
+                return mat.read(pos) - mat.read(ivec4(k, pos.y, 0, 0)) *
+                    (mat.read(ivec4(pos.x, k, 0, 0)) / mat.read(ivec4(k, k, 0, 0)));
             }else{
-                return vec4(0, 0, 0, 0);
+                return 0.0;
             }
         }
-        return readTensor(mat, pos);
+        return mat.read(pos);
     }
 `;
+
 
 const BackSubstitute = TP`
     uniform Tensor mat;
     uniform int k;
 
-    vec4 process(ivec4 pos) {
+    float process(ivec4 pos) {
         if(pos.x == k){
-            return readTensor(mat, pos) / readTensor(mat, k, k);
+            return mat.read(pos) / mat.read(ivec4(k, k, 0, 0));
         }else{
-            return readTensor(mat, pos) - readTensor(mat, k, pos.y) * (
-                    readTensor(mat, pos.x, k) / readTensor(mat, k, k));    
+            return mat.read(pos) - mat.read(ivec4(k, pos.y, 0, 0)) *
+                (mat.read(ivec4(pos.x, k, 0, 0)) / mat.read(ivec4(k, k, 0, 0)));
         }
     }
 `;
@@ -66,6 +67,6 @@ for(var k = mat.shape[0] - 1; k >= 0; k--){
 
 mat.show({ scale: 1/6, offset: 0.5, transpose: true, flipY: true })
 
-console.log(ndshow(mat.read2()))    
+console.log(ndshow(mat.read()))    
 
 </script>

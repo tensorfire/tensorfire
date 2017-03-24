@@ -2102,6 +2102,15 @@ function TNSL(str) {
                 return (obj.every(Number.isInteger) ? 'i' : '') + 'vec' + obj.length + '(' + obj.join(',') + ')';
             }
             throw new Error('Can not inline expression ' + body);
+        }).replace(/\b(\w+)\s*\.\s*(read4?)\b\s*\(([^\(\)]+)\)/g, function (all, name, prop, arg) {
+            if (name in uniforms && uniforms[name].shape) {
+                var parts = arg.split(','),
+                    padded = parts.concat(['0', '0', '0', '0'].slice(0, 4 - parts.length));
+                if (parts.length < 2) return all;
+                var vec = 'ivec4(' + padded.join(',') + ')';
+                return name + '_' + prop + '(' + vec + ')';
+            }
+            return all;
         }).replace(/\b(\w+)\s*\.\s*(\w+)\b/g, function (all, name, prop) {
             if (name in uniforms && uniforms[name].shape) {
                 return name + '_' + prop;
@@ -2481,7 +2490,8 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
                 // C.info.main_input.output.copy({ type: 'uint8', pack: 'tile', density: '4:4', codec: 'linquant', min: 0, max: 255 })._show({ })
                 this.withCopy(function (x) {
                     return x.show(opt);
-                }, { type: 'uint8', pack: 'tile', density: '4:4', codec: 'raw' });
+                }, { type: gl.NO_FLOAT_TEXTURES || gl.NO_RENDER_FLOAT ? 'uint8' : 'float32',
+                    pack: 'tile', density: '4:4', codec: 'raw' });
             };
         }
     }, {

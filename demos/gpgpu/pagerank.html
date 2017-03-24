@@ -21,15 +21,16 @@ const MatrixMultiply = TP`
     uniform Tensor a;
     uniform Tensor b;
    
-    vec4 process(ivec4 pos) {
-        vec4 sum = vec4(0, 0, 0, 0);
+    float process(ivec4 pos) {
+        float sum = 0.0;
         for(int k = 0; k < #(a.shape).y; k++){
-            sum += readTensor(a, ivec4(pos.x, k, pos.wz))
-                 * readTensor(b, ivec4(k, pos.y, pos.wz));
+            sum += a.read(ivec4(pos.x, k, pos.wz))
+                 * b.read(ivec4(k, pos.y, pos.wz));
         }
         return sum;
     }
 `;
+
 
 var transitionProbMatrix = new Tensor(gl, transitionProbs);
 var len = transitionProbMatrix.shape[0];
