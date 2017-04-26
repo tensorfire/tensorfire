@@ -1,324 +1,99 @@
-# WebGL Tensor Library
+# TensorFire Tutorial
 
-Look at all the unit tests!
-
-
-
-# nostruct branch
-
-There are a few problems with the current implementation which may be solved by migrating away from the current tensor struct based approach:
-
-- errors for sampler2D in struct in microsoft edge
-- errors for sampler in struct in firefox on vmware
-- errors for sampler in struct on google pixel
-- heterogeneous nofloat on ios
-
-The current implementation defines a struct for containing information about tensors:
-
-	struct Tensor {
-	    sampler2D tex;
-	    ivec2     texSize;
-	    ivec4     shape; // [width, height, channel+depth, batch]
-	    int       cols;
-	};
-
-The tensors are accessed with the `readTensor(Tensor t, ivec4 pos)` function. 
+Here's a simple tutorial that will hopefully get you started with using the low-level TensorFire tensor manipulation library. If you're just trying to get an existing neural network to run in the browser, you should probably look into our high-level interface for importing from Keras/TensorFlow. 
 
 
-In the future, we'll generate a special function for reading each tensor. This enables us to have different encodings for different tensors within the same shader. 
+### Creating Tensors
 
-	uniform sampler2D image_tex;
-	uniform ivec2 image_texSize;
-	uniform ivec4 image_shape;
-	uniform int image_cols;
-	
-    vec4 __read_image(ivec4 pos){
-        return texture2D(image_tex, (
-            vec2(tile2vec(
-                vec2tile(pos.zw, ceildiv(image_shape.z, 4))
-            , cols) * image_shape.xy) +
-            vec2(pos.xy) + vec2(0.5, 0.5)
-        ) / vec2(image_size));
+A tensor is an n-dimensional generalization of arrays and matrices. An element in an array is identified with one index, and an element in a matrix can be located with two indices, and a tensor generalizes this idea to an arbitrary number of indices. As far as this library is concerned, however, we're only concerned with tensors of rank 4 (where elements are addressed with four indices). 
+
+For dealing with tensors in Javascript, we use the [ndarray package](https://github.com/scijs/ndarray) by the scijs project, which provides a simple and fast interface for creating, importing, and manipulating tensors. 
+
+```js
+var ndpack = require("ndarray-pack");
+X = new Tensor(gl, ndpack([
+    [0,0,1],
+    [0,1,1],
+    [1,0,1],
+    [1,1,1]
+]))
+```
+
+Here we're using [ndarray-pack](https://github.com/scijs/ndarray-pack) to import a nested array of arrays as a tensor. The dimensions of the resulting tensor (given by `X.shape`) are `[4, 3, 1, 1]`. This resulting Tensor object can be passed as an argument to a tensor operation (which we'll get to in the next section). 
+
+We can also create a tensor by specifying its shape, but without specifying its contents. In this case, all the elements are initialized to zero.
+
+```js
+outputTensor = new OutputTensor(gl, [4, 4])
+```
+
+Regular `Tensor` instances are read-only. Once it's been initialized with some contents, its values can't be changed, and it can't be used as the destination for a tensor operation. 
+
+You can, however, instantiate an `OutputTensor` instead in exactly the same way as a regular `Tensor`. It has all the same capabilities, but you're also allowed to update its contents and set it as a destination for tensor operations. However, you can't use the same instance of an `OutputTensor` as both the input and output to a tensor operation (for that, you'll need an `InPlaceTensor`).
+
+### Defining a Tensor Operation
+
+At its heart, TensorFire is a framework for writing tensor operations in GLSL (the OpenGL shader language). The code for a tensor operation is embedded in Javascript as an ordinary string (we're using ES6's backtick syntax for multi-line strings). 
+
+```js
+const Subtraction = `
+    uniform Tensor a;
+    uniform Tensor b;
+    
+    float process(ivec4 pos) {
+        return a.read(pos) - b.read(pos);
     }
+`;
+```
 
-We can introduce some syntactic sugar around accessing these tensors. 
+The heart of a tensor operation is the `float process(ivec4 pos)` method. It gets called once for each possible coordinate in the output tensor of the coordinate. All the outputs are then saved into the appropriate location in the specified output tensor. In the above example, the output value is computed as the elementwise difference between two `Tensor` uniforms (`a` and `b`). However, you can just as easily sum over a range of relative indices to represent a convolution. 
 
-    #image[xyz] // __read_image(ivec4(xyz))
+A tensor operation takes a certain number of parameters as inputs called "uniforms" (borrowing from OpenGL's lingo). These uniforms can be `float`, `int`, `vec2`, `vec4`, or any valid GLSL type. Most interestingly is is the `Tensor` type, which lets us have tensors as input.
 
-This also opens the door to supporting many more tensor formats. 
+### Reading Tensors
+```c
+uniform Tensor a;
+uniform Tensor b;
 
-- floating point (1 pixel to encode vec4, float range)
-- nofloat (4 pixels to encode one vec4, float range)
-- fixnum (4 pixels to encode one vec4, linear range)
+float process(ivec4 pos) {
+    return a.read(pos) - b.read(pos);
+}
+```
+You can read the value of any `Tensor` uniform with the `Tensor::read(ivec4 pos)` method. It reads the value found at the given position
 
-Each can be represnted on a uint8 texture, and only floating point can be represented on a floating point texture (technically the others could too but there's no point in doing so). 
+As shorthand, `.read(x, y[, z, w])` is automatically interpreted as `.read(ivec4(x, y, z, w))` with missing values set to zero. 
 
-What's needed for each encoding
+### Vectorized Methods
 
-- javascript write implementation
-	- encode ndarray as this kind of texture
-- glsl read implementation
-	- return vec4 from position
-- glsl write implementation
-	- return color based on vec4
-- javascript read implementation
-	- decode texture values into ndarray
+We've discussed `float process(ivec4 pos)` and `float Tensor::read(ivec4 pos)` so far as how you process and read tensors, respectively. But it's somewhat inefficient to invoke `process` and `read` so many times, even on massively parallel hardware like a GPU. 
 
+Graphics cards have a bunch of features for efficiently working with 4-vectors, so we also have vectorized analogues for `process` and `read`. 
 
-Formats:
+```c
+vec4 process4(ivec4 pos) {
+    return a.read4(pos) - b.read4(pos);
+}
+```
 
-- normal
-- simple
-- simple-nofloat
+When using `process4`, rather than calling every possible value for `ivec4 pos`, we skip around the `z` coordinate in increments of four. It expects a response in the form of a `vec4` which will populate that range of coordinates. 
 
-- fixnum
-- nofloat
+Analogously, `.read4(ivec4 pos)` rounds the `z` coordinate down to the nearest multiple of 4 and emits another `vec4` of values. 
 
+### Running Tensor Operations
 
-Pseudocode
+Once we've defined an output tensor, we can start running tensor operations with the `Run` method. 
 
-	function Compile(shader, output, params){
-		code = ''
-		code += lookupTensorWriteGLSL(output.encoding)
-		for name in params {
-			if param is Tensor {
-				code += lookupTensorReadGLSL(param)
-			}
-		}
-		cacheProgram(compileAndLink(code))
-	}
+```js
+outputTensor.run(Subtraction, { a: X, b: Y })
+```
 
-	function Run(shader, output, params){
-		Compile(shader, output, params)
-		for name in params {
-			if param is Tensor {
-				for uniform in tensor {
-					setUniform(lookupUniform(uniform), tensor[uniform])
-				}
-			}
-		}
-	}
+The first argument is expected to be a string with the source code of the tensor operation, and the second argument is a dictionary of all the values for uniforms that will be passed into the operation. 
 
+These operations can be thought of as executing synchronously. This isn't technically true as `run` will return instantaneously, merely adding to a processing queue handled by the GPU at its own discretion. However, it automatically tracks dependencies, so you shouldn't have to worry about stale data or race conditions. 
 
-Tensor API:
+If you ever call a function which does I/O, such as reading the value of a tensor from within Javascript, it'll cause the browser to pause until the GPU is done with its queue. 
 
-	class Tensor {
-		type: uint8 | float32
-		
-		_type: uint8 | float32
-		_format: fixnum | nofloat | normal | simple
+If you need to be asynchronously notified upon the completion of an operation, you can pass a callback as an argument after the uniforms dictionary.
 
-		constructor(shape){
-			this._uniforms = format.allocate(shape)
 
-		}
-		_read(){
-			return gl.readPixels...
-		}
 
-		read(){
-			return format.unpack(this._read())
-		}
-
-
-		_update(data){
-			gl.bindTexture(this.tex)
-			gl.texImage2D(data)
-		}
-		update(data){
-			this._update(format.pack(data))
-		}
-	}
-
-
-
-Texture (really low level)
-
-	class Texture {
-		type: uint8 | float32
-		constructor(texSize){
-			gl.createTexture
-		}
-		update(data){
-			gl.texImage2D()
-		}
-		read(){
-			gl.readPixels()
-		}
-	}
-
-
-
-
-Texture (Low Level) API:
-
-	class Texture {
-		constructor(type, format, shape){
-			this.uniforms = format.init(shape)
-		}
-		update(data){
-			gl.texImage2D(format.pack(this.uniforms, data))
-		}
-		read(){
-			return format.unpack(gl.readPixels());
-		}
-	}
-
-
-The texture is a low-level API. The "type" is "uint8" if the underlying texture representation is a gl.UNSIGNED_BYTE, "type" is only "float32" if the underlying texture representation is a gl.FLOAT.
-
-
-
-# Taxonomy of Formats
-
-- Vectorized: this is the typical encoding, where we have a floating point RGBA texture where each pixel encodes 4 floats
-	- Tile: the volume is sliced along depth and channel into tiles that are packed into the texture
-	- Stride: we treat the texture as a long array wrapped at a certain point and we address things by multiplying strides
-
-- Unvectorized: this is meant to run on uint8 textures and each pixel encodes a single floating point value.
-	- Fixnum: fixed-precision encoding
-	- Nofloat: ieee754
-
-
-
-# Taxonomy of Formats (V2)
-
-packings:
-- tile
-- stride
-
-1:4 codecs:
-- softfloat
-- fixnum
-
-4:4 codecs:
-- raw
-- linear quantization
-
-
-directory structure:
-- format/
-	- 4-4
-		- pack
-			- tile
-			- stride
-		- codec
-			- softfloat
-			- fixnum
-	- 1-4
-		- pack
-			- tile
-			- stride
-		- codec
-			- raw
-			- linquant
-
-
-
-ivec4 pos <-> vec2 texture position mapping functions
-
-- Tile
-- Stride
-
-float <-> vec4 color mapping functions for nofloat
-
-
-# Chromebook Crash
-
-It seems that my chromebook doesn't like it when I try to use oes_disjoint_timer_ext or whatever. It ends up crashing the operating system entirely sometimes. 
-
-# Strange Bug:
-
-This works fine:
-
-    if(tile * 4 >= @shape.z * @shape.w){ checkerboard(); return; }
-
-
-This doesn't work on Firefox under VMWare
-
-	if(tile >= ceildiv(@shape.z, 4) * @shape.w){  checkerboard(); return; }
-
-This also works:
-
-	if(tile >= @shape.z / 4 * @shape.w)
-
-
-
-# Functions must return
-
-Microsoft Edge throws `SCRIPT5022: Error linking program with vertex shader, "unknown", and fragment shader "unknown"`: `WEBGL11102: linkProgram: Internal linker error` when code includes this:
-
-	float chsel(vec4 val, int ch){
-		if(ch == 0) return val.r;
-		if(ch == 1) return val.g;
-		if(ch == 2) return val.b;
-		if(ch == 3) return val.a;
-	}
-
-The program needs to return for all possible conditional paths, so changing it to this fixes the problem. 
-
-	float chsel(vec4 val, int ch){
-		if(ch == 0) return val.r;
-		if(ch == 1) return val.g;
-		if(ch == 2) return val.b;
-		return val.a;
-	}
-
-
-# This one is insane
-
-Here's a problem which seems to only happen on my LG Optimus Exceed 2. 
-
-
-So this code works fine:
-
-    uniform Tensor argle;
-    uniform Tensor bargle;
-
-	vec4 process(ivec4 pos){
-	    vec4 derp = (argle_read(pos) + bargle_read(pos));
-	    return vec4(
-	        derp.r,
-	        derp.r,
-	        derp.r,
-	        2
-	    );
-	}
-
-But this code throws a link error:
-
-    uniform Tensor argle;
-    uniform Tensor bargle;
-
-	vec4 process(ivec4 pos){
-	    vec4 derp = (argle_read(pos) + bargle_read(pos));
-	    return vec4(
-	        derp.r,
-	        derp.r,
-	        derp.r,
-	        1
-	    );
-	}
-
-
-Error linking program with vertex shader, "unknown", and fragment shader "unknown"
---From Vertex Shader:
---From Fragment Shader:
-
-
-Note that this works fine:
-
-	vec4 xprocess(ivec4 pos) {
-        return argle_read(pos) + bargle_read(pos);
-    }
-
-    vec4 process(ivec4 pos) {
-        vec4 val = xprocess(pos);
-        return vec4(val.rgb, chsel(val, 3));
-    }
-
-But this doesn't:
-
-	vec4 xprocess(ivec4 pos) {
-        return argle_read(pos) + bargle_read(pos);
-    }
