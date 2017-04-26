@@ -96,4 +96,32 @@ If you ever call a function which does I/O, such as reading the value of a tenso
 If you need to be asynchronously notified upon the completion of an operation, you can pass a callback as an argument after the uniforms dictionary.
 
 
+### Tensor Domain Specific Language
+
+The language that we've been using to write our shaders is mostly GLSL, with a few additional convenience features that comprise our tensor shader domain specific language (DSL) codenamed TNSL. 
+
+The first, which you've already seen on this page is how we specify `Tensor` uniforms:
+
+	uniform Tensor a;
+
+This is reminiscent of struct syntax, but it actually gets compiled into a series of uniform declarations (some browsers, like Microsoft Edge don't support `sampler2D` within structs). 
+
+Tensors have properties which are accessed like struct properties:
+
+	ivec4 a.shape
+	ivec2 a.texSize
+
+Next is the object-oriented syntax for reading from tensors:
+
+	float process(ivec4 pos) {
+        return a.read(pos) - b.read(pos);
+    }
+
+Structs can't have methods in GLSL, so `a.read(pos)` gets transformed into `a_read(pos)`. The `pos` argument is expected to be an `ivec4` vector, however there's some additional syntactic sugar which automatically transforms `a.read(x, y)` into `a_read(ivec4(x, y, 0, 0))`. That is, it will automatically pad coordinates with zero if there is more than one argument specified. Note that this tranformation only happens with two or more arguments.
+
+Finally, GLSL is often quite annoying for lacking . 
+
+
+
+
 
