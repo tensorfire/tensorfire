@@ -1,0 +1,7 @@
+stride packing: compute dot product mode piecewise to avoid overflow:
+instead of (a • b) % c, we can compute:
+
+temp0 = (a[0] * b[0]) % c
+temp1 = (temp0 + a[1] * b[1]) % c
+temp2 = (temp1 + a[2] * b[2]) % c
+result = (temp2 + a[3] * b[3]) % c

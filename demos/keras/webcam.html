@@ -26,11 +26,11 @@
 <script src="imagenet.js"></script>
 <script src="keras_import.js"></script>
 <script>
-var gl = KV.createGL(document.getElementById('glCanvas')),
-    OutputTensor = KV.OutputTensor,
-    Tensor = KV.Tensor,
-    InPlaceTensor = KV.InPlaceTensor,
-    TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
+var gl = TF.createGL(document.getElementById('glCanvas')),
+    OutputTensor = TF.OutputTensor,
+    Tensor = TF.Tensor,
+    InPlaceTensor = TF.InPlaceTensor,
+    TP = s => (out, opt) => TF.Run(s.join(''), out, opt);
 gl.canvas.width = 227
 gl.canvas.height = 227
 
