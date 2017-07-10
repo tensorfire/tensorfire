@@ -10,6 +10,20 @@ async function loadArrayFromURL(fileName){
 }
 
 
+function createProgress(){
+    var prog = document.createElement('progress')
+    prog.style.position = 'absolute'
+    prog.style.width = '100%'
+    prog.style.top = 0;
+    prog.style.left = 0;
+    document.body.appendChild(prog)
+
+
+    prog.destroy = function(){
+        document.body.removeChild(prog)
+    }
+}
+
 async function loadBuffer(fileName){
     var xhr = new XMLHttpRequest()
     xhr.open('GET', fileName, true)
@@ -17,20 +31,14 @@ async function loadBuffer(fileName){
     xhr.send(null)
 
 
-    var prog = document.createElement('progress')
-    prog.style.position = 'absolute'
-    prog.style.width = '100%'
-    prog.style.top = 0;
-    prog.style.left = 0;
-
-    document.body.appendChild(prog)
+    var prog = createProgress()
     xhr.onprogress = function(progress){
         prog.value = progress.loaded / progress.total
     }
 
     await new Promise(resolve => xhr.onload = resolve)
-
-    document.body.removeChild(prog)
+    prog.destroy()
+    
     return xhr.response;
 }
 

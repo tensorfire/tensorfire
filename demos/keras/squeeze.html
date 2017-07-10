@@ -37,7 +37,7 @@ async function squeezenet(){
     var network = import_keras_network(keras_model, keras_model_meta, buffer)
 
 
-    var compiled = await compile(gl, network, { input_1: image })
+    var compiled = await compile(gl, network, { input_1: image, layerPause: true })
     C = compiled
 
     for(var i = 0; i < 10; i++){

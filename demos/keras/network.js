@@ -4,6 +4,9 @@ async function compile(gl, network, options){
     console.time('compiling network')
     var finished = 0;
     console.groupCollapsed('compiling')
+    
+    if(options.layerPause) var prog = createProgress();
+
     while(true){
         var pending = network
             .filter(k => !(k.name in info));
@@ -27,11 +30,18 @@ async function compile(gl, network, options){
             info[layer.name] = LAYER_TYPES[layer.type](gl, layer, deps, options)
             info[layer.name].deps = deps
             finished++;
+
+            if(options.layerPause){
+                prog.value = ready.length / (ready.length + pending.length);
+                await new Promise(resolve => requestAnimationFrame(resolve))
+            }
             if(options.progress) await options.progress(finished / network.length, layer);
         }
     }
     console.groupEnd('compiling')
     console.timeEnd('compiling network')
+
+    if(options.layerPause) prog.destroy();
     
     return { network, info };
 }

@@ -40,7 +40,7 @@ async function stylize(){
     // var image = (await loadArrayFromURL('data/convolution2d_1-input-315x420x3')).transpose(1, 0, 2)
     var image = (await loadArrayFromURL('data/input-382x508x3')).transpose(1, 0, 2)
     
-    var compiled = await compile(gl, network, { main_input: image })
+    var compiled = await compile(gl, network, { main_input: image, layerPause: true })
     C = compiled
     console.time('stylize')
     await run(gl, compiled, { main_input: image, layerPause: true })
