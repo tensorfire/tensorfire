@@ -1745,10 +1745,13 @@ function Run(shaderGen, output) {
 
     var gl = output.gl;
 
-    (0, _timer.beginTimer)(gl, {
-        shader: shaderGen,
-        output: output
-    });
+    if (callback && typeof callback != 'function') throw new Error('Callback must be a function');
+    if (callback) {
+        (0, _timer.beginTimer)(gl, {
+            shader: shaderGen,
+            output: output
+        });
+    }
 
     gl.useProgram(tp.program);
     gl.disable(gl.DEPTH_TEST);
@@ -1800,11 +1803,12 @@ function Run(shaderGen, output) {
 
     // var runTime = now() - startTime;
     // timer.end()
-    if (callback && typeof callback != 'function') throw new Error('Callback must be a function');
-    (0, _timer.endTimer)(gl, function (info) {
-        // console.log('GPU time: ', info)
-        if (callback) callback(info);
-    });
+    if (callback) {
+        (0, _timer.endTimer)(gl, function (info) {
+            // console.log('GPU time: ', info)
+            callback(info);
+        });
+    }
     // console.log('CPU Run Time', runTime)
 
     return output;
