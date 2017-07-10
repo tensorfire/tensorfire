@@ -1,4 +1,5 @@
 import { readFileSync } from 'fs';
+import ndarray from 'ndarray'
 
 export const readShader = readFileSync(__dirname + '/read.glsl', 'utf8');
 export const writeShader = readFileSync(__dirname + '/write.glsl', 'utf8');

@@ -14,11 +14,10 @@
 var gl = TF.createGL(),
     OutputTensor = TF.OutputTensor,
     Tensor = TF.Tensor,
-    InPlaceTensor = TF.InPlaceTensor,
-    TP = s => (out, opt) => TF.Run(s.join(''), out, opt);
+    InPlaceTensor = TF.InPlaceTensor;
 
 
-const EliminationStep = TP`
+const EliminationStep = `
     uniform Tensor mat;
     uniform int k;
 
@@ -36,7 +35,7 @@ const EliminationStep = TP`
 `;
 
 
-const BackSubstitute = TP`
+const BackSubstitute = `
     uniform Tensor mat;
     uniform int k;
 
@@ -58,11 +57,11 @@ var mat = new InPlaceTensor(gl, ndpack([
 
 
 for(var k = 0; k < mat.shape[0]; k++){
-    EliminationStep(mat, { mat: mat, k: k })
+    mat.run(EliminationStep, { mat: mat, k: k })
 }
 
 for(var k = mat.shape[0] - 1; k >= 0; k--){
-    BackSubstitute(mat, { mat: mat, k: k })
+    mat.run(BackSubstitute, { mat: mat, k: k })
 }
 
 mat.show({ scale: 1/6, offset: 0.5, transpose: true, flipY: true })

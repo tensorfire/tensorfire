@@ -16,12 +16,12 @@
 var gl = TF.createGL(),
 	OutputTensor = TF.OutputTensor,
 	Tensor = TF.Tensor,
-	InPlaceTensor = TF.InPlaceTensor,
-	TP = s => (out, opt) => TF.Run(s.join(''), out, opt);
+	InPlaceTensor = TF.InPlaceTensor;
 
 
-const LSTM = TP`
+const LSTM = `
     // Tensor output: [Ns, 1, 2]
+
     uniform Tensor X; // [Ni, 1, 1]
     uniform Tensor prev; // [Ns, 1, 2]
     uniform Tensor W; // [Ns, Ns + Ni + 1, 4]
@@ -59,12 +59,15 @@ var Ns = 4,
     Ni = 4;
 
 var input1 = new Tensor(gl, LSTMInput.pick(0, null)),
-	input2 = new Tensor(gl, LSTMInput.pick(1, null)),
-	weights = new Tensor(gl, W),
-	output = new InPlaceTensor(gl, [Ns, 1, 4]);
+    input2 = new Tensor(gl, LSTMInput.pick(1, null)),
+    weights = new OutputTensor(gl, W),
+    output = new InPlaceTensor(gl, [Ns, 1, 4]);
 
-LSTM(output, { X: input1, W: weights, prev: output });
-LSTM(output, { X: input2, W: weights, prev: output });
+
+console.log(Array.from(weights.read().data).map((k, i) => Math.abs(W.data[i]-k)<0.01 ? 0 : 'xxx'))
+
+output.run(LSTM, { X: input1, W: weights, prev: output });
+output.run(LSTM, { X: input2, W: weights, prev: output });
 
 output.show()
 

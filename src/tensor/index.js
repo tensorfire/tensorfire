@@ -4,6 +4,7 @@ import runFeatureTests from './feature.js'
 import { makeTexture, makeFrameBuffer } from './helpers.js'
 import { Run, Compile } from '../runtime/index.js'
 import ndshow from 'ndarray-show'
+import ndarray from 'ndarray'
 
 export class Tensor extends BaseTensor {
     // new Tensor(gl)
@@ -93,6 +94,7 @@ export class Tensor extends BaseTensor {
 
 	_show(opt = {}){ showTexture(this.gl, this.tex, opt) }
     show(opt = {}){
+        var gl = this.gl;
         if(this.format.pack == 'tile' 
             && this.format.density == '4:4' 
             && this.format.codec == 'raw'){
@@ -169,7 +171,7 @@ export class OutputTensor extends Tensor {
         // strip trailing singleton dimensions
         var shape = array.shape.slice(0),
             stride = array.stride.slice(0);
-        while(shape[shape.length - 1] == 1){
+        while(shape[shape.length - 1] == 1 && shape.length > 1){
             shape.pop()
             stride.pop()
         }

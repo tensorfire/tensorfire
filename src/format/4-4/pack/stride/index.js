@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 
 export const readShader = readFileSync(__dirname + '/read.glsl', 'utf8');
 export const writeShader = readFileSync(__dirname + '/write.glsl', 'utf8');
+import ndarray from 'ndarray'
 
 export function init(shape){
     var length = Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
