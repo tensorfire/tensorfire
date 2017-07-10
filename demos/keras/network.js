@@ -5,7 +5,7 @@ async function compile(gl, network, options){
     var finished = 0;
     console.groupCollapsed('compiling')
     
-    if(options.layerPause) var prog = createProgress();
+    if(options.layerPause) var prog = createProgress('compiling network');
 
     while(true){
         var pending = network
@@ -32,7 +32,7 @@ async function compile(gl, network, options){
             finished++;
 
             if(options.layerPause){
-                prog.value = ready.length / (ready.length + pending.length);
+                prog.value = finished / network.length;
                 await new Promise(resolve => requestAnimationFrame(resolve))
             }
             if(options.progress) await options.progress(finished / network.length, layer);

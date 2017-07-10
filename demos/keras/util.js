@@ -1,25 +1,33 @@
 async function loadArrayFromURL(fileName){
-    var xhr = new XMLHttpRequest()
-    xhr.open('GET', fileName, true)
-    xhr.responseType = 'arraybuffer'
-    xhr.send(null)
-    await new Promise(resolve => xhr.onload = resolve)
-    var buffer = new Float32Array(xhr.response)
+    var buffer = new Float32Array(await loadBuffer(fileName))
     var shape = fileName.match(/\d+(x\d+)*$/)[0].split('x').map(k => +k)
     return ndarray(buffer, shape)
 }
 
 
-function createProgress(){
+function createProgress(label){
+
+    var container = document.createElement('div')
+
+    container.style.position = 'absolute'
+    container.style.top = 0;
+    container.style.left = 0;
+    container.style.width = '100%'
+    container.style.padding = '20px'
+    container.style.boxSizing = 'border-box'
+
+    container.appendChild(document.createTextNode(label || ''))
+
     var prog = document.createElement('progress')
-    prog.style.position = 'absolute'
     prog.style.width = '100%'
-    prog.style.top = 0;
-    prog.style.left = 0;
-    document.body.appendChild(prog)
+    
+    container.appendChild(prog)
+
+
+    document.body.appendChild(container)
 
     prog.destroy = function(){
-        document.body.removeChild(prog)
+        document.body.removeChild(container)
     }
     return prog;
 }
@@ -30,8 +38,7 @@ async function loadBuffer(fileName){
     xhr.responseType = 'arraybuffer'
     xhr.send(null)
 
-
-    var prog = createProgress()
+    var prog = createProgress('downloading ' + fileName)
     xhr.onprogress = function(progress){
         prog.value = progress.loaded / progress.total
     }
