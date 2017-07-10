@@ -9,6 +9,11 @@ export function now() {
 function getTimer(gl){
 	if(gl.NO_PROFILE) return;
 	if(typeof gl.TIMER_POOL === 'undefined'){
+		var extTimer = gl.getExtension('ext_disjoint_timer_query');
+		if(!extTimer || !extTimer.createQueryEXT){
+			gl.NO_PROFILE = true;
+			return;
+		}
 		gl.TIMER_POOL = createTimer(gl)
 	}
 	return gl.TIMER_POOL;
