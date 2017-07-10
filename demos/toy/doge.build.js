@@ -8,13 +8,13 @@ var _templateObject = _taggedTemplateLiteral(['\n    uniform Tensor image;\n\n  
 
 function _taggedTemplateLiteral(strings, raw) { return Object.freeze(Object.defineProperties(strings, { raw: { value: Object.freeze(raw) } })); }
 
-var gl = KV.createGL(),
-    OutputTensor = KV.OutputTensor,
-    Tensor = KV.Tensor,
-    InPlaceTensor = KV.InPlaceTensor,
+var gl = TF.createGL(),
+    OutputTensor = TF.OutputTensor,
+    Tensor = TF.Tensor,
+    InPlaceTensor = TF.InPlaceTensor,
     TP = function TP(s) {
     return function (out, opt) {
-        return KV.Run(s.join(''), out, opt);
+        return TF.Run(s.join(''), out, opt);
     };
 };
 

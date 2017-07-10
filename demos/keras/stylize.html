@@ -15,11 +15,11 @@
 <script src="benchmark.js"></script>
 <script src="keras_import.js"></script>
 <script>
-var gl = KV.createGL(),
-    OutputTensor = KV.OutputTensor,
-    Tensor = KV.Tensor,
-    InPlaceTensor = KV.InPlaceTensor,
-    TP = s => (out, opt) => KV.Run(s.join(''), out, opt);
+var gl = TF.createGL(),
+    OutputTensor = TF.OutputTensor,
+    Tensor = TF.Tensor,
+    InPlaceTensor = TF.InPlaceTensor,
+    TP = s => (out, opt) => TF.Run(s.join(''), out, opt);
 gl.canvas.width = 512
 gl.canvas.height = 512
 

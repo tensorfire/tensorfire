@@ -1,4 +1,4 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.KV = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.TF = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 var sprintf = require('sprintf');
 module.exports = format;
 
@@ -2069,7 +2069,12 @@ function TNSL(str) {
     if (typeof str != 'string') throw new Error('TNSL shader preprocessor only accepts strings');
 
     return function (uniforms, output) {
-        return str.replace(/uniform\s*Tensor\s*([\w_]+)\s*;/g, '/* (Tensor $1) */').replace(/\#\(([\w\.\s]+)\)/g, function (all, body) {
+        return str
+        // comment out the tensor struct definitions
+        .replace(/uniform\s*Tensor\s*([\w_]+)\s*;/g, '/* (Tensor $1) */')
+
+        // this is the macro syntax
+        .replace(/\#\(([\w\.\s]+)\)/g, function (all, body) {
             var obj = uniforms;
             var _iteratorNormalCompletion = true;
             var _didIteratorError = false;
@@ -2102,16 +2107,24 @@ function TNSL(str) {
                 return (obj.every(Number.isInteger) ? 'i' : '') + 'vec' + obj.length + '(' + obj.join(',') + ')';
             }
             throw new Error('Can not inline expression ' + body);
-        }).replace(/\b(\w+)\s*\.\s*(read4?)\b\s*\(([^\(\)]+)\)/g, function (all, name, prop, arg) {
+        })
+        // tensor.read4(x, 0) => tensor.read4(ivec4(x, 0, 0, 0))
+        // this transformation takes place when there are 2 or more arguments
+        // as otherwise it's not possible to statically determine whether x is
+        // of type ivec4 or a number
+        .replace(/\b(\w+)\s*\.\s*(read4?)\b\s*\(([^\(\)]+)\)/g, function (all, name, prop, arg) {
             if (name in uniforms && uniforms[name].shape) {
                 var parts = arg.split(','),
                     padded = parts.concat(['0', '0', '0', '0'].slice(0, 4 - parts.length));
-                if (parts.length < 2) return all;
+                if (parts.length < 2 || parts.length > 4) return all;
                 var vec = 'ivec4(' + padded.join(',') + ')';
                 return name + '_' + prop + '(' + vec + ')';
             }
             return all;
-        }).replace(/\b(\w+)\s*\.\s*(\w+)\b/g, function (all, name, prop) {
+        })
+
+        // tensor.shape => tensor_shape
+        .replace(/\b(\w+)\s*\.\s*(\w+)\b/g, function (all, name, prop) {
             if (name in uniforms && uniforms[name].shape) {
                 return name + '_' + prop;
             }
