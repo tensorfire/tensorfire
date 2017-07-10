@@ -15,7 +15,22 @@ async function loadBuffer(fileName){
     xhr.open('GET', fileName, true)
     xhr.responseType = 'arraybuffer'
     xhr.send(null)
+
+
+    var prog = document.createElement('progress')
+    prog.style.position = 'absolute'
+    prog.style.width = '100%'
+    prog.style.top = 0;
+    prog.style.left = 0;
+
+    document.body.appendChild(prog)
+    xhr.onprogress = function(progress){
+        prog.value = progress.loaded / progress.total
+    }
+
     await new Promise(resolve => xhr.onload = resolve)
+
+    document.body.removeChild(prog)
     return xhr.response;
 }
 
