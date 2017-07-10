@@ -3,6 +3,7 @@ export function createGL(canvas){
         canvas = document.createElement('canvas');
         canvas.width = 512
         canvas.height = 512
+        canvas.style.display = 'none';
         document.body.appendChild(canvas)
     }
     var gl = canvas.getContext("webgl", { antialias: false }) 

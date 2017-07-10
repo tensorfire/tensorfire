@@ -2695,7 +2695,7 @@ function showTexture(gl, tex) {
 }
 
 },{"../runtime/program.js":24}],32:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
@@ -2706,6 +2706,7 @@ function createGL(canvas) {
         canvas = document.createElement('canvas');
         canvas.width = 512;
         canvas.height = 512;
+        canvas.style.display = 'none';
         document.body.appendChild(canvas);
     }
     var gl = canvas.getContext("webgl", { antialias: false }) || canvas.getContext("experimental-webgl", { antialias: false });
