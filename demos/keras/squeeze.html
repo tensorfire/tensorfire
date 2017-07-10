@@ -40,7 +40,7 @@ async function squeezenet(){
     var compiled = await compile(gl, network, { input_1: image, layerPause: true })
     C = compiled
 
-    for(var i = 0; i < 10; i++){
+    for(var i = 0; i < 3; i++){
 
         console.time('running')
         await run(gl, compiled, { input_1: image })
@@ -64,7 +64,7 @@ async function squeezenet(){
             ])
         )
     ))
-
+    table.style.float = 'right'
     document.body.appendChild(table)
     // await destroy(gl, compiled)
 

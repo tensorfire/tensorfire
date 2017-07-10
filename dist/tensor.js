@@ -2694,7 +2694,7 @@ function showTexture(gl, tex) {
         gl.canvas.style.display = 'block';
         gl.canvas.style.position = 'absolute';
         gl.canvas.style.top = 0;
-        gl.canvas.style.right = 0;
+        gl.canvas.style.left = 0;
         gl.canvas.style.width = Math.min(innerHeight, innerWidth) + 'px';
         gl.canvas.style.height = Math.min(innerHeight, innerWidth) + 'px';
     }
