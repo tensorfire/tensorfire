@@ -18,10 +18,10 @@ function createProgress(){
     prog.style.left = 0;
     document.body.appendChild(prog)
 
-
     prog.destroy = function(){
         document.body.removeChild(prog)
     }
+    return prog;
 }
 
 async function loadBuffer(fileName){
