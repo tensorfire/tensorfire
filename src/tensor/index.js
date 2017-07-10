@@ -146,6 +146,7 @@ export class OutputTensor extends Tensor {
             var glType = gl.FLOAT,
                 pixels = new Float32Array(size[0] * size[1] * 4)
         }
+
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
         gl.readPixels(0, 0, size[0], size[1], gl.RGBA, glType, pixels);
         return pixels;
@@ -159,6 +160,10 @@ export class OutputTensor extends Tensor {
     }
 
 	read(){
+        if(this.format.type === 'float32' && this.gl.NO_READ_FLOAT){
+            return this.withCopy(x => x.read(), 'softfloat')
+        }
+
 		var array = this._format.pack.unpack(this.info, this._read(), this._format.codec.decode, this.type);
         
         // strip trailing singleton dimensions
