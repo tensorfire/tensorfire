@@ -70,4 +70,11 @@ export default function showTexture(gl, tex, opt = {}){
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    if(gl.canvas && gl.canvas._tfAuto){
+        gl.canvas.style.display = 'block'
+        gl.canvas.style.position = 'absolute'
+        gl.canvas.style.top = 0;
+        gl.canvas.style.left = 0;
+    }
 }

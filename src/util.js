@@ -4,6 +4,7 @@ export function createGL(canvas){
         canvas.width = 512
         canvas.height = 512
         canvas.style.display = 'none';
+        canvas._tfAuto = true;
         document.body.appendChild(canvas)
     }
     var gl = canvas.getContext("webgl", { antialias: false }) 
