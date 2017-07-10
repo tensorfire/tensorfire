@@ -57,6 +57,16 @@ export default function showTexture(gl, tex, opt = {}){
         gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'tex'), 0);
     }
     
+
+    if(gl.canvas && gl.canvas._tfAuto){
+        gl.canvas.style.display = 'block'
+        gl.canvas.style.position = 'absolute'
+        gl.canvas.style.top = 0;
+        gl.canvas.style.left = 0;
+        gl.canvas.style.width = Math.min(innerHeight, innerWidth) + 'px'
+        gl.canvas.style.height = Math.min(innerHeight, innerWidth) + 'px'
+    }
+
     gl.useProgram(gl._showProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -71,10 +81,4 @@ export default function showTexture(gl, tex, opt = {}){
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-    if(gl.canvas && gl.canvas._tfAuto){
-        gl.canvas.style.display = 'block'
-        gl.canvas.style.position = 'absolute'
-        gl.canvas.style.top = 0;
-        gl.canvas.style.left = 0;
-    }
 }

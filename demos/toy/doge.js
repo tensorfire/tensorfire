@@ -1,13 +1,12 @@
 var gl = TF.createGL(),
     OutputTensor = TF.OutputTensor,
     Tensor = TF.Tensor,
-    InPlaceTensor = TF.InPlaceTensor,
-    TP = s => (out, opt) => TF.Run(s.join(''), out, opt);
+    InPlaceTensor = TF.InPlaceTensor;
 
 
 global.gl = gl;
 
-const ColorizeQuad = TP`
+const ColorizeQuad = `
     uniform Tensor image;
 
     vec4 process(ivec4 pos) {
@@ -20,7 +19,7 @@ const ColorizeQuad = TP`
     }
 `
 
-const RawMirror = TP`
+const RawMirror = `
     uniform Tensor image;
 
     vec4 process(ivec4 pos) {
@@ -30,7 +29,7 @@ const RawMirror = TP`
 `;
 
 
-const ColorMirror = TP`
+const ColorMirror = `
     uniform Tensor image;
 
     vec4 process(ivec4 pos) {
@@ -67,17 +66,17 @@ loadImage('./doge.jpg', function(im){
     global.doge = new Tensor(gl, ndoge.transpose(1, 0, 2))
 
     // global.mirror = new OutputTensor(gl, [im.width, im.height, 4]);
-    // RawMirror(mirror, { image: doge })
+    // mirror.run(RawMirror, { image: doge })
 
     // we can load directly from imagedata
     // global.doge = new Tensor(gl, im)
 
     global.multidoge = new OutputTensor(gl, [im.width, im.height, 4 * 4])
-    ColorizeQuad(multidoge, { image: doge })
+    multidoge.run(ColorizeQuad, { image: doge })
 
     global.hyperdoge = new OutputTensor(gl, [im.width, im.height, 4 * 4, 2])
 
-    ColorMirror(hyperdoge, { image: multidoge })
+    hyperdoge.run(ColorMirror, { image: multidoge })
     hyperdoge.show()
 
 })
