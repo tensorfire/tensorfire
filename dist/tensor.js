@@ -1965,6 +1965,8 @@ function endTimer(gl, callback) {
 	var timer = getTimer(gl);
 	if (timer) {
 		timer.end(callback);
+	} else if (callback) {
+		console.warn("Can not trigger callback: implementation does not support ext_disjoint_timer_query");
 	}
 }
 
