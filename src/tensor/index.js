@@ -151,6 +151,8 @@ export class OutputTensor extends Tensor {
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
         gl.readPixels(0, 0, size[0], size[1], gl.RGBA, glType, pixels);
+
+        // console.log('___read', pixels)
         return pixels;
     }
 

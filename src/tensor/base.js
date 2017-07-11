@@ -69,6 +69,7 @@ export default class BaseTensor {
 			if(data.length !== this.info.texSize[0] * this.info.texSize[1] * 4)
 				throw new Error('data is the wrong length');
 		}
+		// if(data) console.log('_update', data);
 		var gl = this.gl;
         gl.bindTexture(gl.TEXTURE_2D, this.tex);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 

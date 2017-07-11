@@ -12,6 +12,8 @@ void main(){
     if(tile >= @shape.z * @shape.w){ checkerboard(); return; }
 
     gl_FragColor = @encode1(@activation1(process(ivec4(
-        mod(vec2(gl_FragCoord.xy), vec2(@shape.xy)), 
+    	imod(gl_FragCoord.x, @shape.x),
+    	imod(gl_FragCoord.y, @shape.y),
+        // mod(vec2(gl_FragCoord.xy), vec2(@shape.xy)), 
         tile2vec(tile, @shape.z)))));
 }

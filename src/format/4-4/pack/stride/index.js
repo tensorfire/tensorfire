@@ -8,6 +8,8 @@ export function init(shape){
     var length = Math.ceil(shape[2] / 4) * shape[3] * shape[1] * shape[0];
     var cols = Math.ceil(Math.sqrt(length));
     var texSize = [cols, Math.ceil(length / cols)]
+
+    console.assert(texSize[0] * texSize[1] >= length)
     return {
         texSize: texSize,
         shape: shape,
@@ -15,7 +17,7 @@ export function init(shape){
         stride: [
             1, 
             shape[0], 
-            shape[0] * shape[1] / 4, 
+            shape[0] * shape[1], 
             shape[0] * shape[1] * Math.ceil(shape[2] / 4)
         ],
         // decvec: [1, shape[0], shape[0] * shape[1], shape[0] * shape[1] * Math.ceil(shape[2] / 4)]
@@ -24,6 +26,7 @@ export function init(shape){
 
 export function pack(info, array, encode4, format){
     // return Uint8Array or Float32Array
+
     array = ndarray(array.data, 
         array.shape.concat([1, 1, 1, 1]).slice(0, 4),
         array.stride.concat([1, 1, 1, 1]).slice(0, 4),
@@ -70,6 +73,9 @@ export function pack(info, array, encode4, format){
 
 
 export function unpack(info, data, decode4, type){
+
+
+
     var shape = info.shape;
     var shapelength = shape.reduce((a, b) => a * b);
     
@@ -92,7 +98,8 @@ export function unpack(info, data, decode4, type){
                 var b = Math.min(k*4+4, shape[2])-k*4;
                 for(var w = 0; w < info.shape[3]; w++){
 
-                    var tile  = i + 
+                    var tile  = 
+                        i + 
                         j * shape[0] + 
                         k * shape[0] * shape[1] +
                         w * shape[0] * shape[1] * chans;

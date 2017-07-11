@@ -6,6 +6,7 @@ import ndpack from 'ndarray-pack'
 import ndunpack from 'ndarray-unpack'
 import ndshow from 'ndarray-show'
 import ndarray from 'ndarray'
+import zeros from 'zeros'
 
 function assEqual(a, b){
 	if(ndt.equal(a, b, 1e-5)){
@@ -188,6 +189,25 @@ describe('Basic', () => {
 		})
 	})
 
+
+	describe('testing a bunch of shapes and sizes', function(){
+		function testShape(shape){
+			var Z = zeros(shape); 
+			for(var i = 0; i < Z.data.length; i++) 
+				Z.data[i] = i; 
+
+			var ztens = new OutputTensor(gl, Z);
+			assEqual(ztens.copy().read(), Z)	
+		}
+
+		it('testing 2x2', () => testShape([2, 2]))
+		it('testing 4x7', () => testShape([4, 7]))
+		it('testing 3x2', () => testShape([3, 2]))
+		it('testing 8x7', () => testShape([8, 7]))
+
+		
+
+	})
 
 	
 })

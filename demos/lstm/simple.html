@@ -60,11 +60,11 @@ var Ns = 4,
 
 var input1 = new Tensor(gl, LSTMInput.pick(0, null)),
     input2 = new Tensor(gl, LSTMInput.pick(1, null)),
-    weights = new OutputTensor(gl, W),
+    weights = new Tensor(gl, W),
     output = new InPlaceTensor(gl, [Ns, 1, 4]);
 
 
-console.log(Array.from(weights.read().data).map((k, i) => Math.abs(W.data[i]-k)<0.01 ? 0 : 'xxx'))
+// console.log(Array.from((new Tensor(gl, W)).copy().read().data).map((k, i) => Math.abs(W.data[i]-k)<0.01 ? 0 : 'xxx'))
 
 output.run(LSTM, { X: input1, W: weights, prev: output });
 output.run(LSTM, { X: input2, W: weights, prev: output });

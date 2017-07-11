@@ -1,0 +1,88 @@
+<body>
+<script src="../../dist/demo-util.js"></script>
+<script src="../../dist/tensor.js"></script>
+
+
+<style type="text/css">
+    body {
+        font-family: sans-serif;
+    }
+</style>
+
+<script>
+var gl = TF.createGL(),
+	OutputTensor = TF.OutputTensor,
+	Tensor = TF.Tensor,
+	InPlaceTensor = TF.InPlaceTensor;
+
+
+Z=zeros([4, 7]); 
+
+for(var i = 0; i < Z.data.length; i++) 
+	Z.data[i] = i; 
+
+console.log(ndshow(Z))
+
+var ztens = new OutputTensor(gl, Z);
+
+console.log(ndshow(ztens.copy().read())); 
+
+
+// var out = new OutputTensor(gl, [1,1,4])
+// out.run(`
+// 	uniform Tensor img; 
+// 	vec4 process4(ivec4 pos){ 
+// 		return img.read4(ivec4(1,1,0,0)); 
+// 	}`, { img: ztens }); 
+
+// out.run(`
+// uniform Tensor img; 
+// vec4 process4(ivec4 pos){ 
+// 	float tile = dot(vec4(pos), img_stride);
+// 	return vec4(vec2(
+// 			0.5 + mod(tile, float(img_texSize.x)), 
+// 			0.5 + floor(tile / float(img_texSize.x))
+// 		) / vec2(img_texSize),0,0) ;
+// }`, { img: ztens }); 
+
+// console.log(ndshow(out.read()))
+
+
+var out = new OutputTensor(gl, [4,7])
+// out.run(`
+// uniform Tensor img; 
+// vec4 process4(ivec4 pos){ 
+// 	return texture2D(img_tex, (vec2(0.5,0.5) + vec2(pos.xy))/vec2(4.0,7.0));
+// }`, { img: ztens }); 
+
+
+// out.run(`
+// uniform Tensor img; 
+// vec4 process4(ivec4 pos){ 
+//     float tile = dot(vec4(pos), img_stride);
+//     // return vec4(tile);
+
+//     // return vec4(mod(tile, float(img_texSize.x)));
+
+//     return vec4(imod(int(tile), img_texSize.x));
+
+    
+
+//     // return vec4( floor(tile / float(img_texSize.x)) );
+
+//     return vec4( 
+//     		mod(tile, float(img_texSize.x)), 
+//     		floor(tile / float(img_texSize.x)), 0, 0);
+
+//     return texture2D(img_tex, vec2(
+//     		0.5 + mod(tile, float(img_texSize.x)), 
+//     		0.5 + floor(tile / float(img_texSize.x))
+//     	) / vec2(img_texSize)) ;
+// 	// return texture2D(img_tex, (vec2(0.5,0.5) + vec2(pos.xy))/vec2(4.0,7.0));
+// }`, { img: ztens }); 
+
+
+
+// console.log(ndshow(out.read()))
+
+</script>

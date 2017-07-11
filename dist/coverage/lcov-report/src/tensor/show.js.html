@@ -20,14 +20,14 @@
     </h1>
     <div class='clearfix'>
       <div class='fl pad1y space-right2'>
-        <span class="strong">100% </span>
+        <span class="strong">76.92% </span>
         <span class="quiet">Statements</span>
-        <span class='fraction'>19/19</span>
+        <span class='fraction'>20/26</span>
       </div>
       <div class='fl pad1y space-right2'>
-        <span class="strong">73.33% </span>
+        <span class="strong">63.16% </span>
         <span class="quiet">Branches</span>
-        <span class='fraction'>11/15</span>
+        <span class='fraction'>12/19</span>
       </div>
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
@@ -35,13 +35,13 @@
         <span class='fraction'>1/1</span>
       </div>
       <div class='fl pad1y space-right2'>
-        <span class="strong">100% </span>
+        <span class="strong">76.92% </span>
         <span class="quiet">Lines</span>
-        <span class='fraction'>19/19</span>
+        <span class='fraction'>20/26</span>
       </div>
     </div>
   </div>
-  <div class='status-line high'></div>
+  <div class='status-line medium'></div>
 <pre><table class="coverage">
 <tr><td class="line-count quiet">1
 2
@@ -116,7 +116,18 @@
 71
 72
 73
-74</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -168,26 +179,37 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { bindAttributeBuffer, createShaderProgram } from '../runtime/program.js'
 &nbsp;
@@ -241,13 +263,23 @@ const SHOW_TEXTURE_FRAGMENT = `
 `
 &nbsp;
 export default function showTexture(gl, tex, opt = <span class="branch-0 cbranch-no" title="branch not covered" >{})</span>{
-    if(!gl._showProgram){
+    <span class="missing-if-branch" title="else path not taken" >E</span>if(!gl._showProgram){
         gl._showProgram = createShaderProgram(gl, SHOW_TEXTURE_VERTEX, SHOW_TEXTURE_FRAGMENT);
         gl.useProgram(gl._showProgram);
         bindAttributeBuffer(gl, gl._showProgram);
         gl.uniform1i(gl.getUniformLocation(gl._showProgram, 'tex'), 0);
     }
     
+&nbsp;
+    <span class="missing-if-branch" title="if path not taken" >I</span>if(gl.canvas &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >gl.canvas._tfAuto)</span>{
+<span class="cstat-no" title="statement not covered" >        gl.canvas.style.display = 'block'</span>
+<span class="cstat-no" title="statement not covered" >        gl.canvas.style.position = 'absolute'</span>
+<span class="cstat-no" title="statement not covered" >        gl.canvas.style.top = 0;</span>
+<span class="cstat-no" title="statement not covered" >        gl.canvas.style.left = 0;</span>
+<span class="cstat-no" title="statement not covered" >        gl.canvas.style.width = Math.min(innerHeight, innerWidth) + 'px'</span>
+<span class="cstat-no" title="statement not covered" >        gl.canvas.style.height = Math.min(innerHeight, innerWidth) + 'px'</span>
+    }
+&nbsp;
     gl.useProgram(gl._showProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -261,6 +293,7 @@ export default function showTexture(gl, tex, opt = <span class="branch-0 cbranch
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+&nbsp;
 }
 &nbsp;</pre></td></tr>
 </table></pre>
@@ -268,7 +301,7 @@ export default function showTexture(gl, tex, opt = <span class="branch-0 cbranch
 </div><!-- /wrapper -->
 <div class='footer quiet pad2 space-top1 center small'>
   Code coverage
-  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Sat Jan 07 2017 02:29:12 GMT-0500 (EST)
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Mon Jul 10 2017 05:33:54 GMT-0700 (PDT)
 </div>
 </div>
 <script src="../../prettify.js"></script>

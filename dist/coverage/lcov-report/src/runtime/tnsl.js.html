@@ -20,24 +20,24 @@
     </h1>
     <div class='clearfix'>
       <div class='fl pad1y space-right2'>
-        <span class="strong">100% </span>
+        <span class="strong">86.96% </span>
         <span class="quiet">Statements</span>
-        <span class='fraction'>12/12</span>
+        <span class='fraction'>20/23</span>
       </div>
       <div class='fl pad1y space-right2'>
-        <span class="strong">100% </span>
+        <span class="strong">86.96% </span>
         <span class="quiet">Branches</span>
-        <span class='fraction'>11/11</span>
+        <span class='fraction'>20/23</span>
       </div>
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
         <span class="quiet">Functions</span>
-        <span class='fraction'>3/3</span>
+        <span class='fraction'>5/5</span>
       </div>
       <div class='fl pad1y space-right2'>
-        <span class="strong">100% </span>
+        <span class="strong">86.36% </span>
         <span class="quiet">Lines</span>
-        <span class='fraction'>12/12</span>
+        <span class='fraction'>19/22</span>
       </div>
     </div>
   </div>
@@ -80,7 +80,37 @@
 35
 36
 37
-38</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -99,21 +129,51 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">41x</span>
+<span class="cline-any cline-yes">125x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">40x</span>
-<span class="cline-any cline-yes">40x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">124x</span>
+<span class="cline-any cline-yes">124x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">65x</span>
+<span class="cline-any cline-yes">65x</span>
+<span class="cline-any cline-yes">125x</span>
+<span class="cline-any cline-yes">65x</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">63x</span>
+<span class="cline-any cline-yes">61x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">502x</span>
+<span class="cline-any cline-yes">188x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">314x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -140,7 +200,12 @@ export default function TNSL(str){
         throw new Error('TNSL shader preprocessor only accepts strings');
     
     return function(uniforms, output){
-        return str.replace(/\#\(([\w\.\s]+)\)/g, function(all, body){
+        return str
+        // comment out the tensor struct definitions
+        .replace(/uniform\s*Tensor\s*([\w_]+)\s*;/g, '/* (Tensor $1) */')
+&nbsp;
+        // this is the macro syntax
+        .replace(/\#\(([\w\.\s]+)\)/g, function(all, body){
             var obj = uniforms;
             for(let part of body.split('.'))
                 obj = obj[part.trim()];
@@ -152,6 +217,31 @@ export default function TNSL(str){
             }
             throw new Error('Can not inline expression ' + body);
         })
+        // tensor.read4(x, 0) =&gt; tensor.read4(ivec4(x, 0, 0, 0))
+        // this transformation takes place when there are 2 or more arguments
+        // as otherwise it's not possible to statically determine whether x is
+        // of type ivec4 or a number
+        .replace(/\b(\w+)\s*\.\s*(read4?)\b\s*\(([^\(\)]+)\)/g, function(all, name, prop, arg){
+            <span class="missing-if-branch" title="else path not taken" >E</span>if(name in uniforms &amp;&amp; uniforms[name].shape){
+                var parts = arg.split(','),
+                    padded = parts.concat(['0', '0', '0', '0'].slice(0, 4 - parts.length));
+                <span class="missing-if-branch" title="else path not taken" >E</span>if(parts.length &lt; 2 || <span class="branch-1 cbranch-no" title="branch not covered" >parts.length &gt; 4)</span> return all;
+                var vec = <span class="cstat-no" title="statement not covered" >'ivec4(' + padded.join(',') + ')';</span>
+<span class="cstat-no" title="statement not covered" >                return name + '_' + prop + '(' + vec + ')';</span>
+            }
+<span class="cstat-no" title="statement not covered" >            return all;</span>
+        })
+&nbsp;
+        // tensor.shape =&gt; tensor_shape
+        .replace(/\b(\w+)\s*\.\s*(\w+)\b/g, function(all, name, prop){
+            if(name in uniforms &amp;&amp; uniforms[name].shape){
+                return name + '_' + prop;
+            }
+            return all;
+        })
+        // .replace(/\#\s*(\w+)\s*\[(.*?)\]/g, function(all, tensor, body){
+        //     return tensor + '_read(ivec4(' + body + '))'
+        // })
     }
 }
 &nbsp;</pre></td></tr>
@@ -160,7 +250,7 @@ export default function TNSL(str){
 </div><!-- /wrapper -->
 <div class='footer quiet pad2 space-top1 center small'>
   Code coverage
-  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Sat Jan 07 2017 02:29:12 GMT-0500 (EST)
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Mon Jul 10 2017 05:33:54 GMT-0700 (PDT)
 </div>
 </div>
 <script src="../../prettify.js"></script>
