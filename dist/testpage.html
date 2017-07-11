@@ -10,7 +10,7 @@
   <script>
 function sendReport(payload) {
     var req = new XMLHttpRequest();
-    req.open('POST', 'https://telemetry.anish.io/api/v1/submit');
+    req.open('POST', 'https://logs.tenso.rs/api/v1/submit');
     req.setRequestHeader("Content-Type", "application/json");
     var msg = {
         identifier: "tensorfire-v1",
