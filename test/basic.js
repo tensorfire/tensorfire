@@ -33,6 +33,7 @@ const ECHO_LOCATION = `
 describe('Basic', () => {
 
 	var gl = headlessGL(100, 100, { preserveDrawingBuffer: true })
+	
 	var out = new OutputTensor(gl, [5, 5, 4]);
 
 	describe('Input Validation', function(){
@@ -190,24 +191,27 @@ describe('Basic', () => {
 	})
 
 
-	describe('testing a bunch of shapes and sizes', function(){
+	describe('verify copy invariants', function(){
 		function testShape(shape){
 			var Z = zeros(shape); 
 			for(var i = 0; i < Z.data.length; i++) 
 				Z.data[i] = i; 
 
-			var ztens = new OutputTensor(gl, Z);
+			var ztens = new Tensor(gl, Z);
 			assEqual(ztens.copy().read(), Z)	
 		}
 
-		it('testing 2x2', () => testShape([2, 2]))
-		it('testing 4x7', () => testShape([4, 7]))
-		it('testing 3x2', () => testShape([3, 2]))
-		it('testing 8x7', () => testShape([8, 7]))
+		it('2x2', () => testShape([2, 2]))
+		it('4x7', () => testShape([4, 7]))
+		it('3x2', () => testShape([3, 2]))
+		it('8x7', () => testShape([8, 7]))
 
-		
 
+		it('4x7x3', () => testShape([8, 7, 3]))
+		it('5x3x7', () => testShape([5, 3, 7]))
+		it('6x2x9', () => testShape([6, 2, 9]))
 	})
+
 
 	
 })

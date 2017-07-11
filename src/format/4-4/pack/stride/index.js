@@ -17,7 +17,7 @@ export function init(shape){
         stride: [
             1, 
             shape[0], 
-            shape[0] * shape[1], 
+            shape[0] * shape[1] / 4,  // the /4 is because of the color channel
             shape[0] * shape[1] * Math.ceil(shape[2] / 4)
         ],
         // decvec: [1, shape[0], shape[0] * shape[1], shape[0] * shape[1] * Math.ceil(shape[2] / 4)]

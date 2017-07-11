@@ -28,87 +28,66 @@ const IDENTITY = `
 describe('Activations', () => {
 	var gl = headlessGL(100, 100, { preserveDrawingBuffer: true })
 
-	describe('input validation', () => {
-		it('should throw with invalid activation', () => {
-			var arr = ndpack([
-				[5, 6], 
-				[-3, 0]]),
-				inp = new Tensor(gl, arr),
-				out = new OutputTensor(gl, inp.shape);
-			
-			assert.throws(() => Run(IDENTITY, out, { image: inp, _activation: 'wumbo' }))
-		})
+	
+	it('throw with invalid activation', () => {
+		var arr = ndpack([
+			[5, 6], 
+			[-3, 0]]),
+			inp = new Tensor(gl, arr),
+			out = new OutputTensor(gl, inp.shape);
+		
+		assert.throws(() => Run(IDENTITY, out, { image: inp, _activation: 'wumbo' }))
 	})
 
-	describe('linear', () => {
-		it('should not change anything', () => {
-			var arr = ndpack([
-				[5, 6], 
-				[-3, 0]]),
-				inp = new Tensor(gl, arr),
-				out = new OutputTensor(gl, inp.shape);
-			Run(IDENTITY, out, { image: inp, _activation: 'linear' })
-			assEqual(out.read(), arr)
-		})
-		it('yay floating point decoder', () => {
-			var arr = ndpack([
-				[53, 4], 
-				[-1, 0]]),
-				inp = new Tensor(gl, arr),
-				out = new OutputTensor(gl, inp.shape);
-			Run(IDENTITY, out, { image: inp, _activation: 'linear' })
-			assEqual(out.read(), arr)
-		})
+	it('linear', () => {
+		var arr = ndpack([
+			[5, 6], 
+			[-3, 0],
+			[53, 4], 
+			[-1, 0]]),
+			inp = new Tensor(gl, arr),
+			out = new OutputTensor(gl, inp.shape);
+		Run(IDENTITY, out, { image: inp, _activation: 'linear' })
+		assEqual(out.read(), arr)
 	})
 
-	describe('relu', () => {
-		it('should work for carefully chosen floats', () => {
-			var inp = new Tensor(gl, ndpack([
-				[5, 6], 
-				[-3, 0]])),
-				out = new OutputTensor(gl, inp.shape);
-			Run(IDENTITY, out, { image: inp, _activation: 'relu' })
-			assEqual(out.read(), ndpack([
-				[5, 6],
-				[0, 0]]))
-		})
-		it('should work after logan fixes stuff', () => {
-			var inp = new Tensor(gl, ndpack([
-				[1, 2], 
-				[-1, 0]])),
-				out = new OutputTensor(gl, inp.shape);
-			Run(IDENTITY, out, { image: inp, _activation: 'relu' })
-			assEqual(out.read(), ndpack([
-				[1, 2],
-				[0, 0]]))
-		})
+
+	it('relu', () => {
+		var inp = new Tensor(gl, ndpack([
+			[5, 6], 
+			[-3, 0],
+			[1, 2],
+			[-1, 0]])),
+			out = new OutputTensor(gl, inp.shape);
+		Run(IDENTITY, out, { image: inp, _activation: 'relu' })
+		assEqual(out.read(), ndpack([
+			[5, 6],
+			[0, 0],
+			[1, 2],
+			[0, 0]]))
+	})
+	
+	it('should work', () => {
+		var inp = new Tensor(gl, ndpack([
+			[53, 3], 
+			[-32, 0]])),
+			out = new OutputTensor(gl, inp.shape);
+		Run(IDENTITY, out, { image: inp, _activation: 'sigmoid' })
+		assEqual(out.read(), ndpack([
+			[1, 0.9975274205207825],
+			[0, 0.5]]))
 	})
 
-	describe('sigmoid', () => {
-		it('should work', () => {
-			var inp = new Tensor(gl, ndpack([
-				[53, 3], 
-				[-32, 0]])),
-				out = new OutputTensor(gl, inp.shape);
-			Run(IDENTITY, out, { image: inp, _activation: 'sigmoid' })
-			assEqual(out.read(), ndpack([
-				[1, 0.9975274205207825],
-				[0, 0.5]]))
-		})
-	})
+	it('tanh', () => {
+		var inp = new Tensor(gl, ndpack([
+			[53, 3], 
+			[-32, 0]])),
+			out = new OutputTensor(gl, inp.shape);
+		Run(IDENTITY, out, { image: inp, _activation: 'tanh' })
 
-	describe('tanh', () => {
-		it('should work', () => {
-			var inp = new Tensor(gl, ndpack([
-				[53, 3], 
-				[-32, 0]])),
-				out = new OutputTensor(gl, inp.shape);
-			Run(IDENTITY, out, { image: inp, _activation: 'tanh' })
-
-			assEqual(out.read(), ndpack([
-				[1, 0.9950547814369202],
-				[-1, 0]]))
-		})
+		assEqual(out.read(), ndpack([
+			[1, 0.9950547814369202],
+			[-1, 0]]))
 	})
 
 

@@ -2,6 +2,8 @@ import { bindAttributeBuffer, createShaderProgram } from '../runtime/program.js'
 import { makeFrameBuffer, makeTexture } from './helpers.js'
 
 export default function runFeatureTests(gl){
+    // gl.NO_FLOAT_TEXTURES = true;
+    
     if(!gl.FLOAT_TEXTURES_TESTED && !gl.NO_FLOAT_TEXTURES){
         if(!gl.getExtension('OES_texture_float')){
             console.info("This browser does not seem to support OES_texture_float. "

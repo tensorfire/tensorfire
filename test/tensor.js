@@ -224,27 +224,29 @@ describe('Tensor', () => {
 		// 		assert.deepEqual(nofloat._read(), new Uint8Array(new Float32Array(floatData).buffer))
 		// 	});
 		// })
-		describe('Complex Array', function(){
-			var array = ndpack([
-				[[[1, 2, -1], [-3, 18, 0.3]], [[Math.PI, 2, 0.001], [-11323, 3, 4]]], 
-				[[[13, 2, 14], [33, 4, 6]], [[1, 0.2, 1.1], [23383, Math.E, 4]]]
-			])
-			var t = new OutputTensor(gl, array)
+		
+	})
 
-			it('should read out the matrix intact', function(){
-				assEqual(t.read(), array)
-			})
+	describe('Complex Array', function(){
+		var array = ndpack([
+			[[[1, 2, -1], [-3, 18, 0.3]], [[Math.PI, 2, 0.001], [-11323, 3, 4]]], 
+			[[[13, 2, 14], [33, 4, 6]], [[1, 0.2, 1.1], [23383, Math.E, 4]]]
+		])
+		var t = new OutputTensor(gl, array)
 
-			it('should be the same after being float32 copied', function(){
-				assEqual(t.copy('float32').read(), array)
-			})
+		it('should read out the matrix intact', function(){
+			assEqual(t.read(), array)
+		})
 
-			it('should be the same after being softfloat copied', function(){
-				var softfloat = t.copy('softfloat');
-				assert.equal(softfloat.type, 'float32')
-				assert.equal(softfloat.format.type, 'uint8')
-				assEqual(softfloat.read(), array)
-			})
+		it('should be the same after being float32 copied', function(){
+			assEqual(t.copy('float32').read(), array)
+		})
+
+		it('should be the same after being softfloat copied', function(){
+			var softfloat = t.copy('softfloat');
+			assert.equal(softfloat.type, 'float32')
+			assert.equal(softfloat.format.type, 'uint8')
+			assEqual(softfloat.read(), array)
 		})
 	})
 

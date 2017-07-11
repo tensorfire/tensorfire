@@ -1200,7 +1200,8 @@ function init(shape) {
         texSize: texSize,
         shape: shape,
 
-        stride: [1, shape[0], shape[0] * shape[1], shape[0] * shape[1] * Math.ceil(shape[2] / 4)]
+        stride: [1, shape[0], shape[0] * shape[1], // the /4 is because of the color channel
+        shape[0] * shape[1] * Math.ceil(shape[2] / 4)]
     };
 }
 
@@ -2259,7 +2260,7 @@ var BaseTensor = function () {
 				} else throw new Error('Type must be uint8 or float32');
 				if (data.length !== this.info.texSize[0] * this.info.texSize[1] * 4) throw new Error('data is the wrong length');
 			}
-			if (data) console.log('_update', data);
+			// if(data) console.log('_update', data);
 			var gl = this.gl;
 			gl.bindTexture(gl.TEXTURE_2D, this.tex);
 			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.info.texSize[0], this.info.texSize[1], 0, gl.RGBA, this.format.type == 'uint8' ? gl.UNSIGNED_BYTE : gl.FLOAT, data);
@@ -2659,7 +2660,7 @@ var OutputTensor = exports.OutputTensor = function (_Tensor) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
             gl.readPixels(0, 0, size[0], size[1], gl.RGBA, glType, pixels);
 
-            console.log('___read', pixels);
+            // console.log('___read', pixels)
             return pixels;
         }
     }, {
