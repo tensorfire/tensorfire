@@ -33,7 +33,7 @@ const ECHO_LOCATION = `
 describe('Basic', () => {
 
 	var gl = headlessGL(100, 100, { preserveDrawingBuffer: true })
-	
+
 	var out = new OutputTensor(gl, [5, 5, 4]);
 
 	describe('Input Validation', function(){
@@ -197,8 +197,10 @@ describe('Basic', () => {
 			for(var i = 0; i < Z.data.length; i++) 
 				Z.data[i] = i; 
 
-			var ztens = new Tensor(gl, Z);
-			assEqual(ztens.copy().read(), Z)	
+			var ztens = new Tensor(gl, Z, 'softfloat');
+			var copy = ztens.copy('softfloat');
+			console.log(ztens.format, copy.format)
+			assEqual(copy.read(), Z)	
 		}
 
 		it('2x2', () => testShape([2, 2]))

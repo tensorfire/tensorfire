@@ -1200,7 +1200,7 @@ function init(shape) {
         texSize: texSize,
         shape: shape,
 
-        stride: [1, shape[0], shape[0] * shape[1], // the /4 is because of the color channel
+        stride: [1, shape[0], shape[0] * shape[1] / 4, // the /4 is because of the color channel
         shape[0] * shape[1] * Math.ceil(shape[2] / 4)]
     };
 }
@@ -2310,6 +2310,7 @@ var _program = require('../runtime/program.js');
 var _helpers = require('./helpers.js');
 
 function runFeatureTests(gl) {
+
     if (!gl.FLOAT_TEXTURES_TESTED && !gl.NO_FLOAT_TEXTURES) {
         if (!gl.getExtension('OES_texture_float')) {
             console.info("This browser does not seem to support OES_texture_float. " + "Using float codec workaround from now on.");
