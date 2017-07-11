@@ -7,6 +7,25 @@
 <body>
   <div id="mocha"></div>
 
+  <script>
+function sendReport(payload) {
+    var req = new XMLHttpRequest();
+    req.open('POST', 'https://telemetry.anish.io/api/v1/submit');
+    req.setRequestHeader("Content-Type", "application/json");
+    var msg = {
+        identifier: "tensorfire-v1",
+        data: {
+            ua: navigator.userAgent,
+            gl: "", // TODO
+            passes: payload.passes,
+            failures: payload.failures,
+            passed: JSON.stringify(payload.passed),
+            failed: JSON.stringify(payload.failed),
+        },
+    }
+    req.send(JSON.stringify(msg));
+}
+  </script>
   <script src="test.js"></script>
 </body>
 </html>

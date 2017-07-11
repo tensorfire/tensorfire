@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha --require babel-register",
-    "testpage": "browserify --debug -t babelify -p [mocaccino --reporter html] test/*.js > dist/test.js",
+    "testpage": "browserify --debug -t babelify -p [mocaccino -R ../../../test-lib/reporter] test/*.js > dist/test.js",
     "cover": "BABEL_ENV=nyc nyc mocha || nyc report --reporter=lcov && rm -r dist/coverage && mv coverage dist/coverage",
     "build": "browserify src/index.js -t babelify -o dist/tensor.js -s TF"
   },
