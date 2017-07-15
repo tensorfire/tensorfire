@@ -197,9 +197,9 @@ describe('Basic', () => {
 			for(var i = 0; i < Z.data.length; i++) 
 				Z.data[i] = i; 
 
-			var ztens = new Tensor(gl, Z, 'softfloat');
-			var copy = ztens.copy('softfloat');
-			console.log(ztens.format, copy.format)
+			var ztens = new Tensor(gl, Z);
+			var copy = ztens.copy();
+			// console.log(ztens.format, copy.format)
 			assEqual(copy.read(), Z)	
 		}
 
