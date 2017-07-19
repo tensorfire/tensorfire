@@ -52,6 +52,7 @@ function createTensorProgram(gl, fragmentShader){
 
     return {
         program: program,
+        fragmentShader: fragmentShader,
         uniformLocs: uniformLocs,
         uniformTypes: uniformTypes,
         setUniform: setUniform,

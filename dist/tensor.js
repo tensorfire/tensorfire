@@ -1898,6 +1898,7 @@ function createTensorProgram(gl, fragmentShader) {
 
     return {
         program: program,
+        fragmentShader: fragmentShader,
         uniformLocs: uniformLocs,
         uniformTypes: uniformTypes,
         setUniform: setUniform
@@ -2775,6 +2776,9 @@ function showTexture(gl, tex) {
         gl.canvas.style.left = 0;
         gl.canvas.style.width = Math.min(innerHeight, innerWidth) + 'px';
         gl.canvas.style.height = Math.min(innerHeight, innerWidth) + 'px';
+        gl.canvas.onclick = function () {
+            gl.canvas.style.display = 'none';
+        };
     }
 
     gl.useProgram(gl._showProgram);

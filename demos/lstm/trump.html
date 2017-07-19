@@ -5,7 +5,7 @@
 
 <div class="tweet">
     <div class="header">
-        <img src="https://pbs.twimg.com/profile_images/1980294624/DJT_Headshot_V2_400x400.jpg">
+        <img src="trump/trump.jpg">
         <div class="byline">
             <div class="author">Donald J. Trump</div>
             <div class="username">@realDonaldTrump</div>
@@ -17,13 +17,16 @@
     </div>
     <div id="timestamp"></div>
 </div>
+<canvas id="canvas"></canvas>
 
 <script>
-var gl = TF.createGL(),
+var gl = TF.createGL(document.getElementById('canvas')),
 	OutputTensor = TF.OutputTensor,
 	Tensor = TF.Tensor,
 	InPlaceTensor = TF.InPlaceTensor,
 	TP = s => (out, opt) => TF.Run(s.join(''), out, opt);
+
+
 
 
 const LSTM = TP`
@@ -163,7 +166,7 @@ async function run(){
     charTensor = new OutputTensor(gl, [1])
     state = new InPlaceTensor(gl, [Ns, 1, 4])
     denseOutput = new OutputTensor(gl, [Ni, 1, 4])
-    buffer = new InPlaceTensor(gl, [ 1, 1, 1, 300 ])
+    buffer = new InPlaceTensor(gl, [ 1, 1, 1, 288 ])
 
     refreshTweet()
     document.getElementById('refresh').onclick = function(){
@@ -188,7 +191,7 @@ function refreshTweet(){
         TextureBuffer(buffer, { buffer: buffer, data: charTensor, index: i })
     }
 
-    buffer.show({ scale: 1 / Ni })
+    buffer._show({ scale: 1 / Ni })
     var message = Array.from(buffer.read().data).map(k => chars[k]).join('')
     console.log(message)
 

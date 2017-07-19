@@ -16,8 +16,7 @@
 var gl = TF.createGL(),
     OutputTensor = TF.OutputTensor,
     Tensor = TF.Tensor,
-    InPlaceTensor = TF.InPlaceTensor,
-    TP = s => (out, opt) => TF.Run(s.join(''), out, opt);
+    InPlaceTensor = TF.InPlaceTensor;
 gl.canvas.width = 16
 gl.canvas.height = 16
 
@@ -36,7 +35,7 @@ gl.canvas.height = 16
 // `;
 
 
-const MatrixMultiply = TP`
+const MatrixMultiply = `
     uniform Tensor a;
     uniform Tensor b;
    
@@ -60,10 +59,10 @@ function MatrixPower(base, n){
 	n--
 	while(n > 0){
 		if(n % 2 == 0){
-			MatrixMultiply(a, { a: a, b: a })	
+			a.run(MatrixMultiply, { a: a, b: a })	
 			n /= 2
 		}
-		MatrixMultiply(res, { a: res, b: a })
+		res.run(MatrixMultiply, { a: res, b: a })
 		n--
 	}
 	return res
