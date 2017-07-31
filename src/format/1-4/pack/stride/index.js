@@ -56,7 +56,7 @@ export function pack(info, array, encode1, format){
 
 
 export function unpack(info, data, decode1, type){
-    if(type != 'float32') throw new Error('not impl');
+    // if(type != 'float32') throw new Error('not impl');
 
     var shape = info.shape;
     var length = shape.reduce((a, b) => a * b);

@@ -957,7 +957,7 @@ function pack(info, array, encode1, format) {
 }
 
 function unpack(info, data, decode1, type) {
-    if (type != 'float32') throw new Error('not impl');
+    // if(type != 'float32') throw new Error('not impl');
 
     var shape = info.shape;
     var length = shape.reduce(function (a, b) {
@@ -1370,7 +1370,62 @@ function pack(info, array, encode4, format) {
 }
 
 function unpack(info, data, decode4, type) {
-    throw new Error("not implemented: format/4-4/pack/tile/index.js:unpack");
+    // throw new Error("not implemented: format/4-4/pack/tile/index.js:unpack")
+
+    var shapelength = info.shape.reduce(function (a, b) {
+        return a * b;
+    });
+    var array = (0, _ndarray2.default)(new Float32Array(shapelength), info.shape);
+
+    var shape = array.shape,
+        tiles = Math.ceil(shape[2] / 4) * shape[3],
+        tw = shape[0],
+        th = shape[1],
+        cols = info.cols,
+        _info$texSize2 = _slicedToArray(info.texSize, 2),
+        width = _info$texSize2[0],
+        height = _info$texSize2[1],
+        chunks = Math.ceil(shape[2] / 4),
+        length = width * height * 4;
+
+    // if(format.type === 'float32'){
+    //     var data = new Float32Array(length);    
+    // }else if(format.type === 'uint8'){
+    //     var data = new Uint8Array(length);    
+    // }
+
+    var buf = new Float32Array(4);
+
+    for (var z = 0; z < chunks; z++) {
+        for (var w = 0; w < shape[3]; w++) {
+            var tile = w * chunks + z;
+            var b = Math.min(z * 4 + 4, shape[2]) - z * 4;
+
+            var ih = th * Math.floor(tile / cols);
+            var jw = tw * (tile % cols);
+
+            for (var i = 0; i < tw; i++) {
+                for (var j = 0; j < th; j++) {
+
+                    var pos = 4 * ((ih + j) * width + jw + i);
+                    // encode4(
+                    //     data.subarray(pos, pos + 4),
+                    //     b < 1 ? 0 : array.get(i, j, 4*z+0, w), 
+                    //     b < 2 ? 0 : array.get(i, j, 4*z+1, w), 
+                    //     b < 3 ? 0 : array.get(i, j, 4*z+2, w), 
+                    //     b < 4 ? 0 : array.get(i, j, 4*z+3, w), info)
+
+                    decode4(buf, data[pos], data[pos + 1], data[pos + 2], data[pos + 3], info);
+
+                    if (b >= 1) array.set(i, j, 4 * z + 0, w, buf[0]);
+                    if (b >= 2) array.set(i, j, 4 * z + 1, w, buf[1]);
+                    if (b >= 3) array.set(i, j, 4 * z + 2, w, buf[2]);
+                    if (b >= 4) array.set(i, j, 4 * z + 3, w, buf[3]);
+                }
+            }
+        }
+    }
+    return array;
 }
 
 },{"ndarray":5}],19:[function(require,module,exports){
@@ -2311,7 +2366,6 @@ var _program = require('../runtime/program.js');
 var _helpers = require('./helpers.js');
 
 function runFeatureTests(gl) {
-
     if (!gl.FLOAT_TEXTURES_TESTED && !gl.NO_FLOAT_TEXTURES) {
         if (!gl.getExtension('OES_texture_float')) {
             console.info("This browser does not seem to support OES_texture_float. " + "Using float codec workaround from now on.");

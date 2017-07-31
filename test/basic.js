@@ -162,7 +162,7 @@ describe('Basic', () => {
 		const INCREMENT = `
 			uniform Tensor image;
 			vec4 process4(ivec4 pos){
-				return image.read(pos) + vec4(1,1,1,1);
+				return image.read4(pos) + vec4(1,1,1,1);
 			}
 		`;
 		
