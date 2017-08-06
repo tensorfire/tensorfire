@@ -63,7 +63,7 @@ var video = document.getElementById('videoElement')
 async function squeezenet(){
     var keras_model = await loadJSON('models/rps.json');
     var keras_model_meta = await loadJSON('models/rps_metadata.json');
-    var buffer = await loadBuffer('models/rps-0.9015_weights.buf');
+    var buffer = await loadBuffer('models/rps-weights.buf');
     // var buffer = await loadBuffer('models/rps-0.9575_weights.buf');
 
     console.log(keras_model, keras_model_meta, buffer)
