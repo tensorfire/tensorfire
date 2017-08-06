@@ -70,10 +70,11 @@ async function loadImage(url){
 }
 
 
-function h(type, children = []){
+function h(type, children = [], style = {}){
     var el = document.createElement(type);
-    (Array.isArray(children) ? children : [ children ])
+    ;(Array.isArray(children) ? children : [ children ])
         .forEach(k => el.appendChild(typeof k != 'object' ? 
             document.createTextNode(k) : k));
+    ;Object.keys(style).forEach(k => el.style[k] = style[k]);
     return el
 }

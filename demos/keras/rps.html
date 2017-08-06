@@ -10,7 +10,7 @@
         display: inline-block;
     }
 </style>
-<label><input type="checkbox" id="woot" onchange="woot()"> do the thing </label>
+<label><input type="checkbox" id="woot" onchange="woot()"> process webcam data </label>
 
 <br>
 <video autoplay="true" id="videoElement" style="width: 300px"></video>
@@ -24,6 +24,9 @@
 <script src="util.js"></script>
 <script src="network.js"></script>
 <script src="keras_import_new.js"></script>
+
+<script src="keras.js"></script>
+
 <script>
 
 var gl = TF.createGL(document.getElementById('glCanvas')),
@@ -38,7 +41,7 @@ var canvas = document.getElementById('canvas'),
     ctx = canvas.getContext('2d');
 
 var img = new Image;
-img.src = 'paper.jpg'
+img.src = 'kevin-rock.png'
 img.onload = function(){
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 }
@@ -74,7 +77,8 @@ async function squeezenet(){
 
 
     var network = import_keras_network(keras_model, keras_model_meta, buffer)
-
+    console.log(network)
+    console.log(network.splice(-2, 2)) // cut off the last two layers, do that in JS
 
     var compiled = await compile(gl, network, { input_1: zeros([227, 227, 3]) })
     C = compiled
@@ -83,10 +87,45 @@ async function squeezenet(){
     await update()
 }
 
+function softmax(arr) {
+    let maxVal = arr[0];
+    for(let i = 1; i < arr.length; i++)
+        if(arr[i] > maxVal) maxVal = arr[i];
+    let exp = arr.map(k => Math.exp(k - maxVal)),
+        expSum = exp.reduce((a, b) => a + b);
+    return exp.map(k => k / expSum)
+}
 
 var longTimeAverage = new Float32Array(4)
 
+// const model = new KerasJS.Model({
+//   filepaths: {
+//     model: 'models/rps.json',
+//     weights: 'models/rps-weights.buf',
+//     metadata: 'models/rps_metadata.json'
+//   },
+//   gpu: true
+// })
+    
+
+function preprocess_input(im){
+    // data processing
+    // see https://github.com/fchollet/keras/blob/master/keras/applications/imagenet_utils.py
+    let dataTensor = ndarray(new Float32Array(im.data), [im.width, im.height, 4])
+    let dataProcessedTensor = ndarray(new Float32Array(im.width * im.height * 3), [im.width, im.height, 3])
+    ndops.subseq(dataTensor.pick(null, null, 2), 103.939)
+    ndops.subseq(dataTensor.pick(null, null, 1), 116.779)
+    ndops.subseq(dataTensor.pick(null, null, 0), 123.68)
+    ndops.assign(dataProcessedTensor.pick(null, null, 0), dataTensor.pick(null, null, 2))
+    ndops.assign(dataProcessedTensor.pick(null, null, 1), dataTensor.pick(null, null, 1))
+    ndops.assign(dataProcessedTensor.pick(null, null, 2), dataTensor.pick(null, null, 0))
+    return dataProcessedTensor;
+}
+
+
 async function update(){
+    // await model.ready()
+
     var compiled = C;
     if(hasVideo){
         var vwidth = canvas.height / video.videoHeight * video.videoWidth;
@@ -94,20 +133,25 @@ async function update(){
     }
     
     var im = ctx.getImageData(0, 0, 227, 227);
-    var dat = new Float32Array(im.data);
-    // for(var i = 0; i < dat.length; i+= 4){
+    // var dat = new Float32Array(im.data);
+    // for(var i = 0; i < dat.length; i += 4){
     //     dat[i + 0] = dat[i + 2] - 103.939
     //     dat[i + 1] = dat[i + 1] - 116.779
     //     dat[i + 2] = dat[i + 0] - 123.68
     // }
-    var image = ndarray(dat, [ 227, 227, 4 ]).hi(null, null, 3)//.transpose(1, 0)
+    // var image = ndarray(dat, [ 227, 227, 4 ]).hi(null, null, 3).transpose(1, 0)
 
-    ;(new Tensor(gl, image)).show({ offset: 0.5, scale: 1/256, flipY: true })
+    // ;(new Tensor(gl, image)).show({ offset: 0.5, scale: 1/256, flipY: true })
+
+
+    // const inputData = { input_1: dataProcessedTensor.data }
+    // let outputData = await model.predict(inputData)
+    // console.log(outputData)
 
 
     var startTime = Date.now()
         // console.time('running')
-    await run(gl, compiled, { input_1: image })
+    await run(gl, compiled, { input_1: preprocess_input(im) })
 
     // var data = compiled.info.loss.output.read().data
     var data = compiled.info['global_average_pooling2d_1'].output.read().data
@@ -117,23 +161,31 @@ async function update(){
     for(var i = 0; i < 4; i++){
         longTimeAverage[i] = longTimeAverage[i] * (1 - freshness) + freshness * data[i]
     }
-    var results = Array.from(data)
-        .map((k, i) => [['null', 'paper', 'rock', 'scissors'][i], k])
-        .sort((b, a) => a[1] - b[1])
-        .slice(0, 10);
+    var results = softmax(Array.from(data))
+        // .map((k, i) => [['null', 'paper', 'rock', 'scissors'][i], k])
+        // .sort((b, a) => a[1] - b[1])
+        // .slice(0, 10);
 
-
+    // console.log('our ouptut', data)
     // console.timeEnd('running')
 
     // compiled.info.loss.output.show({ offset: 0, scale: 1, flipY: true })
     compiled.info['conv10-final+relu_conv10'].output.show()
 
+    const NAME = ['null', 'paper', 'rock', 'scissors'];
+
+    let maxVal = Math.max(...results)
 
     var table = h('table', h('tbody', 
-        results.map(k => 
+        results.map((k, i) => 
             h('tr', [
-                h('td', k[0]),
-                h('td', (k[1] * 100).toFixed(2) + '%' )
+                h('td', maxVal == k ? h('strong', NAME[i]) : NAME[i] ),
+                h('td', k.toFixed(2) ),
+                h('td',
+                    h('div', [], { 
+                        width: (k*100) + 'px', 
+                        background: maxVal == k ? 'red' : 'gray', 
+                        height: '1em' }) )
             ])
         )
     ))
