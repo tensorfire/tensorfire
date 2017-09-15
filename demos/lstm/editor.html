@@ -100,6 +100,12 @@ var models = {
         Ni: 75,
         Ns: 128,
         path: 'models/scifi-128'
+    },
+    "linux-256": {
+        chars: ['\t', '\n', '\x0c', ' ', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'],
+        Ni: 98,
+        Ns: 256,
+        path: 'models/linux-256'
     }
 }
 
@@ -315,7 +321,7 @@ var cm = CodeMirror(document.body, {
 const PREFIX = 'They expressed their feelings loud and clear. \n'
 
 function updateCompletion(){
-    var leadingText = (PREFIX + cm.getRange({ line: 0, ch: 0 }, cm.getCursor('from'))).slice(-50);
+    var leadingText = (PREFIX + cm.getRange({ line: 0, ch: 0 }, cm.getCursor('from'))).slice(-100);
     var text = null;
 
     var raw_completion = generateCompletion(leadingText, +document.getElementById('temperature').value);
