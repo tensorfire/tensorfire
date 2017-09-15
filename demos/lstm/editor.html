@@ -47,7 +47,7 @@
 <p>It's inspired by <a href="https://www.robinsloan.com/notes/writing-with-the-machine/">Robin Sloan's Atom plugin</a>, and powered by <b>TensorFire</b> and <b>CodeMirror</b>.</p>
 
 <p>
-    <select id="model_picker" onchange="loadModel()"></select>
+    <select id="model_picker" value="trump-256" onchange="loadModel()"></select>
 
     Temperature: <input id="temperature" oninput="document.getElementById('temp').innerHTML = (+this.value).toFixed(2)" onchange="updateCompletion()" type="range" style="width: 300px" value="0.6" min="0.1" max="2" step="0.01"> <span id="temp">0.60</span> (higher temperatures yield weirder completions)
 </p>
