@@ -47,16 +47,53 @@
 <p>It's inspired by <a href="https://www.robinsloan.com/notes/writing-with-the-machine/">Robin Sloan's Atom plugin</a>, and powered by <b>TensorFire</b> and <b>CodeMirror</b>.</p>
 
 <p>
-    Temperature: <input id="temperature" oninput="document.getElementById('temp').innerHTML = (+this.value).toFixed(2)" onchange="updateCompletion()" type="range" style="width: 300px" value="0.6" min="0.1" max="2" step="0.01"> <span id="temp">0.60</span> (higher temperatures yield weirder completions)
-</p>
+    <select id="model_picker" onchange="loadModel()"></select>
 
-<p>
-    Currently the only model we have is one which was trained on a corpus of <b>@realDonaldTrump</b> tweets.
+    Temperature: <input id="temperature" oninput="document.getElementById('temp').innerHTML = (+this.value).toFixed(2)" onchange="updateCompletion()" type="range" style="width: 300px" value="0.6" min="0.1" max="2" step="0.01"> <span id="temp">0.60</span> (higher temperatures yield weirder completions)
 </p>
 
 <canvas id="canvas"></canvas>
 
 <script>
+
+var models = {
+    "shakespeare-128": {
+        chars: ['\n', ' ', '!', '$', '&', "'", ',', '-', '.', '3', ':', ';', '?', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', ']', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'],
+        Ns: 128,
+        Ni: 67,
+        path: 'models/shakespeare-128'
+    },
+    "slatestar-256": {
+        chars: ['\n', ' ', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', ']', '^', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'],
+        Ns: 256,
+        Ni: 95,
+        path: 'models/slatestar-256'
+    }, 
+    "trump-big.old": {
+        chars: ['\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '=', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'],
+        Ns: 256,
+        Ni: 94,
+        path: 'models/trump-big.old'
+    },
+    "trump-256": {
+        chars: ['\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '=', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'],
+        Ns: 256,
+        Ni: 94,
+        path: "models/trump-256"
+    },
+    "scifi-128": {
+        chars: [' ', '!', '"', '#', "'", '(', ')', ',', '-', '.', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '?', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'],
+        Ni: 75,
+        Ns: 128,
+        path: 'models/scifi-128'
+    }
+}
+
+for(let k in models){
+    document.getElementById('model_picker').appendChild(new Option(k))
+}
+
+
 
 var gl = TF.createGL(document.getElementById('canvas')),
     OutputTensor = TF.OutputTensor,
@@ -174,12 +211,6 @@ const OneHot = `
     }
 `
 
-var chars = ['\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '=', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'];
-
-var Ni = chars.length;
-var Ns = 256;
-
-
 
 async function loadArrayFromURL(fileName){
     var xhr = new XMLHttpRequest()
@@ -193,25 +224,45 @@ async function loadArrayFromURL(fileName){
 }
 
 
-async function run(){
+function destroyTensors(tensors){
+    for(var i = 0; i < tensors.length; i++){
+        if(tensors[i]){
+            tensors[i].destroy()
+        }
+    }
+}
 
-    lstmWeights = new Tensor(gl, await loadArrayFromURL('trump/lstm_combined-256x351x4'));
-    denseWeights = new Tensor(gl, await loadArrayFromURL('trump/dense_1-weights-W-'+Ns+'x'+Ni))
-    denseBias = new Tensor(gl, await loadArrayFromURL('trump/dense_1-weights-b-'+Ni))
+var lstmWeights, denseWeights, denseBias, oneHotVector, charTensor, state, denseOutput, buffer;
+
+async function loadModel(){
+    
+    var m = models[document.getElementById('model_picker').value],
+        Ns = m.Ns, Ni = m.Ni;
+    
+    console.assert(Ni == m.chars.length);
+
+    destroyTensors([ lstmWeights, denseWeights, denseBias, oneHotVector, charTensor, state, denseOutput, buffer ])
+
+
+    lstmWeights = new Tensor(gl, await loadArrayFromURL(m.path + '/lstm_1_combined-'+Ns+'x' + (Ns+Ni+1) + 'x4'));
+    denseWeights = new Tensor(gl, await loadArrayFromURL(m.path + '/dense_1-weights-kernel-'+Ns+'x'+Ni))
+    denseBias = new Tensor(gl, await loadArrayFromURL(m.path + '/dense_1-weights-bias-'+Ni))
+
 
     oneHotVector = new OutputTensor(gl, [Ni, 1, 4])
     charTensor = new OutputTensor(gl, [1])
     state = new InPlaceTensor(gl, [Ns, 1, 4])
     denseOutput = new OutputTensor(gl, [Ni, 1, 4])
     buffer = new InPlaceTensor(gl, [ 1, 1, 1, 200 ])
-
-    generateCompletion('I AM GOING TO MAKE AMERICA')
     
 }
 
-run()
+loadModel()
 
 function generateCompletion(input, temperature = 0.7){
+    var m = models[document.getElementById('model_picker').value],
+        Ns = m.Ns, Ni = m.Ni, chars = m.chars;
+
     var startTime = Date.now()
     for(let i = 0; i < buffer.shape[3]; i++){
         if(i < input.length)
@@ -244,22 +295,19 @@ var cm = CodeMirror(document.body, {
 
 
 
-const PREFIX = 'They expressed their feelings loud and clear. '
+const PREFIX = 'They expressed their feelings loud and clear. \n'
 
 function updateCompletion(){
     var leadingText = (PREFIX + cm.getRange({ line: 0, ch: 0 }, cm.getCursor('from'))).slice(-50);
     var text = null;
 
-    // try up to 10 times to generate a completion
-    for(var i = 0; i < 10; i++){
-        var raw_completion = generateCompletion(leadingText, +document.getElementById('temperature').value);
-        try {
-            text = raw_completion.match(/^.*?(\.|\!)+\s/)[0].replace(/\s/g, ' ')
-        } catch (err) {
-            continue;
-        }
-        break;    
+    var raw_completion = generateCompletion(leadingText, +document.getElementById('temperature').value);
+    try {
+        text = raw_completion.match(/^.*?((\.|\!|\;)+\s|\n)/)[0]
+    } catch (err) {
+        text = raw_completion.split(' ').slice(0, 10).join(' ')
     }
+    
     if(text){
         console.log('new text', text)
         cm.replaceSelection(text, 'around')    
