@@ -111,15 +111,15 @@ for filename in os.listdir(directory):
             name = layer_name  + weight + '-' + shape
             bytearr.tofile(os.path.join(directory, model_name, name))
 
-            for weight_name in weight_names:
-                weight_value = g[weight_name].value
-                bytearr = weight_value.astype(np.float32)#.tobytes()
+            # for weight_name in weight_names:
+            #     weight_value = g[weight_name].value
+            #     bytearr = weight_value.astype(np.float32)#.tobytes()
 
-                shape = 'x'.join(str(x) for x in list(weight_value.shape))
-                weight = weight_name[len(layer_name)+1:].split(":")[0]
-                name = layer_name + '-weights-' + weight + '-' + shape
+            #     shape = 'x'.join(str(x) for x in list(weight_value.shape))
+            #     weight = weight_name[len(layer_name)+1:].split(":")[0]
+            #     name = layer_name + '-weights-' + weight + '-' + shape
 
-                bytearr.tofile(os.path.join(directory, model_name, name))
+            #     bytearr.tofile(os.path.join(directory, model_name, name))
 
         else:
             for weight_name in weight_names:
