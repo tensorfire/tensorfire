@@ -69,12 +69,12 @@ var models = {
         Ni: 95,
         path: 'models/slatestar-256'
     }, 
-    "trump-big.old": {
-        chars: ['\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '=', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'],
-        Ns: 256,
-        Ni: 94,
-        path: 'models/trump-big.old'
-    },
+    // "trump-big.old": {
+    //     chars: ['\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '=', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'],
+    //     Ns: 256,
+    //     Ni: 94,
+    //     path: 'models/trump-big.old'
+    // },
     "trump-256": {
         chars: ['\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '=', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'],
         Ns: 256,
@@ -235,7 +235,8 @@ function destroyTensors(tensors){
 var lstmWeights, denseWeights, denseBias, oneHotVector, charTensor, state, denseOutput, buffer;
 
 async function loadModel(){
-    
+    document.getElementById('model_picker').disabled = true;
+
     var m = models[document.getElementById('model_picker').value],
         Ns = m.Ns, Ni = m.Ni;
     
@@ -254,6 +255,8 @@ async function loadModel(){
     state = new InPlaceTensor(gl, [Ns, 1, 4])
     denseOutput = new OutputTensor(gl, [Ni, 1, 4])
     buffer = new InPlaceTensor(gl, [ 1, 1, 1, 200 ])
+
+    document.getElementById('model_picker').disabled = false;
     
 }
 
