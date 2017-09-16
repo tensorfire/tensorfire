@@ -2602,10 +2602,11 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
         value: function copy() {
             var format = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.type;
             var T = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : OutputTensor;
+            var callback = arguments[2];
 
             var TENSOR_IDENTITY = '\n            uniform Tensor image;\n            vec4 process4(ivec4 pos) { return image.read4(pos); }\n        ';
             var out = new T(this.gl, this.shape, format);
-            out.run(TENSOR_IDENTITY, { image: this });
+            out.run(TENSOR_IDENTITY, { image: this }, callback);
             return out;
         }
     }, {
@@ -2619,6 +2620,18 @@ var Tensor = exports.Tensor = function (_BaseTensor) {
             var result = fn(copy);
             copy.destroy();
             return result;
+        }
+    }, {
+        key: 'ready',
+        value: function ready(callback) {
+            var _this2 = this;
+
+            if (!callback) return new Promise(function (resolve) {
+                return _this2.ready(resolve);
+            });
+            this.withCopy(function (x) {
+                return x;
+            }, this.type, OutputTensor, callback);
         }
     }, {
         key: '_show',
@@ -2687,10 +2700,10 @@ var OutputTensor = exports.OutputTensor = function (_Tensor) {
             args[_key2] = arguments[_key2];
         }
 
-        var _this2 = _possibleConstructorReturn(this, (_ref = OutputTensor.__proto__ || Object.getPrototypeOf(OutputTensor)).call.apply(_ref, [this].concat(args)));
+        var _this3 = _possibleConstructorReturn(this, (_ref = OutputTensor.__proto__ || Object.getPrototypeOf(OutputTensor)).call.apply(_ref, [this].concat(args)));
 
-        _this2.fbo = (0, _helpers.makeFrameBuffer)(_this2.gl, _this2.tex);
-        return _this2;
+        _this3.fbo = (0, _helpers.makeFrameBuffer)(_this3.gl, _this3.tex);
+        return _this3;
     }
 
     _createClass(OutputTensor, [{
@@ -2766,13 +2779,13 @@ var InPlaceTensor = exports.InPlaceTensor = function (_OutputTensor) {
             args[_key3] = arguments[_key3];
         }
 
-        var _this3 = _possibleConstructorReturn(this, (_ref2 = InPlaceTensor.__proto__ || Object.getPrototypeOf(InPlaceTensor)).call.apply(_ref2, [this].concat(args)));
+        var _this4 = _possibleConstructorReturn(this, (_ref2 = InPlaceTensor.__proto__ || Object.getPrototypeOf(InPlaceTensor)).call.apply(_ref2, [this].concat(args)));
 
-        _this3.tex2 = _this3.tex;
-        _this3.tex = (0, _helpers.makeTexture)(_this3.gl);
-        _this3.update(null);
-        _this3.swap();
-        return _this3;
+        _this4.tex2 = _this4.tex;
+        _this4.tex = (0, _helpers.makeTexture)(_this4.gl);
+        _this4.update(null);
+        _this4.swap();
+        return _this4;
     }
 
     _createClass(InPlaceTensor, [{

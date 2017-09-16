@@ -75,13 +75,13 @@ export class Tensor extends BaseTensor {
 	}
 
 
-	copy(format = this.type, T = OutputTensor){
+	copy(format = this.type, T = OutputTensor, callback){
         const TENSOR_IDENTITY = `
             uniform Tensor image;
             vec4 process4(ivec4 pos) { return image.read4(pos); }
         `;
         var out = new T(this.gl, this.shape, format);
-        out.run(TENSOR_IDENTITY, { image: this })
+        out.run(TENSOR_IDENTITY, { image: this }, callback)
         return out
     }
 
@@ -90,6 +90,11 @@ export class Tensor extends BaseTensor {
         var result = fn(copy)
         copy.destroy()
         return result;
+    }
+    
+    ready(callback){
+        if(!callback) return new Promise(resolve => this.ready(resolve));
+        this.withCopy(x => x, this.type, OutputTensor, callback)
     }
 
 	_show(opt = {}){ showTexture(this.gl, this.tex, opt) }
@@ -162,6 +167,7 @@ export class OutputTensor extends Tensor {
     compile(shader, params){
         return Compile(shader, this, params);
     }
+    
 
 	read(){
         if(this.format.type === 'float32' && this.gl.NO_READ_FLOAT){
