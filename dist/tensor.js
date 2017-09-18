@@ -2053,7 +2053,8 @@ function endTimer(gl, callback) {
 	if (timer) {
 		timer.end(callback);
 	} else if (callback) {
-		console.warn("Can not trigger callback: implementation does not support ext_disjoint_timer_query");
+		console.warn("Browser does not support ext_disjoint_timer_query, triggering callback after fixed timeout.");
+		setTimeout(callback, 100);
 	}
 }
 
