@@ -16,9 +16,9 @@ export function init(shape){
     var texSize = [width * cols, shape[1] * Math.ceil(tiles / cols)]
 
     return {
-    	texSize: texSize,
-    	cols: cols,
-    	shape: shape,
+        texSize: texSize,
+        cols: cols,
+        shape: shape,
     }
 }
 

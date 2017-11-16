@@ -20,7 +20,7 @@ export class Tensor extends BaseTensor {
     // new Tensor(gl, { width, height, data })
     // pix = new Tensor(gl, [1, 1, 4], [1, 0.4, 3, 4], 'uint8')
 
-	constructor(gl, shape = [], data = null, format = null){
+    constructor(gl, shape = [], data = null, format = null){
         super()
         runFeatureTests(gl);
 
@@ -72,10 +72,10 @@ export class Tensor extends BaseTensor {
 
         this.type = type || format.type;
         this._init(gl, format, shape, data);
-	}
+    }
 
 
-	copy(format = this.type, T = OutputTensor, callback){
+    copy(format = this.type, T = OutputTensor, callback){
         const TENSOR_IDENTITY = `
             uniform Tensor image;
             vec4 process4(ivec4 pos) { return image.read4(pos); }
@@ -97,7 +97,7 @@ export class Tensor extends BaseTensor {
         this.withCopy(x => x, this.type, OutputTensor, callback)
     }
 
-	_show(opt = {}){ showTexture(this.gl, this.tex, opt) }
+    _show(opt = {}){ showTexture(this.gl, this.tex, opt) }
     show(opt = {}){
         var gl = this.gl;
         if(this.format.pack == 'tile' 
@@ -132,10 +132,10 @@ export class Tensor extends BaseTensor {
 }
 
 export class OutputTensor extends Tensor {
-	constructor(...args){
+    constructor(...args){
         super(...args);
-		this.fbo = makeFrameBuffer(this.gl, this.tex);
-	}
+        this.fbo = makeFrameBuffer(this.gl, this.tex);
+    }
 
     destroy(){
         super.destroy()
@@ -169,12 +169,12 @@ export class OutputTensor extends Tensor {
     }
     
 
-	read(){
+    read(){
         if(this.format.type === 'float32' && this.gl.NO_READ_FLOAT){
             return this.withCopy(x => x.read(), 'softfloat')
         }
 
-		var array = this._format.pack.unpack(this.info, this._read(), this._format.codec.decode, this.type);
+        var array = this._format.pack.unpack(this.info, this._read(), this._format.codec.decode, this.type);
         
         // strip trailing singleton dimensions
         var shape = array.shape.slice(0),
@@ -184,18 +184,18 @@ export class OutputTensor extends Tensor {
             stride.pop()
         }
         return ndarray(array.data, shape, stride, array.offset);
-	}
+    }
 }
 
 export class InPlaceTensor extends OutputTensor {
-	constructor(...args){
-		super(...args)
+    constructor(...args){
+        super(...args)
 
         this.tex2 = this.tex;
         this.tex = makeTexture(this.gl);
-		this.update(null);
+        this.update(null);
         this.swap()
-	}
+    }
     destroy(){
         super.destroy()
         this.gl.deleteTexture(this.tex2)
